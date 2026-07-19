@@ -858,9 +858,41 @@ function orderAddressText(address: any) {
 
 function buildOrderInvoiceMessage(order: any) {
   const normalized = normalizeOrder(order);
+  if (!normalized) {
+    return [
+      'SVAYIRO Invoice',
+      'Invoice: N/A',
+      'Order ID: N/A',
+      'Order Ref: -',
+      'Type: Online Order',
+      'Date: -',
+      '',
+      'Customer: Walk-In Customer',
+      'Phone: -',
+      'Fulfillment: Store Pickup / POS',
+      'Slot: No slot',
+      'Address: Store pickup / walk-in billing',
+      '',
+      'Items:',
+      'No items found',
+      '',
+      'Product subtotal: Rs. 0.00',
+      'Delivery charge: Rs. 0.00',
+      'Bag charge: Rs. 0.00',
+      'Discount: -Rs. 0.00',
+      'Grand total: Rs. 0.00',
+      '',
+      'Payment: cod (pending)',
+      'Reference: -',
+      '',
+      'Thank you for shopping with SVAYIRO.'
+    ].join('\n');
+  }
+
   const lines = (normalized.items || []).map((item: any, index: number) => {
     const qty = Number(item.quantity || 1);
-    const unit = Number(item.unitPrice ?? (Number(item.totalPrice || item.price || 0) / qty) ?? 0);
+    const fallbackUnit = Number(item.totalPrice || item.price || 0) / qty;
+    const unit = Number(item.unitPrice ?? item.unit_price ?? fallbackUnit ?? 0);
     const total = Number(item.totalPrice ?? item.price ?? 0);
     return `${index + 1}. ${item.productName || 'Item'} x ${qty} @ ${money(unit)} = ${money(total)}`;
   });
@@ -932,7 +964,8 @@ function renderPublicInvoiceHtml(invoice: any, order: any) {
   const paymentStatus = invoice.payment_status || order.payment_status || 'pending';
   const itemRows = items.map((item: any, index: number) => {
     const qty = Number(item.quantity || 1);
-    const unit = Number(item.unitPrice ?? item.unit_price ?? (Number(item.totalPrice || item.price || 0) / qty) ?? 0);
+    const fallbackUnit = Number(item.totalPrice || item.price || 0) / qty;
+    const unit = Number(item.unitPrice ?? item.unit_price ?? fallbackUnit ?? 0);
     const total = Number(item.totalPrice ?? item.total_price ?? item.price ?? 0);
     return `
       <tr>
@@ -1297,12 +1330,12 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
       if (prodQ.rowCount !== ids.length) throw new Error('One or more products not found');
 
       // Map products
-      const prodMap = new Map();
+      const prodMap = new Map<string, any>();
       for (const r of prodQ.rows) prodMap.set(r.id, r);
 
       // Validate stock and compute totals
       let productTotal = 0;
-      const orderItems = [];
+      const orderItems: Array<{ product_id: string | null; name: string; sku: string | null; quantity: number; unit_price: number; purchase_unit_cost: number; total_price: number; weight_grams: number }> = [];
       for (const it of payload.items) {
         const p = prodMap.get(it.productId);
         if (!p) throw new Error(`Product ${it.productId} not found`);
@@ -1384,7 +1417,8 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
       for (const oi of orderItems) {
         await client.query('INSERT INTO order_items(order_id, product_id, name, sku, quantity, unit_price, purchase_unit_cost, total_price) VALUES($1,$2,$3,$4,$5,$6,$7,$8)', [orderId, oi.product_id, oi.name, oi.sku, oi.quantity, oi.unit_price, oi.purchase_unit_cost, oi.total_price]);
         if (shouldApplyOrderEffectsNow) {
-          const p = prodMap.get(oi.product_id);
+          const p = prodMap.get(oi.product_id || '');
+          if (!p) throw new Error(`Product ${oi.product_id} not found`);
           const newStock = Number(p.stock_count) - oi.quantity;
           await client.query('UPDATE products SET stock_count = $1, updated_at = now() WHERE id = $2', [newStock, oi.product_id]);
           await client.query('INSERT INTO inventory_logs(product_id, delta, reason, source, reference_id, metadata) VALUES($1,$2,$3,$4,$5,$6)', [oi.product_id, -oi.quantity, 'order-placement', 'order', orderId, { orderId, orderRef }]);
@@ -2766,10 +2800,11 @@ app.get('/api/inventory/logs', authMiddleware, requirePermission('inventory:mana
   const { productId } = req.query;
   try {
     let q = 'SELECT * FROM inventory_logs';
-    const params = [];
-    if (productId) {
+    const params: Array<string | number | boolean | null> = [];
+    const productIdValue = typeof productId === 'string' ? productId : Array.isArray(productId) ? String(productId[0] ?? '') : '';
+    if (productIdValue) {
       q += ' WHERE product_id = $1';
-      params.push(productId);
+      params.push(productIdValue);
     }
     q += ' ORDER BY created_at DESC LIMIT 200';
     const { rows } = await pgQuery(q, params);
@@ -3576,7 +3611,7 @@ app.delete('/api/products/:id', authMiddleware, requirePermission('products:mana
 app.get('/api/bags', async (req, res) => {
   try {
     const { rows } = await pgQuery('SELECT * FROM bags WHERE is_enabled = true ORDER BY position ASC');
-    return res.json(rows.map((row, index) => normalizeBag(row, index)));
+    return res.json(rows.map((row: any, index: number) => normalizeBag(row, index)));
   } catch (err) {
     console.error('GET /api/bags error', err);
     return res.status(500).json({ error: 'Failed to fetch bags' });
@@ -3604,7 +3639,7 @@ app.put('/api/bags', authMiddleware, requirePermission('bags:manage'), async (re
       }
     });
     const { rows } = await pgQuery('SELECT * FROM bags ORDER BY position ASC');
-    return res.json({ success: true, data: rows.map((row, index) => normalizeBag(row, index)) });
+    return res.json({ success: true, data: rows.map((row: any, index: number) => normalizeBag(row, index)) });
   } catch (err) {
     console.error('PUT /api/bags error', err);
     return res.status(500).json({ error: 'Failed to update bags' });
@@ -4924,15 +4959,15 @@ app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use')
     return res.status(400).json({ error: 'Valid 10-digit customer phone number is required before invoice generation.' });
   }
 
-  let saleItems = [];
+  let saleItems: Array<any> = [];
   if (items && Array.isArray(items) && items.length > 0) saleItems = items;
   else if (productId && quantity) saleItems = [{ productId, quantity: Number(quantity) }];
   else return res.status(400).json({ error: 'Please specify items or single product parameter for this offline sale.' });
 
   try {
     const result = await runTransaction(async (client) => {
-      const orderItems: any[] = [];
-      const pendingInventoryLogs: any[] = [];
+      const orderItems: Array<{ product_id: string | null; sku: string | null; name: string; quantity: number; unit_price: number; purchase_unit_cost: number; total_price: number; weight_grams?: number }> = [];
+      const pendingInventoryLogs: Array<{ productId: string | null; delta: number; reason: string; source: string; metadata: any }> = [];
       let calculatedTotal = 0;
       for (const item of saleItems) {
         if (item.isUnlisted || (item.productId && String(item.productId).startsWith('unlisted_'))) {

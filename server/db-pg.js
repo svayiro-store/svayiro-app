@@ -7,7 +7,12 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
 });
 
-export async function query(text, params) {
+/**
+ * @param {string} text
+ * @param {any[] | undefined} params
+ * @returns {Promise<any>}
+ */
+export async function query(text, params = []) {
   const client = await pool.connect();
   try {
     const res = await client.query(text, params);
@@ -17,6 +22,11 @@ export async function query(text, params) {
   }
 }
 
+/**
+ * @template T
+ * @param {(client: any) => Promise<T>} fn
+ * @returns {Promise<T>}
+ */
 export async function runTransaction(fn) {
   const client = await pool.connect();
   try {
