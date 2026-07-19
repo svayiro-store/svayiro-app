@@ -103,10 +103,7 @@ CREATE TABLE categories (
   position integer DEFAULT 0,
   metadata jsonb DEFAULT '{}',
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now(),
-  CONSTRAINT chk_products_prices_nonnegative CHECK (base_price >= 0 AND offer_price >= 0),
-  CONSTRAINT chk_products_stock_nonnegative CHECK (stock_count >= 0),
-  CONSTRAINT chk_products_weight_nonnegative CHECK (weight_grams >= 0)
+  updated_at timestamptz DEFAULT now()
 );
 
 -- Products
@@ -125,7 +122,10 @@ CREATE TABLE products (
   low_stock_threshold integer DEFAULT 5,
   metadata jsonb DEFAULT '{}',
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  updated_at timestamptz DEFAULT now(),
+  CONSTRAINT chk_products_prices_nonnegative CHECK (base_price >= 0 AND offer_price >= 0),
+  CONSTRAINT chk_products_stock_nonnegative CHECK (stock_count >= 0),
+  CONSTRAINT chk_products_weight_nonnegative CHECK (weight_grams >= 0)
 );
 
 -- Product images (ordered)

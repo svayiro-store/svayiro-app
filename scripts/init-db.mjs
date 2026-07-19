@@ -257,6 +257,13 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error('Database initialization failed:', err.message);
+  console.error('Database initialization failed:', {
+    message: err.message,
+    code: err.code,
+    detail: err.detail,
+    hint: err.hint,
+    position: err.position,
+    where: err.where
+  });
   process.exit(1);
 });
