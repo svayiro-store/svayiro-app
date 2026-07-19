@@ -1,23 +1,57 @@
+# SVAYIRO App
 
+SVAYIRO is a production-oriented grocery and daily essentials commerce app with a customer storefront, admin console, POS billing, inventory, orders, coupons, notifications, reviews, complaints, and PostgreSQL-backed workflows.
 
-## Run Locally
+## Local Development
 
-**Prerequisites:**  Node.js
+Prerequisites:
 
-1. Install dependencies:
-   `npm install`
-2. Initialize the local PostgreSQL schema:
-   `npm run db:init`
-3. Run the app:
-   `npm run dev`
+- Node.js 20+
+- PostgreSQL
 
-## Run with Docker
+Install dependencies:
 
-1. Build and start the app with the database:
-   `npm run docker:up`
-2. Stop the services:
-   `npm run docker:down`
+```bash
+npm install
+```
 
-The app is exposed on `http://localhost:3000`, and the PostgreSQL database is available on `localhost:5432`.
+Create and configure `.env` from `.env.example`, then initialize the database:
 
-If you need to seed the default admin user inside Docker, set `SEED_ADMIN=true` in your local environment before starting the container.
+```bash
+npm run db:init
+npm run db:seed-admin
+```
+
+Run the app:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+## Docker
+
+Start the app with PostgreSQL:
+
+```bash
+npm run docker:up
+```
+
+Stop services:
+
+```bash
+npm run docker:down
+```
+
+## Production Notes
+
+- Do not commit `.env`.
+- Use a managed PostgreSQL database for production.
+- Use Cloudinary or similar object storage for uploaded images.
+- Set strong production secrets in the hosting provider environment variables.
+- Run `npm run build` before deployment checks.

@@ -1,9 +1,9 @@
-const CACHE_NAME = 'svayiro-shell-v1';
+const CACHE_NAME = 'svayiro-shell-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/favicon.svg'
+  '/favicon.png'
 ];
 
 self.addEventListener('install', (event) => {
