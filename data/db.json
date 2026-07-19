@@ -1,0 +1,422 @@
+{
+  "shop_profile": {
+    "logoUrl": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200&h=200",
+    "bannerUrl": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200&h=400",
+    "name": "SVAYIRO",
+    "description": "Your local destination for premium quality flours, freshly ground grains, dairy, pulses, and daily essentials delivered right to your doorstep.",
+    "tagline": "Purity & Quality Delivered Daily",
+    "contactNumber": "+91 98765 43210",
+    "whatsAppNumber": "+91 98765 43210",
+    "email": "support@svayiro.com",
+    "address": "S-12, Sector 4, Ground Floor, Central Market, New Delhi, India",
+    "googleMapsLink": "https://maps.google.com/?q=28.6139,77.2090",
+    "deliveryRadius": 10,
+    "workingHours": "07:00 AM - 09:00 PM",
+    "holidayTimings": "Open all days except National Holidays",
+    "socialFacebook": "https://facebook.com/svayiro",
+    "socialInstagram": "https://instagram.com/svayiro",
+    "socialTwitter": "https://twitter.com/svayiro",
+    "isOpen": true,
+    "isHolidayMode": false,
+    "announcement": "🎉 Get FREE Delivery on your first order with code SVAYIROFIRST! Premium Sharbati Atta has been restocked.",
+    "holidayMessage": "We are operating with limited staff on national holidays. Deliveries might be slightly delayed.",
+    "personalPhoneNumber": "+91 99999 88888",
+    "supportPhoneNumber": "+91 1800 123 4567",
+    "upiId": "svayiro.essentials@upi",
+    "paymentQrCodeUrl": "",
+    "deliverySlots": [
+      "07:00 AM - 10:00 AM",
+      "11:00 AM - 02:00 PM",
+      "04:00 PM - 07:00 PM",
+      "Store hours standard pickup (07:00 AM - 09:00 PM)"
+    ]
+  },
+  "categories": [
+    {
+      "id": "cat_flours",
+      "name": "Flours & Grains",
+      "description": "Stone-ground fresh flours, multigrains, and premium suji.",
+      "imageUrl": "https://images.unsplash.com/photo-1574325131876-a799ed77d9f2?auto=format&fit=crop&q=80&w=300",
+      "isEnabled": true,
+      "order": 1
+    },
+    {
+      "id": "cat_rice_pulses",
+      "name": "Rice, Dals & Pulses",
+      "description": "Unpolished quality lentils, premium basmati rice, and grains.",
+      "imageUrl": "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=300",
+      "isEnabled": true,
+      "order": 2
+    },
+    {
+      "id": "cat_daily_dairy",
+      "name": "Daily Dairy & Bakery",
+      "description": "Fresh cow milk, curd, paneer, and daily fresh bread.",
+      "imageUrl": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=300",
+      "isEnabled": true,
+      "order": 3
+    },
+    {
+      "id": "cat_spices_oils",
+      "name": "Oils, Ghee & Spices",
+      "description": "Pure cold-pressed oils, premium A2 ghee, and whole spices.",
+      "imageUrl": "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&q=80&w=300",
+      "isEnabled": true,
+      "order": 4
+    }
+  ],
+  "products": [
+    {
+      "id": "prod_atta_10kg",
+      "categoryId": "cat_flours",
+      "name": "Premium Stone-Ground Sharbati Atta (Whole Wheat Flour)",
+      "description": "Freshly milled from high quality MP Sharbati wheat grains. Stone-ground (Chakki) to preserve nutrition, dietary fibers, and natural taste. Standard choice for super soft and delicious rotis.",
+      "images": [
+        "https://images.unsplash.com/photo-1574325131876-a799ed77d9f2?auto=format&fit=crop&q=80&w=600",
+        "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=600"
+      ],
+      "basePrice": 560,
+      "offerPrice": 499,
+      "stockCount": 44,
+      "weight": 10000,
+      "isEnabled": true,
+      "ratingAverage": 4.5,
+      "ratingCount": 2,
+      "isDailyEssential": true,
+      "isFeatured": true
+    },
+    {
+      "id": "prod_atta_5kg",
+      "categoryId": "cat_flours",
+      "name": "Premium Stone-Ground Sharbati Atta",
+      "description": "Freshly milled stone-ground premium MP Sharbati wheat flour. Rich in dietary fiber, clean, and nutritious. Pack of 5 kg.",
+      "images": [
+        "https://images.unsplash.com/photo-1574325131876-a799ed77d9f2?auto=format&fit=crop&q=80&w=600"
+      ],
+      "basePrice": 290,
+      "offerPrice": 260,
+      "stockCount": 8,
+      "weight": 5000,
+      "isEnabled": true,
+      "ratingAverage": 4.6,
+      "ratingCount": 5,
+      "isDailyEssential": false,
+      "isFeatured": true
+    },
+    {
+      "id": "prod_chana_besan_1kg",
+      "categoryId": "cat_flours",
+      "name": "Fresh Pure Chana Besan (Gram Flour)",
+      "description": "100% pure chana dal ground flour. Perfect for pakoras, laddoos, and traditional breakfast recipes. Gluten-free and loaded with high protein.",
+      "images": [
+        "https://images.unsplash.com/photo-1608686207856-001b95cf60ca?auto=format&fit=crop&q=80&w=600"
+      ],
+      "basePrice": 120,
+      "offerPrice": 99,
+      "stockCount": 30,
+      "weight": 1000,
+      "isEnabled": true,
+      "ratingAverage": 4.5,
+      "ratingCount": 4,
+      "isDailyEssential": true,
+      "isFeatured": false
+    },
+    {
+      "id": "prod_basmati_5kg",
+      "categoryId": "cat_rice_pulses",
+      "name": "Royal Premium Basmati Rice (Aged)",
+      "description": "Long grain aged aromatic basmati rice. Ideal for biryanis, pulao, and festive meals. Aged for 12+ months to achieve perfect fluffiness.",
+      "images": [
+        "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=600"
+      ],
+      "basePrice": 750,
+      "offerPrice": 680,
+      "stockCount": 25,
+      "weight": 5000,
+      "isEnabled": true,
+      "ratingAverage": 4.9,
+      "ratingCount": 18,
+      "isDailyEssential": true,
+      "isFeatured": true
+    },
+    {
+      "id": "prod_toor_dal_1kg",
+      "categoryId": "cat_rice_pulses",
+      "name": "Unpolished Organic Toor Dal",
+      "description": "Unpolished, organically grown pigeon pea lentils (Arhar Dal). No chemical or synthetic colors added. Retains native nutrients and provides high dietary fibers.",
+      "images": [
+        "https://images.unsplash.com/photo-1545114050-47b2c0f2eebe?auto=format&fit=crop&q=80&w=600"
+      ],
+      "basePrice": 180,
+      "offerPrice": 165,
+      "stockCount": 50,
+      "weight": 1000,
+      "isEnabled": true,
+      "ratingAverage": 4.4,
+      "ratingCount": 7,
+      "isDailyEssential": true,
+      "isFeatured": false
+    },
+    {
+      "id": "prod_milk_500ml",
+      "categoryId": "cat_daily_dairy",
+      "name": "Fresh Full Cream Cow Milk (Pack of 2)",
+      "description": "Farm-fresh high fat cow milk, pasteurized and packed securely. Pasteurized within 4 hours of milking. (2x 500ml packets)",
+      "images": [
+        "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=600"
+      ],
+      "basePrice": 70,
+      "offerPrice": 66,
+      "stockCount": 80,
+      "weight": 1000,
+      "isEnabled": true,
+      "ratingAverage": 5,
+      "ratingCount": 1,
+      "isDailyEssential": true,
+      "isFeatured": true
+    },
+    {
+      "id": "prod_mustard_oil_1l",
+      "categoryId": "cat_spices_oils",
+      "name": "Pure Cold-Pressed Mustard Oil (Kachi Ghani)",
+      "description": "Extracted from premium native black mustard seeds using traditional cold-press mills. Highly pungent aroma, authentic taste, completely raw and unrefined.",
+      "images": [
+        "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&q=80&w=600"
+      ],
+      "basePrice": 210,
+      "offerPrice": 185,
+      "stockCount": 40,
+      "weight": 910,
+      "isEnabled": true,
+      "ratingAverage": 4.8,
+      "ratingCount": 15,
+      "isDailyEssential": true,
+      "isFeatured": false
+    },
+    {
+      "id": "prod_a2_ghee_500ml",
+      "categoryId": "cat_spices_oils",
+      "name": "Pure Desi Cow A2 Bilona Ghee",
+      "description": "Traditional Bilona churned ghee prepared from pure grass-fed A2 cow milk. Loaded with standard vitamins, high butyric acid, and heavenly granular aroma.",
+      "images": [
+        "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=600"
+      ],
+      "basePrice": 950,
+      "offerPrice": 850,
+      "stockCount": 15,
+      "weight": 500,
+      "isEnabled": true,
+      "ratingAverage": 4.9,
+      "ratingCount": 11,
+      "isDailyEssential": false,
+      "isFeatured": true
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev_1",
+      "productId": "prod_atta_10kg",
+      "customerName": "Rakesh Sharma",
+      "rating": 5,
+      "comment": "This whole wheat flour is superb. The rotis are indeed exceptionally soft and stay fresh for a very long time.",
+      "date": "2026-06-01T10:30:00Z",
+      "reply": "Thank you Rakesh! We take immense pride in stone grinding our flour freshly every day for our beloved customers.",
+      "isHidden": false
+    },
+    {
+      "id": "rev_2",
+      "productId": "prod_atta_10kg",
+      "customerName": "Anjali Gupta",
+      "rating": 4,
+      "comment": "Very high quality Atta, absolutely clean and wholesome. Recommending this shop to everyone in the neighborhood.",
+      "date": "2026-06-05T14:15:00Z",
+      "reply": "thanks",
+      "isHidden": false
+    },
+    {
+      "id": "rev_3",
+      "productId": "prod_milk_500ml",
+      "customerName": "Amit Verma",
+      "rating": 5,
+      "comment": "Excellent high-cream milk. Highly consistent quality, and prompt morning delivery slots.",
+      "date": "2026-06-08T08:00:00Z",
+      "reply": "Thank you Amit! Happy to fuel your mornings.",
+      "isHidden": false
+    }
+  ],
+  "orders": [
+    {
+      "id": "ord_6pw4pxm6d",
+      "userId": "user_ow9mo5df5",
+      "customerName": "lilly",
+      "customerPhone": "701365668455",
+      "deliveryMethod": "pickup",
+      "deliveryAddress": null,
+      "selectedSlot": "08:00 AM - 11:00 AM",
+      "bagOption": "own",
+      "checkoutBags": [],
+      "productTotal": 499,
+      "bagCost": 0,
+      "deliveryCost": 0,
+      "discount": 0,
+      "finalTotal": 499,
+      "couponCode": null,
+      "paymentDetails": {
+        "method": "cod",
+        "status": "pending",
+        "upiReference": null
+      },
+      "status": "pending",
+      "items": [
+        {
+          "productId": "prod_atta_10kg",
+          "productName": "Premium Stone-Ground Sharbati Atta (Whole Wheat Flour)",
+          "quantity": 1,
+          "price": 499,
+          "weightGrams": 10000
+        }
+      ],
+      "createdAt": "2026-07-03T09:20:31.240Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "not_welcome",
+      "title": "Welcome to SVAYIRO Essentials!",
+      "message": "Thank you for joining. Explore our catalog of freshly ground stone flours, pure organic pulses, cold-pressed oils, and farm fresh dairy.",
+      "type": "announcement",
+      "date": "2026-06-11T09:00:00Z"
+    },
+    {
+      "id": "not_discount",
+      "title": "💥 Monsoon Store Coupon active!",
+      "message": "Use coupon SVAYIROFIRST at checkout and get flat 10% discount on order values above ₹400. Stock up now!",
+      "type": "offer",
+      "date": "2026-06-11T10:15:00Z"
+    },
+    {
+      "id": "not_5b7ax0hiu",
+      "title": "New Order Received! 🛍️",
+      "message": "Order #ord_6pw4pxm6d of ₹499 placed by lilly (701365668455) via COD. Slot chosen: 08:00 AM - 11:00 AM.",
+      "type": "order",
+      "date": "2026-07-03T09:20:31.240Z"
+    }
+  ],
+  "banners": [
+    {
+      "id": "bn_atta",
+      "imageUrl": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200",
+      "title": "Fresh Farm Stone Ground Atta - Rich Flour & Quality Grains",
+      "linkType": "category",
+      "linkId": "cat_flours"
+    },
+    {
+      "id": "bn_dairy",
+      "imageUrl": "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=1200",
+      "title": "Start Your Morning with Pure Farm-Fresh Milk & Ghee",
+      "linkType": "category",
+      "linkId": "cat_daily_dairy"
+    }
+  ],
+  "coupons": [
+    {
+      "id": "cp_first",
+      "code": "SVAYIROFIRST",
+      "discountType": "percentage",
+      "discountValue": 10,
+      "minOrderValue": 400,
+      "expiryDate": "2027-12-31",
+      "usageLimit": 1000,
+      "currentUsage": 5
+    },
+    {
+      "id": "cp_flat50",
+      "code": "FLAT50",
+      "discountType": "flat",
+      "discountValue": 50,
+      "minOrderValue": 600,
+      "expiryDate": "2027-12-31",
+      "usageLimit": 500,
+      "currentUsage": 22
+    }
+  ],
+  "bags": [
+    {
+      "id": "bag_sm",
+      "size": "Eco Mini Bag (UP to 1kg)",
+      "capacityGrams": 1000,
+      "price": 5
+    },
+    {
+      "id": "bag_md",
+      "size": "Medium Cloth Carrier (UP to 5kg)",
+      "capacityGrams": 5000,
+      "price": 12
+    },
+    {
+      "id": "bag_lg",
+      "size": "Large Premium Gunny sack (UP to 15kg)",
+      "capacityGrams": 15000,
+      "price": 25
+    }
+  ],
+  "inventory_logs": [
+    {
+      "id": "ilog_6b6ryd4i0",
+      "productId": "prod_atta_10kg",
+      "productName": "Premium Stone-Ground Sharbati Atta (Whole Wheat Flour)",
+      "type": "out_bound",
+      "quantityChange": -1,
+      "stockAfter": 44,
+      "note": "Auto-deducted for new order pending validation",
+      "createdAt": "2026-07-03T09:20:31.240Z"
+    }
+  ],
+  "advance_requests": [],
+  "users": [
+    {
+      "id": "user_default",
+      "phone": "9876543210",
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "savedAddresses": [
+        {
+          "id": "addr_1",
+          "label": "Home",
+          "name": "John Doe",
+          "phone": "9876543210",
+          "flatAndHouse": "Flat 405, Block B, Green Heights",
+          "areaAndStreet": "Sector 19, Dwarka",
+          "landmark": "Opposite Metro Station Pillar 121",
+          "pincode": "110075",
+          "isDefault": true
+        },
+        {
+          "id": "addr_2",
+          "label": "Office",
+          "name": "John Doe",
+          "phone": "9999988888",
+          "flatAndHouse": "Tower C, Suite 102, Tech Park SEZ",
+          "areaAndStreet": "Infocity Phase 1, Sector 62",
+          "landmark": "Near Main Gate",
+          "pincode": "201301",
+          "isDefault": false
+        }
+      ],
+      "wishlist": [
+        "prod_atta_10kg",
+        "prod_a2_ghee_500ml"
+      ],
+      "savedForLater": []
+    },
+    {
+      "id": "user_ow9mo5df5",
+      "phone": "701365668455",
+      "name": "lilly",
+      "email": "",
+      "savedAddresses": [],
+      "wishlist": [],
+      "savedForLater": []
+    }
+  ]
+}

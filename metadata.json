@@ -1,0 +1,6 @@
+{
+  "name": "SVAYIRO",
+  "description": "Progressive Web Application commerce platform for local grocery, flour, daily essentials, and franchise operations.",
+  "requestFramePermissions": [" "],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

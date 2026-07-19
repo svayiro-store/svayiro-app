@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: svayiro
+    volumes:
+      - svayiro_pgdata:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: .
+      args:
+        VITE_PUBLIC_APP_URL: ${VITE_PUBLIC_APP_URL:-http://localhost:3000}
+        VITE_GOOGLE_MAPS_BROWSER_KEY: ${VITE_GOOGLE_MAPS_BROWSER_KEY:-}
+        VITE_GOOGLE_MAPS_PLATFORM_KEY: ${VITE_GOOGLE_MAPS_PLATFORM_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:postgres@db:5432/svayiro
+      PORT: ${PORT:-3000}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:3000}
+      JWT_SECRET: ${JWT_SECRET:-change_this_before_using_docker}
+      SEED_ADMIN: ${SEED_ADMIN:-false}
+      SVAYIRO_ADMIN_PHONE: ${SVAYIRO_ADMIN_PHONE:-9876543210}
+      SVAYIRO_ADMIN_NAME: ${SVAYIRO_ADMIN_NAME:-SVAYIRO Admin}
+      SVAYIRO_ADMIN_EMAIL: ${SVAYIRO_ADMIN_EMAIL:-admin@svayiro.local}
+      SVAYIRO_ADMIN_PASSWORD: ${SVAYIRO_ADMIN_PASSWORD:-ChangeThisStrongPassword123}
+      SEARCH_USE_DELAY: ${SEARCH_USE_DELAY:-true}
+      SEARCH_DELAY_MS: ${SEARCH_DELAY_MS:-450}
+      GOOGLE_MAPS_PLATFORM_KEY: ${GOOGLE_MAPS_PLATFORM_KEY:-}
+      NOMINATIM_USER_AGENT: "${NOMINATIM_USER_AGENT:-SVAYIRO/1.0 (http://localhost:3000; contact: support@svayiro.com)}"
+      GMAIL_USER: ${GMAIL_USER:-}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SVAYIRO}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      WHATSAPP_GRAPH_VERSION: ${WHATSAPP_GRAPH_VERSION:-v20.0}
+
+    ports:
+      - "3000:3000"
+    # Do not mount the project root in production; use the built image contents.
+    # Local source mounting would hide the built dist folder created during image build.
+
+volumes:
+  svayiro_pgdata:
+    name: svayiro_pgdata

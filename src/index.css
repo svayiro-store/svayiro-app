@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+@theme {
+  --color-indigo-50: #f0f3ff;
+  --color-indigo-100: #e2e6ff;
+  --color-indigo-200: #c7ceff;
+  --color-indigo-300: #9fa9ff;
+  --color-indigo-400: #6c76fd;
+  --color-indigo-500: #0a12b2;
+  --color-indigo-600: #090e92;
+  --color-indigo-700: #070a73;
+  --color-indigo-800: #050756;
+  --color-indigo-900: #03043c;
+  --color-indigo-950: #020327;
+
+  --color-emerald-50: #eefdf2;
+  --color-emerald-100: #d5f9de;
+  --color-emerald-200: #aff2c0;
+  --color-emerald-300: #77e694;
+  --color-emerald-400: #3bd065;
+  --color-emerald-500: #00b020;
+  --color-emerald-600: #009618;
+  --color-emerald-700: #007612;
+  --color-emerald-800: #005d0e;
+  --color-emerald-900: #004c0b;
+  --color-emerald-950: #002e06;
+
+  --color-amber-50: #fefce8;
+  --color-amber-100: #fef9c3;
+  --color-amber-200: #fef08a;
+  --color-amber-300: #fde047;
+  --color-amber-400: #facc15;
+  --color-amber-500: #f0d018;
+  --color-amber-600: #d4b20e;
+  --color-amber-700: #a8850a;
+  --color-amber-800: #856408;
+  --color-amber-900: #71510a;
+  --color-amber-950: #422c02;
+
+  --color-yellow-50: #fefce8;
+  --color-yellow-100: #fef9c3;
+  --color-yellow-200: #fef08a;
+  --color-yellow-300: #fde047;
+  --color-yellow-400: #facc15;
+  --color-yellow-500: #f0d018;
+  --color-yellow-600: #d4b20e;
+  --color-yellow-700: #a8850a;
+  --color-yellow-800: #856408;
+  --color-yellow-900: #71510a;
+  --color-yellow-950: #422c02;
+
+  --color-violet-50: #f0f3ff;
+  --color-violet-100: #e2e6ff;
+  --color-violet-200: #c7ceff;
+  --color-violet-300: #9fa9ff;
+  --color-violet-400: #6c76fd;
+  --color-violet-500: #0a12b2;
+  --color-violet-600: #090e92;
+  --color-violet-700: #070a73;
+  --color-violet-800: #050756;
+  --color-violet-900: #03043c;
+  --color-violet-950: #020327;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(1rem) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes birthdayPop {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.88);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes birthdayScreenStar {
+  0% {
+    opacity: 0;
+    filter: drop-shadow(0 0 0 currentColor);
+    transform: translate(0, 0) scale(0.2) rotate(0deg);
+  }
+  18% {
+    opacity: 1;
+    filter: drop-shadow(0 0 12px currentColor);
+    transform: translate(calc(var(--spark-x) * 0.12), calc(var(--spark-y) * 0.12)) scale(1.35) rotate(42deg);
+  }
+  54% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 18px currentColor);
+  }
+  100% {
+    opacity: 0;
+    filter: drop-shadow(0 0 4px currentColor);
+    transform: translate(var(--spark-x), var(--spark-y)) scale(0.85) rotate(260deg);
+  }
+}
+
+@keyframes birthdayScreenGlint {
+  0% {
+    opacity: 0;
+    transform: scale(0.1) rotate(0deg);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.35) rotate(90deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.25) rotate(180deg);
+  }
+}
+
+.animate-birthday-pop {
+  animation: birthdayPop 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.birthday-screen-star {
+  animation: birthdayScreenStar 1300ms ease-out both;
+  background: currentColor;
+  clip-path: polygon(50% 0%, 61% 34%, 98% 35%, 68% 56%, 79% 91%, 50% 70%, 21% 91%, 32% 56%, 2% 35%, 39% 34%);
+}
+
+.birthday-screen-glint {
+  animation: birthdayScreenGlint 1150ms ease-out both;
+}
+
+.birthday-screen-glint::before,
+.birthday-screen-glint::after {
+  background: currentColor;
+  border-radius: 999px;
+  box-shadow: 0 0 14px currentColor;
+  content: "";
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.birthday-screen-glint::before {
+  height: 100%;
+  width: 18%;
+}
+
+.birthday-screen-glint::after {
+  height: 18%;
+  width: 100%;
+}
+
+.marble-surface-light {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 30%),
+    radial-gradient(circle at 82% 4%, rgba(217, 249, 157, 0.45), rgba(217, 249, 157, 0) 34%),
+    radial-gradient(circle at 48% 120%, rgba(254, 249, 195, 0.42), rgba(254, 249, 195, 0) 38%),
+    linear-gradient(135deg, #fffffb 0%, #fbfff0 46%, #fffdf3 100%);
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #invoice-print-section, #invoice-print-section * {
+    visibility: visible;
+  }
+  #invoice-print-section {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    color: black !important;
+    padding: 24px !important;
+    margin: 0px !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
