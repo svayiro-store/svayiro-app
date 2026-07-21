@@ -152,7 +152,6 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       alert(errMsg);
       return;
     }
-
     setSaving(true);
     try {
       const payload = {
@@ -172,7 +171,6 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
         isFeatured: form.isFeatured,
         lowStockAlertThreshold: Number(form.lowStockAlertThreshold) || 5
       };
-
       if (editingId) {
         await api.updateProduct(editingId, payload);
         alert('Product updated successfully!');
@@ -192,7 +190,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   };
 
   const startEdit = (prod: Product) => {
-    const imgs = Array.isArray(prod.images) 
+    const imgs = Array.isArray(prod.images)
       ? prod.images.map(img => typeof img === 'string' ? img : (img as any).url || '')
       : [];
     setEditingId(prod.id);
@@ -243,8 +241,8 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     let result = products;
     if (productSearch) {
       const query = productSearch.toLowerCase();
-      result = result.filter(p => 
-        p.name.toLowerCase().includes(query) || 
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(query) ||
         categories.find(c => c.id === p.categoryId)?.name.toLowerCase().includes(query)
       );
     }
@@ -261,7 +259,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     let result = products;
     if (codeSearch) {
       const query = codeSearch.toLowerCase();
-      result = result.filter(p => 
+      result = result.filter(p =>
         (p.name?.toLowerCase().includes(query) || false) ||
         (p.id?.substring(0, 8).toLowerCase().includes(query) || false) ||
         categories.find(c => c.id === p.categoryId)?.name.toLowerCase().includes(query)
@@ -287,6 +285,13 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
   const labelClass = 'mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500';
   const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900';
+
+  const categoryLabel = (categoryId: string, subcategoryId?: string) => {
+    const cat = categories.find(c => c.id === categoryId);
+    const subcat = subcategoryId ? categories.find(c => c.id === subcategoryId) : null;
+    if (!cat) return '—';
+    return subcat ? `${cat.name} › ${subcat.name}` : cat.name;
+  };
 
   return (
     <div className="space-y-6">
@@ -317,7 +322,6 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
         <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
           {editingId ? <><Plus className="h-4 w-4" /> Edit Product</> : <><Plus className="h-4 w-4" /> Add New Product</>}
         </h3>
-
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left column: form fields */}
           <div className="space-y-4 lg:col-span-2">
@@ -338,9 +342,9 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className={labelClass}>Category *</span>
-                <select 
-                  className={inputClass} 
-                  value={form.categoryId} 
+                <select
+                  className={inputClass}
+                  value={form.categoryId}
                   onChange={(e) => {
                     updateForm('categoryId', e.target.value);
                     updateForm('subcategoryId', undefined); // Reset subcategory
@@ -355,10 +359,9 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                   ))}
                 </select>
               </label>
-
               <label className="block">
                 <span className={labelClass}>Subcategory (optional)</span>
-                <select 
+                <select
                   className={inputClass}
                   value={form.subcategoryId || ''}
                   onChange={(e) => updateForm('subcategoryId', e.target.value || undefined)}
@@ -458,7 +461,6 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 </div>
               )}
             </div>
-
             <div className="flex gap-2">
               <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-black text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
                 <Upload className="h-3 w-3" />
@@ -482,7 +484,6 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 Paste URL
               </button>
             </div>
-
             {form.images.length > 0 && (
               <div className="space-y-1">
                 <span className="text-[10px] font-bold">Images ({form.images.length})</span>
@@ -501,7 +502,6 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 </div>
               </div>
             )}
-
             <div className="flex gap-2 pt-2">
               <button
                 onClick={handleSave}
@@ -539,9 +539,9 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               </label>
               <label>
                 <span className={labelClass}>Filter Category</span>
-                <select 
-                  className={inputClass} 
-                  value={productCategoryFilter} 
+                <select
+                  className={inputClass}
+                  value={productCategoryFilter}
                   onChange={(event) => {
                     setProductCategoryFilter(event.target.value);
                     setProductSubcategoryFilter(''); // Reset subcategory filter
@@ -555,7 +555,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               </label>
               <label>
                 <span className={labelClass}>Filter Subcategory</span>
-                <select 
+                <select
                   className={inputClass}
                   value={productSubcategoryFilter}
                   onChange={(event) => setProductSubcategoryFilter(event.target.value)}
@@ -629,11 +629,96 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
           <span className="text-[10px] font-mono opacity-60">{loading ? 'Loading...' : 'Ready'}</span>
         </div>
 
-        {/* Product table/grid will go here - keeping existing rendering logic */}
-        {filteredProducts.length === 0 && catalogueView === 'products' && (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
-            <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No products found matching your search criteria.</p>
-          </div>
+        {catalogueView === 'products' && (
+          filteredProducts.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No products found matching your search criteria.</p>
+            </div>
+          ) : (
+            <div className="rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="grid grid-cols-6 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                <span className="col-span-2">Product</span>
+                <span>Category</span>
+                <span>Price</span>
+                <span>Stock</span>
+                <span>Action</span>
+              </div>
+              {filteredProducts.map((product) => {
+                const thumbnail = Array.isArray(product.images) && product.images.length > 0
+                  ? (typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as any)?.url)
+                  : '';
+                return (
+                  <div
+                    key={product.id}
+                    id={`admin-product-${product.id}`}
+                    className="grid grid-cols-6 gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center"
+                  >
+                    <div className="col-span-2 flex items-center gap-3">
+                      {thumbnail ? (
+                        <img src={thumbnail} alt={product.name} className="h-10 w-10 rounded-lg object-cover border border-slate-200" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700">
+                          <ImageIcon className="h-4 w-4 text-slate-400" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold">{product.name}</div>
+                        <div className="text-[10px] opacity-70 font-mono">{product.sku || product.id.substring(0, 8)}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs opacity-80">{categoryLabel(product.categoryId, (product as any).subcategoryId)}</div>
+                    <div className="text-xs">
+                      {product.offerPrice > 0 ? (
+                        <>
+                          <span className="font-bold text-emerald-600">Rs {product.offerPrice}</span>{' '}
+                          <span className="text-[10px] line-through opacity-50">Rs {product.basePrice}</span>
+                        </>
+                      ) : (
+                        <span className="font-bold">Rs {product.basePrice}</span>
+                      )}
+                    </div>
+                    <div className="text-xs">
+                      <span className={`rounded px-2 py-1 font-bold ${product.stockCount === 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400' : product.stockCount <= ((product as any).lowStockAlertThreshold || 5) ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
+                        {product.stockCount}
+                      </span>
+                      {!product.isEnabled && (
+                        <span className="ml-1 rounded bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Disabled</span>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => startEdit(product)} className="rounded bg-indigo-600 px-3 py-1 text-xs text-white">Edit</button>
+                      <button onClick={() => handleDelete(product.id)} className="rounded bg-rose-600 px-3 py-1 text-xs text-white">Delete</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        )}
+
+        {catalogueView === 'codes' && (
+          codeProducts.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No products found matching your search criteria.</p>
+            </div>
+          ) : (
+            <div className="rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="grid grid-cols-4 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                <span>Product Code</span>
+                <span>Name</span>
+                <span>Category</span>
+                <span>Created</span>
+              </div>
+              {codeProducts.map((product) => (
+                <div key={product.id} className="grid grid-cols-4 gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center">
+                  <div className="font-mono text-xs font-bold">{product.sku || product.id.substring(0, 8).toUpperCase()}</div>
+                  <div className="text-xs">{product.name}</div>
+                  <div className="text-xs opacity-80">{categoryLabel(product.categoryId, (product as any).subcategoryId)}</div>
+                  <div className="text-[10px] opacity-70">{(product as any).createdAt ? formatDateTimeDDMMYYYY(new Date((product as any).createdAt)) : '—'}</div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>
