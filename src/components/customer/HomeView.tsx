@@ -318,7 +318,6 @@ export default function HomeView({
                     animationDelay: glint.delay
                   } as React.CSSProperties}
                 />
-              />
               ))}
             </div>
           )}
@@ -649,7 +648,6 @@ export default function HomeView({
               </div>
             </div>
           );
-      );
         })()}
       </div>
 
