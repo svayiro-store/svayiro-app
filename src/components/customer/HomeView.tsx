@@ -4,7 +4,6 @@ import {
   ShoppingCart, Star, AlertTriangle, Share2, Gift
 } from 'lucide-react';
 import { Banner, Category, Product, User as UserType, ShopProfile, Coupon } from '../../types';
-import { SubcategoriesModal } from '../SubcategoriesModal';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
 const bannerImageFallback = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1400';
@@ -104,7 +103,7 @@ export default function HomeView({
   const [visibleProductCount, setVisibleProductCount] = useState(10);
   const [isLoadingMoreProducts, setIsLoadingMoreProducts] = useState(false);
   const [exhaustedProductKeys, setExhaustedProductKeys] = useState<Record<string, boolean>>({});
-  const [activeSubcategoryParent, setActiveSubcategoryParent] = useState<{ id: string; name: string } | null>(null);
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
 
   const holidayBroadcastMessage = (shop?.holidayMessage || '').trim();
   const closedBroadcastText = shop?.isHolidayMode && holidayBroadcastMessage
@@ -116,7 +115,7 @@ export default function HomeView({
   const birthdayMinOrder = Number(birthdayCoupon?.minOrderValue || 0);
   const showBirthdayBubble = Boolean(activeUser && isBirthdayToday);
 
-  // Only top-level categories show as circles here; subcategories live inside the modal
+  // Only top-level categories show as circles here; subcategories expand inline below
   const topLevelCategories = categories.filter(cat => !cat.parentId);
 
   const scrollToProducts = () => {
@@ -129,9 +128,10 @@ export default function HomeView({
   const handleCategoryCircleClick = (cat: Category) => {
     const hasSubcategories = categories.some(c => c.parentId === cat.id);
     if (hasSubcategories) {
-      setActiveSubcategoryParent({ id: cat.id, name: cat.name });
+      setExpandedCategoryId(prev => (prev === cat.id ? null : cat.id));
     } else {
       setSelectedCategory(cat.id);
+      setExpandedCategoryId(null);
       scrollToProducts();
     }
   };
@@ -318,6 +318,7 @@ export default function HomeView({
                     animationDelay: glint.delay
                   } as React.CSSProperties}
                 />
+              />
               ))}
             </div>
           )}
@@ -490,7 +491,7 @@ export default function HomeView({
           </h3>
           {selectedCategory && (
             <button
-              onClick={() => setSelectedCategory(null)}
+              onClick={() => { setSelectedCategory(null); setExpandedCategoryId(null); }}
               className="text-xs text-rose-500 hover:text-rose-600 font-bold hover:underline"
             >
               Clear Filter
@@ -503,6 +504,7 @@ export default function HomeView({
           <div
             onClick={() => {
               setSelectedCategory(null);
+              setExpandedCategoryId(null);
               scrollToProducts();
             }}
             className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
@@ -524,6 +526,8 @@ export default function HomeView({
           {/* Main list of category circles (top-level only) */}
           {topLevelCategories.map((cat) => {
             const isSelected = selectedCategory === cat.id;
+            const isExpanded = expandedCategoryId === cat.id;
+            const hasSubcategories = categories.some(c => c.parentId === cat.id);
             return (
               <div
                 key={cat.id}
@@ -531,7 +535,7 @@ export default function HomeView({
                 className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
               >
                 <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden border transition-all duration-300 p-1 shadow-sm relative ${
-                  isSelected
+                  isSelected || isExpanded
                     ? 'border-indigo-700 bg-indigo-50 dark:bg-indigo-500/5 ring-4 ring-indigo-500/20 scale-105'
                     : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 group-hover:scale-105 group-hover:border-indigo-300'
                 }`}>
@@ -551,14 +555,102 @@ export default function HomeView({
                       />
                     )}
                   </div>
+                  {hasSubcategories && (
+                    <span className={`absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white dark:border-slate-950 text-[8px] font-black text-white shadow transition-transform ${isExpanded ? 'bg-rose-500 rotate-45' : 'bg-indigo-600'}`}>
+                      +
+                    </span>
+                  )}
                 </div>
-                <span className={`text-[10px] md:text-xs font-bold text-center tracking-tight transition-colors duration-300 max-w-[80px] truncate ${isSelected ? 'text-indigo-700 dark:text-indigo-300 font-extrabold' : 'text-slate-600 dark:text-slate-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300'}`}>
+                <span className={`text-[10px] md:text-xs font-bold text-center tracking-tight transition-colors duration-300 max-w-[80px] truncate ${isSelected || isExpanded ? 'text-indigo-700 dark:text-indigo-300 font-extrabold' : 'text-slate-600 dark:text-slate-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300'}`}>
                   {cat.name}
                 </span>
               </div>
             );
           })}
         </div>
+
+        {/* Inline subcategory row - bigger round circles, expands under the tapped main category */}
+        {expandedCategoryId && (() => {
+          const parentCat = categories.find(c => c.id === expandedCategoryId);
+          const subs = categories.filter(c => c.parentId === expandedCategoryId);
+          if (!parentCat || subs.length === 0) return null;
+
+          const ringPalette = [
+            'bg-indigo-50 border-indigo-200 dark:bg-indigo-950/30 dark:border-indigo-900',
+            'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900',
+            'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900',
+            'bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900',
+            'bg-sky-50 border-sky-200 dark:bg-sky-950/30 dark:border-sky-900',
+          ];
+
+          return (
+            <div className={`rounded-2xl border p-3 animate-fadeIn ${isDarkMode ? 'border-indigo-900/50 bg-indigo-950/10' : 'border-indigo-100 bg-indigo-50/40'}`}>
+              <p className="px-1 pb-2 text-[11px] font-black uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                Browse in {parentCat.name}
+              </p>
+              <div className="flex items-center gap-6 overflow-x-auto pb-1 px-1 w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {/* Shortcut to view everything under the main category */}
+                <div
+                  onClick={() => {
+                    setSelectedCategory(parentCat.id);
+                    scrollToProducts();
+                  }}
+                  className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
+                >
+                  <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center border-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
+                    selectedCategory === parentCat.id
+                      ? 'border-indigo-700 bg-indigo-100 dark:bg-indigo-900/40 ring-4 ring-indigo-500/20'
+                      : 'border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800'
+                  }`}>
+                    <Compass className="h-6 w-6 text-indigo-700 dark:text-indigo-400" />
+                  </div>
+                  <span className="text-[11px] md:text-xs font-bold text-center tracking-tight max-w-[88px] truncate text-indigo-700 dark:text-indigo-300">
+                    View All
+                  </span>
+                </div>
+
+                {subs.map((sub, idx) => {
+                  const isSubSelected = selectedCategory === sub.id;
+                  return (
+                    <div
+                      key={sub.id}
+                      onClick={() => {
+                        setSelectedCategory(sub.id);
+                        scrollToProducts();
+                      }}
+                      className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
+                    >
+                      <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center border-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
+                        isSubSelected
+                          ? 'border-indigo-700 ring-4 ring-indigo-500/20 bg-indigo-100 dark:bg-indigo-900/40'
+                          : ringPalette[idx % ringPalette.length]
+                      }`}>
+                        <div className="relative w-[86%] h-[86%] rounded-full overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center shadow-inner">
+                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase select-none">
+                            {sub.name.substring(0, 2)}
+                          </span>
+                          {sub.imageUrl && (
+                            <img
+                              src={sub.imageUrl}
+                              alt={sub.name}
+                              referrerPolicy="no-referrer"
+                              className="absolute inset-0 w-full h-full object-cover z-10"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-[11px] md:text-xs font-semibold text-center tracking-tight max-w-[88px] truncate ${isSubSelected ? 'text-indigo-700 dark:text-indigo-300 font-extrabold' : 'text-slate-700 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-300'}`}>
+                        {sub.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+      );
+        })()}
       </div>
 
       {/* Filtered category active banner */}
@@ -860,18 +952,6 @@ export default function HomeView({
           </>
         )}
       </div>
-
-      <SubcategoriesModal
-        isOpen={Boolean(activeSubcategoryParent)}
-        categoryId={activeSubcategoryParent?.id || null}
-        categoryName={activeSubcategoryParent?.name || ''}
-        onClose={() => setActiveSubcategoryParent(null)}
-        onSelectSubcategory={(subcategory) => {
-          setSelectedCategory(subcategory.id);
-          setActiveSubcategoryParent(null);
-          scrollToProducts();
-        }}
-      />
     </div>
   );
 }
