@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Category, CustomerTab } from '../../types';
+import { SubcategoriesModal } from '../SubcategoriesModal';
 
 interface CategoriesViewProps {
   categories: Category[];
@@ -17,27 +18,38 @@ export default function CategoriesView({
   setActiveTab,
   isDarkMode
 }: CategoriesViewProps) {
+  const [activeSubcategoryParent, setActiveSubcategoryParent] = useState<{ id: string; name: string } | null>(null);
+
+  // Only show top-level categories here; subcategories appear inside the modal
+  const topLevelCategories = categories.filter(cat => !cat.parentId);
+
+  const handleCategoryClick = (cat: Category) => {
+    const hasSubcategories = categories.some(c => c.parentId === cat.id);
+    if (hasSubcategories) {
+      setActiveSubcategoryParent({ id: cat.id, name: cat.name });
+    } else {
+      setSelectedCategory(cat.id);
+      setActiveTab('home');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="font-serif text-2xl font-black text-left">All Catalog Categories</h2>
-      
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {categories.map(cat => {
+        {topLevelCategories.map(cat => {
           const isSelected = selectedCategory === cat.id;
           return (
-            <div 
+            <div
               key={cat.id}
-              onClick={() => {
-                setSelectedCategory(cat.id);
-                setActiveTab('home');
-              }}
+              onClick={() => handleCategoryClick(cat)}
               className={`flex gap-4 p-5 border rounded-2xl cursor-pointer shadow-sm hover:shadow-lg transition-all duration-300 group relative overflow-hidden ${isSelected ? 'border-indigo-500 bg-indigo-500/5' : isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/40 hover:bg-[#1e293b]/60' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
             >
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden shadow-inner border border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50">
-                <img 
-                  src={cat.imageUrl} 
-                  alt={cat.name} 
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                <img
+                  src={cat.imageUrl}
+                  alt={cat.name}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   referrerPolicy="no-referrer"
                 />
               </div>
@@ -57,6 +69,18 @@ export default function CategoriesView({
           );
         })}
       </div>
+
+      <SubcategoriesModal
+        isOpen={Boolean(activeSubcategoryParent)}
+        categoryId={activeSubcategoryParent?.id || null}
+        categoryName={activeSubcategoryParent?.name || ''}
+        onClose={() => setActiveSubcategoryParent(null)}
+        onSelectSubcategory={(subcategory) => {
+          setSelectedCategory(subcategory.id);
+          setActiveSubcategoryParent(null);
+          setActiveTab('home');
+        }}
+      />
     </div>
   );
 }
