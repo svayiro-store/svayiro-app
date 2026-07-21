@@ -1162,6 +1162,7 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
     sku: product.sku || '',
     unit: product.unit || '',
     categoryId: product.category_id || product.categoryId || '',
+    subcategoryId: product.subcategory_id || product.subcategoryId || undefined,
     basePrice: Number(product.base_price ?? product.basePrice ?? 0),
     offerPrice: Number(product.offer_price ?? product.offerPrice ?? 0),
     stockCount: Number(product.stock_count ?? product.stockCount ?? 0),
@@ -3304,7 +3305,7 @@ app.post('/api/calculate-distance', async (req, res) => {
 // --------------------------------------------------------
 app.get('/api/categories', async (req, res) => {
   try {
-    const { rows } = await pgQuery('SELECT * FROM categories ORDER BY position ASC, created_at DESC');
+    const { rows } = await pgQuery('SELECT *, parent_id AS "parentId" FROM categories ORDER BY position ASC, created_at DESC');
     return res.json(rows);
   } catch (err) {
     console.error('GET /api/categories error', err);
@@ -3315,7 +3316,7 @@ app.get('/api/categories', async (req, res) => {
 app.get('/api/categories/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const p = await pgQuery('SELECT * FROM categories WHERE id = $1', [id]);
+    const p = await pgQuery('SELECT *, parent_id AS "parentId" FROM categories WHERE id = $1', [id]);
     if (p.rowCount === 0) return res.status(404).json({ error: 'Category not found' });
     return res.json(p.rows[0]);
   } catch (err) {
@@ -3327,7 +3328,7 @@ app.get('/api/categories/:id', async (req, res) => {
 // Admin: get ALL categories (including disabled)
 app.get('/api/admin/categories', authMiddleware, requirePermission('categories:manage'), async (req, res) => {
   try {
-    const { rows } = await pgQuery('SELECT * FROM categories ORDER BY position ASC, created_at DESC');
+    const { rows } = await pgQuery('SELECT *, parent_id AS "parentId" FROM categories ORDER BY position ASC, created_at DESC');
     return res.json(rows);
   } catch (err) {
     console.error('GET /api/admin/categories error', err);
@@ -3340,11 +3341,26 @@ app.post('/api/categories', authMiddleware, requirePermission('categories:manage
   const validationErrors = validateCategoryPayload(category);
   if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join('; ') });
   try {
-    const ins = await pgQuery('INSERT INTO categories(name, slug, description, image_url, is_enabled, position, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,true,$5,$6,now(),now()) RETURNING *', [category.name, category.slug || category.name.toLowerCase().replace(/\s+/g, '-'), category.description || null, category.imageUrl || null, category.order || 0, category.metadata || {}]);
+    const ins = await pgQuery('INSERT INTO categories(name, slug, description, image_url, parent_id, is_enabled, position, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,true,$6,$7,now(),now()) RETURNING *', [category.name, category.slug || category.name.toLowerCase().replace(/\s+/g, '-'), category.description || null, category.imageUrl || null, category.parentId || null, category.order || 0, category.metadata || {}]);
     return res.json({ success: true, data: ins.rows[0] });
   } catch (err) {
     console.error('POST /api/categories error', err);
     return res.status(500).json({ error: 'Failed to create category' });
+  }
+});
+
+// Get subcategories for a given parent category (customer-facing, only enabled ones)
+app.get('/api/categories/:id/subcategories', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { rows } = await pgQuery(
+      'SELECT *, parent_id AS "parentId" FROM categories WHERE parent_id = $1 AND is_enabled = true ORDER BY position ASC, created_at DESC',
+      [id]
+    );
+    return res.json(rows);
+  } catch (err) {
+    console.error('GET /api/categories/:id/subcategories error', err);
+    return res.status(500).json({ error: 'Failed to fetch subcategories' });
   }
 });
 
@@ -3360,17 +3376,19 @@ app.put('/api/categories/:id', authMiddleware, requirePermission('categories:man
         slug = COALESCE($2::varchar, slug),
         description = COALESCE($3::text, description),
         image_url = COALESCE($4::text, image_url),
+        parent_id = $5::uuid,
         is_enabled = true,
-        position = COALESCE($5::integer, position),
-        metadata = COALESCE($6::jsonb, metadata),
+        position = COALESCE($6::integer, position),
+        metadata = COALESCE($7::jsonb, metadata),
         updated_at = now()
-      WHERE id = $7::uuid
+      WHERE id = $8::uuid
       RETURNING *`,
       [
         categoryData.name ?? null,
         categoryData.slug ?? null,
         categoryData.description ?? null,
         categoryData.imageUrl ?? null,
+        categoryData.parentId ?? null,
         categoryData.order ?? null,
         categoryData.metadata ?? null,
         id
@@ -3479,7 +3497,7 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
         purchasePrice: Number(productData.purchasePrice || 0)
       };
       const generatedSku = await generateUniqueProductSku(client, productData.name);
-      const ins = await client.query('INSERT INTO products(category_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now(),now()) RETURNING *', [productData.categoryId, generatedSku, productData.name, productData.slug || (productData.name.toLowerCase().replace(/\s+/g, '-')), productData.description || null, Number(productData.basePrice) || 0, Number(productData.offerPrice) || 0, Number(productData.stockCount) || 0, Number(productData.weight) || 0, productData.isEnabled !== undefined ? productData.isEnabled : true, productData.lowStockAlertThreshold || 5, metadata]);
+      const ins = await client.query('INSERT INTO products(category_id, subcategory_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) RETURNING *', [productData.categoryId, productData.subcategoryId || null, generatedSku, productData.name, productData.slug || (productData.name.toLowerCase().replace(/\s+/g, '-')), productData.description || null, Number(productData.basePrice) || 0, Number(productData.offerPrice) || 0, Number(productData.stockCount) || 0, Number(productData.weight) || 0, productData.isEnabled !== undefined ? productData.isEnabled : true, productData.lowStockAlertThreshold || 5, metadata]);
       const prod = ins.rows[0];
       // insert images
       if (Array.isArray(productData.images) && productData.images.length > 0) {
@@ -3521,7 +3539,7 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
       if (productData.isFeatured !== undefined) metadata.isFeatured = Boolean(productData.isFeatured);
       if (productData.purchasePrice !== undefined) metadata.purchasePrice = Number(productData.purchasePrice || 0);
       // update product
-      const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), sku = COALESCE($2,sku), name = COALESCE($3,name), slug = COALESCE($4,slug), description = COALESCE($5,description), base_price = COALESCE($6,base_price), offer_price = COALESCE($7,offer_price), stock_count = $8, weight_grams = COALESCE($9,weight_grams), is_enabled = COALESCE($10,is_enabled), low_stock_threshold = COALESCE($11,low_stock_threshold), metadata = COALESCE($12,metadata), updated_at = now() WHERE id = $13 RETURNING *', [productData.categoryId, productData.sku, productData.name, productData.slug, productData.description, productData.basePrice !== undefined ? Number(productData.basePrice) : null, productData.offerPrice !== undefined ? Number(productData.offerPrice) : null, newStock, productData.weight !== undefined ? Number(productData.weight) : null, productData.isEnabled, productData.lowStockAlertThreshold, metadata, id]);
+      const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), subcategory_id = $2, sku = COALESCE($3,sku), name = COALESCE($4,name), slug = COALESCE($5,slug), description = COALESCE($6,description), base_price = COALESCE($7,base_price), offer_price = COALESCE($8,offer_price), stock_count = $9, weight_grams = COALESCE($10,weight_grams), is_enabled = COALESCE($11,is_enabled), low_stock_threshold = COALESCE($12,low_stock_threshold), metadata = COALESCE($13,metadata), updated_at = now() WHERE id = $14 RETURNING *', [productData.categoryId, productData.subcategoryId || null, productData.sku, productData.name, productData.slug, productData.description, productData.basePrice !== undefined ? Number(productData.basePrice) : null, productData.offerPrice !== undefined ? Number(productData.offerPrice) : null, newStock, productData.weight !== undefined ? Number(productData.weight) : null, productData.isEnabled, productData.lowStockAlertThreshold, metadata, id]);
       const prod = upd.rows[0];
       // handle images replacement
       if (Array.isArray(productData.images)) {
