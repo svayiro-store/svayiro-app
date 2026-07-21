@@ -58,6 +58,7 @@ export interface ShopAddress {
 export interface Category {
   id: string;
   name: string;
+  parentId?: string;
   slug: string;
   description: string;
   imageUrl: string;
