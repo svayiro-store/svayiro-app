@@ -1955,76 +1955,31 @@ function buildEmailMessage(options: { fromEmail: string; fromName: string; toEma
 }
 
 async function sendGmailSmtpMail(options: { toEmail: string; subject: string; text: string }) {
-  const gmailUser = process.env.GMAIL_USER || process.env.SMTP_USER || '';
-  const gmailPassword = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASSWORD || '';
+  const apiKey = process.env.RESEND_API_KEY || '';
+  const fromEmail = process.env.MAIL_FROM_EMAIL || 'onboarding@resend.dev';
   const fromName = process.env.MAIL_FROM_NAME || 'SVAYIRO';
-  if (!gmailUser || !gmailPassword) {
-    throw new HttpError(503, 'Gmail SMTP is not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD in .env.');
+
+  if (!apiKey) {
+    throw new HttpError(503, 'Resend is not configured. Add RESEND_API_KEY in .env.');
   }
 
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = Number(process.env.SMTP_PORT || 465);
-  const socket = tls.connect({ host, port, servername: host });
-  socket.setTimeout(15000);
-
-  let buffer = '';
-  const waitForResponse = (expected: number[]) => new Promise<string>((resolve, reject) => {
-    const onData = (chunk: Buffer) => {
-      buffer += chunk.toString('utf8');
-      const lines = buffer.split(/\r?\n/).filter(Boolean);
-      const lastLine = lines[lines.length - 1] || '';
-      const code = Number(lastLine.slice(0, 3));
-      if (/^\d{3}\s/.test(lastLine)) {
-        socket.off('data', onData);
-        socket.off('error', onError);
-        socket.off('timeout', onTimeout);
-        const response = buffer;
-        buffer = '';
-        if (expected.includes(code)) resolve(response);
-        else reject(new Error(`SMTP command failed: ${response.trim()}`));
-      }
-    };
-    const onError = (err: Error) => {
-      socket.off('data', onData);
-      socket.off('timeout', onTimeout);
-      reject(err);
-    };
-    const onTimeout = () => {
-      socket.off('data', onData);
-      socket.off('error', onError);
-      reject(new Error('SMTP connection timed out'));
-    };
-    socket.on('data', onData);
-    socket.once('error', onError);
-    socket.once('timeout', onTimeout);
-  });
-
-  const writeCommand = async (command: string, expected: number[]) => {
-    socket.write(`${command}\r\n`);
-    return waitForResponse(expected);
-  };
-
-  try {
-    await waitForResponse([220]);
-    await writeCommand(`EHLO ${process.env.APP_URL || 'svayiro.local'}`, [250]);
-    await writeCommand('AUTH LOGIN', [334]);
-    await writeCommand(Buffer.from(gmailUser).toString('base64'), [334]);
-    await writeCommand(Buffer.from(gmailPassword).toString('base64'), [235]);
-    await writeCommand(`MAIL FROM:<${gmailUser}>`, [250]);
-    await writeCommand(`RCPT TO:<${options.toEmail}>`, [250, 251]);
-    await writeCommand('DATA', [354]);
-    const message = buildEmailMessage({
-      fromEmail: gmailUser,
-      fromName,
-      toEmail: options.toEmail,
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: `${fromName} <${fromEmail}>`,
+      to: [options.toEmail],
       subject: options.subject,
       text: options.text
-    }).replace(/\r?\n\./g, '\r\n..');
-    socket.write(`${message}\r\n.\r\n`);
-    await waitForResponse([250]);
-    await writeCommand('QUIT', [221]);
-  } finally {
-    socket.end();
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+    throw new Error(`Resend API error (${response.status}): ${errorBody}`);
   }
 }
 
@@ -2054,7 +2009,7 @@ app.post('/api/auth/send-registration-otp', async (req, res) => {
       'SVAYIRO'
     ].join('\n');
 
-    const gmailConfigured = Boolean((process.env.GMAIL_USER || process.env.SMTP_USER) && (process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASSWORD));
+    const gmailConfigured = Boolean(process.env.RESEND_API_KEY);
     if (gmailConfigured) {
       await sendGmailSmtpMail({
         toEmail: email,
@@ -2135,7 +2090,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
       'SVAYIRO'
     ].join('\n');
 
-    const gmailConfigured = Boolean((process.env.GMAIL_USER || process.env.SMTP_USER) && (process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASSWORD));
+    const gmailConfigured = Boolean(process.env.RESEND_API_KEY);
     if (gmailConfigured) {
       await sendGmailSmtpMail({
         toEmail: email,
@@ -3406,17 +3361,16 @@ app.put('/api/categories/:id', authMiddleware, requirePermission('categories:man
         description = COALESCE($3::text, description),
         image_url = COALESCE($4::text, image_url),
         is_enabled = true,
-        position = COALESCE($6::integer, position),
-        metadata = COALESCE($7::jsonb, metadata),
+        position = COALESCE($5::integer, position),
+        metadata = COALESCE($6::jsonb, metadata),
         updated_at = now()
-      WHERE id = $8::uuid
+      WHERE id = $7::uuid
       RETURNING *`,
       [
         categoryData.name ?? null,
         categoryData.slug ?? null,
         categoryData.description ?? null,
         categoryData.imageUrl ?? null,
-        null,
         categoryData.order ?? null,
         categoryData.metadata ?? null,
         id
