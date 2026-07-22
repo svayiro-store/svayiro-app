@@ -32,6 +32,9 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
 };
 
+const handlePrintInvoice = (order: Order) => {
+  printShopInvoice(order);
+};
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
 
 const money = (value: any) => `Rs. ${Number(value || 0).toFixed(2)}`;
