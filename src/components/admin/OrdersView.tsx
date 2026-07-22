@@ -78,7 +78,7 @@ function hasValidCustomerPhone(order: Order) {
 /** Pre-texted WhatsApp message for normal WhatsApp */
 function buildWhatsAppInvoiceMessage(order: Order, websiteUrl = 'https://svayiro.co.in') {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://svayiro.co.in';
-  const publicInvoiceLink = `${origin}/?invoice/${order.id}`;
+  const publicInvoiceLink = `${origin}/invoice/${order.id}`;
 
   const itemsList = (order.items || [])
     .map((item: any) => `${item.productName || item.name || 'Item'} (Qty: ${item.quantity || 1})`)
@@ -356,7 +356,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
 
   const handlePrintInvoice = (order: Order) => {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const publicLink = `${origin}/?invoice=${order.id}`;
+  const publicLink = `${origin}/invoice=${order.id}`;
   window.open(publicLink, '_blank');
 };
 
@@ -553,11 +553,16 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
 
                   const canProgress = order.status !== 'delivered' && order.status !== 'cancelled' && !(isUpi && paymentStatus !== 'paid') && !(nextStatus === 'delivered' && isCod && paymentStatus !== 'paid');
                   
-                  const canCollectCod = isDeliveryPartner
+                  const canCollectCodDelivery = isDeliveryPartner
                     && isCod
                     && paymentStatus !== 'paid'
                     && order.deliveryMethod === 'delivery'
                     && ['packed', 'out_for_delivery', 'delivered'].includes(order.status);
+
+                  const canCollectCodPickup = isCod
+                    && paymentStatus !== 'paid'
+                    && order.deliveryMethod === 'pickup';
+                  const canCollectCod = canCollectCodDelivery || canCollectCodPickup;
 
                   return (
                     <tr key={order.id} className="border-t border-slate-100 dark:border-slate-800">
