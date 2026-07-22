@@ -3489,10 +3489,33 @@ app.get('/api/public/orders/:id', async (req, res) => {
     const { id } = req.params;
 
     const result = await pgQuery(
-      `SELECT *
-       FROM orders
-       WHERE id = $1 OR order_ref = $1
-       LIMIT 1`,
+      `
+      SELECT
+        id,
+        order_ref,
+        customer_name,
+        customer_phone,
+        status,
+        payment_method,
+        payment_status,
+        payment_ref,
+        delivery_method,
+        delivery_address,
+        selected_slot,
+        bag_option,
+        items,
+        amount_total,
+        delivery_charge,
+        bag_charge,
+        discount_amount,
+        final_amount,
+        created_at,
+        updated_at
+      FROM orders
+      WHERE id = $1
+         OR order_ref = $1
+      LIMIT 1
+      `,
       [id]
     );
 
@@ -3502,9 +3525,33 @@ app.get('/api/public/orders/:id', async (req, res) => {
       });
     }
 
-    res.json(result.rows[0]);
+    const row = result.rows[0];
+
+    res.json({
+      id: row.id,
+      orderRef: row.order_ref,
+      customerName: row.customer_name,
+      customerPhone: row.customer_phone,
+      status: row.status,
+      paymentMethod: row.payment_method,
+      paymentStatus: row.payment_status,
+      paymentRef: row.payment_ref,
+      deliveryMethod: row.delivery_method,
+      deliveryAddress: row.delivery_address,
+      selectedSlot: row.selected_slot,
+      bagOption: row.bag_option,
+      items: row.items || [],
+      amountTotal: Number(row.amount_total),
+      deliveryCharge: Number(row.delivery_charge),
+      bagCharge: Number(row.bag_charge),
+      discountAmount: Number(row.discount_amount),
+      finalAmount: Number(row.final_amount),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    });
   } catch (err) {
-    console.error(err);
+    console.error('Public invoice error:', err);
+
     res.status(500).json({
       error: 'Failed to fetch public invoice'
     });
