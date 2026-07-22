@@ -83,7 +83,7 @@ function buildPosWhatsAppMessage(
   websiteUrl = 'https://svayiro.co.in'
 ) {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://svayiro.co.in';
-  const publicInvoiceLink = orderIdOrRef ? `${origin}/invoice/${orderIdOrRef}` : `${origin}`;
+  const publicInvoiceLink = orderIdOrRef ? `${origin}/?invoice/${orderIdOrRef}` : `${origin}`;
 
   const itemsList = offlineCart
     .map((item) => `${item.name} (Qty: ${item.quantity})`)
