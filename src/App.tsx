@@ -19,6 +19,10 @@ export interface ToastMessage {
 }
 
 export default function App() {
+  // 🟢 PUBLIC INVOICE LINK ROUTE (Accessible by anyone without login)
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/invoice/')) {
+    return <PublicPrintBill websiteUrl="https://svayiro.co.in" />;
+  }
   // Global Profile View Mode: 'customer' | 'admin'
   const [currentMode, setCurrentMode] = useState<'customer' | 'admin'>(() => {
     if (typeof window !== 'undefined') {
@@ -35,12 +39,6 @@ export default function App() {
     }
     return 'customer';
   });
-
-export default function App() {
-  // 🟢 PUBLIC INVOICE LINK ROUTE (Accessible by anyone without login)
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/invoice/')) {
-    return <PublicPrintBill websiteUrl="https://svayiro.co.in" />;
-  }
   
   // Toast notifications state
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
