@@ -3487,16 +3487,27 @@ app.get('/api/products/:id', async (req, res) => {
 app.get('/api/public/orders/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    // Search database for order matching either UUID id or orderRef (e.g. ORD1234)
-    const order = await db.collection('orders').findOne({
-      $or: [{ id: id }, { orderRef: id }, { _id: id }]
-    });
-    if (!order) {
-      return res.status(404).json({ error: 'Invoice not found' });
+
+    const result = await pgQuery(
+      `SELECT *
+       FROM orders
+       WHERE id = $1 OR order_ref = $1
+       LIMIT 1`,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        error: 'Invoice not found'
+      });
     }
-    res.json(order);
+
+    res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch public invoice' });
+    console.error(err);
+    res.status(500).json({
+      error: 'Failed to fetch public invoice'
+    });
   }
 });
 
