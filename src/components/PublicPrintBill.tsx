@@ -1,3 +1,4 @@
+// src/components/PublicPrintBill.tsx
 import React, { useEffect, useState } from 'react';
 import { Order } from '../types';
 import { api } from '../api';
@@ -13,14 +14,33 @@ export const PublicPrintBill: React.FC<{ websiteUrl?: string }> = ({
   useEffect(() => {
     if (!orderId) return;
     setLoading(true);
+
+    // Try fetching invoice publicly
     api.getPublicOrderInvoice(orderId)
       .then(res => setOrder(res.data || res))
-      .catch(() => setError('Order invoice not found.'))
+      .catch(err => {
+        // Fallback: If localStorage contains cached orders (for offline/demo)
+        try {
+          const localOrders: Order[] = JSON.parse(localStorage.getItem('svayiro_orders') || '[]');
+          const matched = localOrders.find(o => o.id === orderId || o.orderRef === orderId);
+          if (matched) {
+            setOrder(matched);
+            return;
+          }
+        } catch {}
+        setError('Invoice not found or link has expired.');
+      })
       .finally(() => setLoading(false));
   }, [orderId]);
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading Invoice...</div>;
-  if (error || !order) return <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>{error || 'Invoice not found'}</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', fontFamily: 'sans-serif' }}>Loading Invoice...</div>;
+  if (error || !order) return (
+    <div style={{ padding: 40, textAlign: 'center', color: '#dc2626', fontFamily: 'sans-serif' }}>
+      <h2>Invoice Not Available</h2>
+      <p>{error || 'Invalid invoice link.'}</p>
+      <a href={websiteUrl} style={{ color: '#2563eb', fontWeight: 'bold' }}>Return to SVAYIRO Store</a>
+    </div>
+  );
 
   const money = (val: any) => `Rs. ${Number(val || 0).toFixed(2)}`;
 
@@ -54,7 +74,7 @@ export const PublicPrintBill: React.FC<{ websiteUrl?: string }> = ({
             <span style={{ fontSize: '12px', color: '#64748b' }}>Phone: {order.customerPhone || '-'}</span>
           </div>
           <div style={{ border: '1px solid #cbd5e1', padding: '12px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Payment</div>
+            <div style={{ fontSize: '10px', fontWeight 800, color: '#64748b', textTransform: 'uppercase' }}>Payment</div>
             <strong>Mode: {String(order.paymentMethod || 'COD').toUpperCase()}</strong><br />
             <span style={{ fontSize: '12px', color: '#64748b' }}>Status: {String(order.paymentStatus || 'Pending').toUpperCase()}</span>
           </div>
