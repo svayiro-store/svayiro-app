@@ -10,7 +10,9 @@ import {
   QrCode,
   Receipt,
   ShoppingBag,
-  Trash2
+  Trash2,
+  Printer,
+  Send
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Bag, InventoryLog, Product } from '../../types';
@@ -72,84 +74,39 @@ interface Props {
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
 const panelClass = 'rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900';
 
+/** Pre-texted WhatsApp message for POS Walk-In Customer */
+function buildPosWhatsAppMessage(
+  customerName: string, 
+  offlineCart: PosCartItem[], 
+  grandTotal: number, 
+  orderIdOrRef?: string, 
+  websiteUrl = 'https://svayiro.co.in'
+) {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://svayiro.co.in';
+  const publicInvoiceLink = orderIdOrRef ? `${origin}/invoice/${orderIdOrRef}` : `${origin}`;
+
+  const itemsList = offlineCart
+    .map((item) => `${item.name} (Qty: ${item.quantity})`)
+    .join(', ');
+
+  return [
+    `Greetings ${customerName || 'Customer'}!`,
+    `Your order status for ${itemsList || 'your walk-in billing'} is: *COMPLETED*.`,
+    ``,
+    `Please view and print your bill by clicking this link:`,
+    `${publicInvoiceLink}`,
+    ``,
+    `Grand Total: Rs. ${grandTotal.toFixed(2)}`,
+    `Thank you for shopping with us!`,
+    `Visit our website: ${websiteUrl}`
+  ].join('\n');
+}
+
+/** Open Normal WhatsApp with pre-texted message */
 function openPosWhatsAppBill(phone: string, message: string) {
   const digits = phone.replace(/\D/g, '');
   const target = digits.length === 10 ? `91${digits}` : digits;
   window.open(`https://wa.me/${target}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-}
-
-function escapePdfText(value: any) {
-  return String(value ?? '').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
-}
-
-function wrapPdfLine(line: string, width = 82) {
-  const words = String(line || '').split(/\s+/);
-  const lines: string[] = [];
-  let current = '';
-  words.forEach((word) => {
-    if ((current + ' ' + word).trim().length > width) {
-      if (current) lines.push(current);
-      current = word;
-    } else {
-      current = `${current} ${word}`.trim();
-    }
-  });
-  if (current) lines.push(current);
-  return lines.length ? lines : [''];
-}
-
-function buildTextPdfBlob(text: string) {
-  const textLines = text.split('\n').flatMap((line) => wrapPdfLine(line));
-  const content = [
-    'BT',
-    '/F1 11 Tf',
-    '50 790 Td',
-    '14 TL',
-    ...textLines.map((line, index) => `${index === 0 ? '' : 'T* '}(${escapePdfText(line)}) Tj`),
-    'ET'
-  ].join('\n');
-  const objects = [
-    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
-    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
-    '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
-    `5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`
-  ];
-  let pdf = '%PDF-1.4\n';
-  const offsets = [0];
-  objects.forEach((obj) => {
-    offsets.push(pdf.length);
-    pdf += obj;
-  });
-  const xref = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  offsets.slice(1).forEach((offset) => {
-    pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
-  });
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return new Blob([pdf], { type: 'application/pdf' });
-}
-
-async function shareOrDownloadPosPdf(message: string) {
-  const fileName = `SVAYIRO-POS-Bill-${Date.now()}.pdf`;
-  const blob = buildTextPdfBlob(message);
-  const file = new File([blob], fileName, { type: 'application/pdf' });
-  const nav = navigator as Navigator & {
-    canShare?: (data: { files?: File[] }) => boolean;
-    share?: (data: { files?: File[]; title?: string; text?: string }) => Promise<void>;
-  };
-  if (nav.canShare?.({ files: [file] }) && nav.share) {
-    await nav.share({ files: [file], title: fileName, text: 'SVAYIRO POS bill' });
-    return;
-  }
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
 }
 
 const emptyRegisterSession = (): RegisterSession => ({
@@ -193,8 +150,11 @@ export default function PosView({
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [cleanupBusy, setCleanupBusy] = useState(false);
   const [catalogAddFlash, setCatalogAddFlash] = useState(false);
+  const [lastCompletedOrder, setLastCompletedOrder] = useState<any | null>(null);
+
   const sessionKey = activeRegisterId || registers[0]?.id || 'register_1';
   const session = sessions[sessionKey] || emptyRegisterSession();
+
   const updateSession = (patch: Partial<RegisterSession>) => {
     setSessions((prev) => ({
       ...prev,
@@ -268,6 +228,7 @@ export default function PosView({
   const selectedProduct = sortedProducts.find((product) => product.id === session.selectedProductId);
   const activeValue = session.keypadTarget === 'qty' ? session.qtyInput : session.priceOverride;
   const recentLogs = inventoryLogs.slice(0, 120);
+
   const cleanupOptions = [
     { value: '1w', label: 'Delete logs older than 1 week' },
     { value: '1m', label: 'Delete logs older than 1 month' },
@@ -356,11 +317,17 @@ export default function PosView({
     updateSession({ customItemName: '' });
   };
 
+  /** Action 1: Print Receipt */
   const printReceipt = () => {
+    if (offlineCart.length === 0 && !lastCompletedOrder) {
+      alert('No cart items to print.');
+      return;
+    }
     const lines = offlineCart.map((item) => {
       const amount = item.price * item.quantity;
       return `<tr><td>${item.name}</td><td>${item.quantity}</td><td>Rs. ${item.price.toFixed(2)}</td><td>Rs. ${amount.toFixed(2)}</td></tr>`;
     }).join('');
+
     const popup = window.open('', '_blank', 'width=420,height=640');
     if (!popup) return;
     popup.document.write(`
@@ -379,7 +346,7 @@ export default function PosView({
         <body>
           <h1>SVAYIRO POS Receipt</h1>
           <div class="meta">${formatDateTimeDDMMYYYY(new Date())}</div>
-          <div class="meta">Customer: ${session.customerName || 'Walk-In Customer'} | ${session.customerPhone}</div>
+          <div class="meta">Customer: ${session.customerName || 'Walk-In Customer'} | ${session.customerPhone || '-'}</div>
           <table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>${lines}</tbody></table>
           ${bagCost > 0 ? `<div class="total">Bag charge: Rs. ${bagCost.toFixed(2)}</div>` : ''}
           <div class="total">Grand total: Rs. ${total.toFixed(2)}</div>
@@ -393,30 +360,19 @@ export default function PosView({
     popup.print();
   };
 
-  const buildPosWhatsAppBill = () => {
-    const lines = offlineCart.map((item, index) => {
-      const lineTotal = item.price * item.quantity;
-      return `${index + 1}. ${item.name} x ${item.quantity} @ Rs. ${item.price.toFixed(2)} = Rs. ${lineTotal.toFixed(2)}`;
-    });
-    return [
-      'SVAYIRO POS Bill',
-      `Date: ${formatDateTimeDDMMYYYY(new Date())}`,
-      '',
-      `Customer: ${session.customerName || 'Walk-In Customer'}`,
-      `Phone: ${session.customerPhone || '-'}`,
-      '',
-      'Items:',
-      ...(lines.length ? lines : ['No items found']),
-      '',
-      bagCost > 0 ? `Bag charge: Rs. ${bagCost.toFixed(2)}` : '',
-      `Grand total: Rs. ${total.toFixed(2)}`,
-      `Payment: ${session.paymentMethod.toUpperCase()}${session.upiReference ? ` (${session.upiReference})` : ''}`,
-      session.transactionNote ? `Note: ${session.transactionNote}` : '',
-      '',
-      'Thank you for shopping with SVAYIRO.'
-    ].filter(Boolean).join('\n');
+  /** Action 2: Send WhatsApp Bill */
+  const handleSendPosWhatsApp = () => {
+    const digits = session.customerPhone.replace(/\D/g, '');
+    if (!/^[6-9]\d{9}$/.test(digits)) {
+      alert('Mobile number is required. Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+    const orderId = lastCompletedOrder?.id || lastCompletedOrder?.orderRef || '';
+    const message = buildPosWhatsAppMessage(session.customerName, offlineCart, total, orderId, 'https://svayiro.co.in');
+    openPosWhatsAppBill(digits, message);
   };
 
+  /** Action 3: Complete Sale Only (Decrements stock, clears session) */
   const handleSubmit = async () => {
     if (offlineCart.length === 0) {
       alert('Cart is empty');
@@ -438,18 +394,9 @@ export default function PosView({
         bagCost,
         note: session.transactionNote.trim()
       });
-      printReceipt();
-      let billMessage = buildPosWhatsAppBill();
-      if (saleOrder?.id) {
-        try {
-          const invoiceLink = await api.adminInvoiceLink(saleOrder.id);
-          billMessage = invoiceLink.invoiceText || billMessage;
-        } catch {
-          // Keep local POS bill fallback if invoice link creation fails.
-        }
-      }
-      await shareOrDownloadPosPdf(billMessage);
-      openPosWhatsAppBill(digits, billMessage);
+
+      setLastCompletedOrder(saleOrder);
+      alert('Sale completed successfully! Inventory updated.');
       updateSession(emptyRegisterSession());
     } catch (err: any) {
       alert(err?.message || 'Unable to complete sale.');
@@ -750,10 +697,40 @@ export default function PosView({
                 <input className={inputClass} value={session.transactionNote} onChange={(event) => updateSession({ transactionNote: event.target.value })} placeholder="Optional cashier note" />
               </label>
 
-              <button type="button" onClick={handleSubmit} disabled={submitting || offlineCart.length === 0} className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-xs font-black uppercase text-white shadow-lg disabled:opacity-60">
-                <CheckCircle className="h-4 w-4" />
-                {submitting ? 'Completing...' : 'Complete, Print & WhatsApp Bill'}
-              </button>
+              {/* SEPARATED ACTION BUTTONS */}
+              <div className="mt-4 space-y-2">
+                {/* Button 1: Complete Sale Only */}
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting || offlineCart.length === 0}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-4 py-3 text-xs font-black uppercase text-white shadow-lg disabled:opacity-60 transition"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  {submitting ? 'Completing Sale...' : 'Complete Sale Only'}
+                </button>
+
+                {/* Button 2 & 3 Row: Print Receipt & Send WhatsApp Bill */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={printReceipt}
+                    className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-2.5 text-xs font-black uppercase text-slate-800 dark:text-slate-200 transition"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print Receipt
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSendPosWhatsApp}
+                    className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 px-3 py-2.5 text-xs font-black uppercase transition"
+                  >
+                    <Send className="h-4 w-4" />
+                    WhatsApp Bill
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
