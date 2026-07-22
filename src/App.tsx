@@ -7,6 +7,7 @@ import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { api } from './api';
 import { ShopProfile, Category, Product, Banner, Notification, User } from './types';
 import { ShoppingBag, Settings, RefreshCw, AlertCircle, CheckCircle, AlertTriangle, XCircle, Info, X, Eye, EyeOff } from 'lucide-react';
+import PublicPrintBill from './components/PublicPrintBill';
 
 const CustomerApp = lazy(() => import('./components/customer/CustomerApp'));
 const AdminApp = lazy(() => import('./components/admin'));
@@ -34,6 +35,12 @@ export default function App() {
     }
     return 'customer';
   });
+
+export default function App() {
+  // 🟢 PUBLIC INVOICE LINK ROUTE (Accessible by anyone without login)
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/invoice/')) {
+    return <PublicPrintBill websiteUrl="https://svayiro.co.in" />;
+  }
   
   // Toast notifications state
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
