@@ -78,7 +78,7 @@ function hasValidCustomerPhone(order: Order) {
 /** Pre-texted WhatsApp message for normal WhatsApp */
 function buildWhatsAppInvoiceMessage(order: Order, websiteUrl = 'https://svayiro.co.in') {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://svayiro.co.in';
-  const publicInvoiceLink = `${origin}/invoice/${order.id}`;
+  const publicInvoiceLink = `${origin}/?invoice/${order.id}`;
 
   const itemsList = (order.items || [])
     .map((item: any) => `${item.productName || item.name || 'Item'} (Qty: ${item.quantity || 1})`)
@@ -355,10 +355,10 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
   };
 
   const handlePrintInvoice = (order: Order) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const publicLink = `${origin}/invoice/${order.id}`;
-    window.open(publicLink, '_blank');
-  };
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const publicLink = `${origin}/?invoice=${order.id}`;
+  window.open(publicLink, '_blank');
+};
 
   const handleMarkCodPaid = async (order: Order) => {
     setLoadingId(order.id);
