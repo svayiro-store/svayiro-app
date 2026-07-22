@@ -553,7 +553,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
 
                   const canProgress = order.status !== 'delivered' && order.status !== 'cancelled' && !(isUpi && paymentStatus !== 'paid') && !(nextStatus === 'delivered' && isCod && paymentStatus !== 'paid');
                   
-                  const canCollectCodDelivery = isDeliveryPartner
+                  const canCollectCodDelivery = (isDeliveryPartner || isOwner)
                     && isCod
                     && paymentStatus !== 'paid'
                     && order.deliveryMethod === 'delivery'
@@ -689,7 +689,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
               && order.status !== 'cancelled'
               && (order.status === 'out_for_delivery' || order.deliveryMethod === 'pickup' || order.status === 'packed');
             
-            const canCollectCod = isDeliveryPartner
+            const canCollectCod = (isDeliveryPartner || isOwner)
               && isCod
               && paymentStatus !== 'paid'
               && order.deliveryMethod === 'delivery'
