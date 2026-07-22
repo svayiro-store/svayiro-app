@@ -8,22 +8,21 @@ import { api } from './api';
 import { ShopProfile, Category, Product, Banner, Notification, User } from './types';
 import { ShoppingBag, Settings, RefreshCw, AlertCircle, CheckCircle, AlertTriangle, XCircle, Info, X, Eye, EyeOff } from 'lucide-react';
 import PublicPrintBill from './components/PublicPrintBill';
-
 const CustomerApp = lazy(() => import('./components/customer/CustomerApp'));
 const AdminApp = lazy(() => import('./components/admin'));
-
 export interface ToastMessage {
   id: string;
   message: string;
   type: 'success' | 'info' | 'warning' | 'error';
 }
-
+// 🟢 1. App function declaration MUST come FIRST
 export default function App() {
-  // 🟢 PUBLIC INVOICE LINK ROUTE (Accessible by anyone without login)
+  
+  // 🟢 2. Public Invoice Route check inside App
   if (typeof window !== 'undefined' && window.location.pathname.startsWith('/invoice/')) {
     return <PublicPrintBill websiteUrl="https://svayiro.co.in" />;
   }
-  // Global Profile View Mode: 'customer' | 'admin'
+  // 🟢 3. React hooks MUST be inside App()
   const [currentMode, setCurrentMode] = useState<'customer' | 'admin'>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
