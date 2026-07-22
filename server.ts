@@ -3484,6 +3484,22 @@ app.get('/api/products/:id', async (req, res) => {
   }
 });
 
+app.get('/api/public/orders/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Search database for order matching either UUID id or orderRef (e.g. ORD1234)
+    const order = await db.collection('orders').findOne({
+      $or: [{ id: id }, { orderRef: id }, { _id: id }]
+    });
+    if (!order) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch public invoice' });
+  }
+});
+
 app.post('/api/products', authMiddleware, requirePermission('products:manage'), async (req, res) => {
   const productData = { ...req.body, sku: undefined };
   const validationErrors = validateProductPayload(productData);
