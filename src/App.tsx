@@ -17,9 +17,13 @@ export interface ToastMessage {
 }
 // 🟢 1. App function declaration MUST come FIRST
 export default function App() {
-  
-  // 🟢 2. Public Invoice Route check inside App
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/invoice/')) {
+  const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const queryInvoiceId = params?.get('invoice');
+  const pathInvoiceId = typeof window !== 'undefined' && window.location.pathname.startsWith('/invoice/')
+    ? window.location.pathname.split('/').pop()
+    : null;
+  // 🟢 PUBLIC INVOICE ROUTE (Supports both /invoice/:id and ?invoice=:id)
+  if (queryInvoiceId || pathInvoiceId) {
     return <PublicPrintBill websiteUrl="https://svayiro.co.in" />;
   }
   // 🟢 3. React hooks MUST be inside App()
