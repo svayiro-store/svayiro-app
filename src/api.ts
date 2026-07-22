@@ -730,7 +730,12 @@ export const api = {
         daily: { label: string; total: number; orders: number }[];
         monthly: { label: string; total: number; orders: number }[];
         yearly: { label: string; total: number; orders: number }[];
-      };
-      upcomingBirthdays?: { id: string; name: string; phone: string; email: string; roles?: string[]; roleLabel?: string; dateOfBirth: string; birthdayDayMonth?: string; nextBirthday: string; daysUntil: number; isToday: boolean }[];
-    }>('/admin/reports')
+      }; upcomingBirthdays?: { id: string; name: string; phone: string; email: string; roles?: string[]; roleLabel?: string; dateOfBirth: string; birthdayDayMonth?: string; nextBirthday: string; daysUntil: number; isToday: boolean }[];
+    }>('/admin/reports'),
+    
+   // 🟢 ADD THIS FUNCTION AT THE END OF THE api OBJECT:
+  getPublicOrderInvoice: async (orderId: string) => {
+   return apiRequest<any>(`/public/orders/${orderId}`);
+  }, 
+
 };
