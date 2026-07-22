@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Order, ShopProfile } from '../../types';
 import { api } from '../../api';
-import { ChevronDown, ChevronUp, Search, Printer, X, Package, Truck, CheckCircle, Clock, AlertTriangle, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Printer, X, Package, Truck, CheckCircle, Clock, AlertTriangle, Trash2, Send } from 'lucide-react';
 import { formatDateTimeDDMMYYYY } from '../../utils/date';
 
 interface Props {
@@ -75,129 +75,35 @@ function hasValidCustomerPhone(order: Order) {
   return /^[6-9]\d{9}$/.test(String(order.customerPhone || '').replace(/\D/g, ''));
 }
 
-function buildWhatsAppInvoiceMessage(order: Order) {
-  const items = (order.items || []).map((item: any, index) => {
-    const qty = Number(item.quantity || 1);
-    const unit = getOrderItemUnit(item);
-    const lineTotal = getOrderItemTotal(item);
-    return `${index + 1}. ${item.productName || item.name || 'Item'} x ${qty} @ ${money(unit)} = ${money(lineTotal)}`;
-  });
+/** Pre-texted WhatsApp message for normal WhatsApp */
+function buildWhatsAppInvoiceMessage(order: Order, websiteUrl = 'https://svayiro.co.in') {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://svayiro.co.in';
+  const publicInvoiceLink = `${origin}/invoice/${order.id}`;
+
+  const itemsList = (order.items || [])
+    .map((item: any) => `${item.productName || item.name || 'Item'} (Qty: ${item.quantity || 1})`)
+    .join(', ');
+
+  const formattedStatus = String(order.status || 'pending').replace(/_/g, ' ').toUpperCase();
 
   return [
-    'SVAYIRO Invoice',
-    `Invoice: ${order.orderRef || order.id}`,
-    `Order ID: ${order.id}`,
-    `Date: ${formatDateTimeDDMMYYYY(order.createdAt || new Date())}`,
-    '',
-    `Customer: ${order.customerName || 'Customer'}`,
-    `Phone: ${order.customerPhone || '-'}`,
-    `Fulfillment: ${order.deliveryMethod === 'delivery' ? 'Home Delivery' : 'Store Pickup / POS'}`,
-    `Slot: ${order.selectedSlot || 'No slot'}`,
-    `Address: ${orderAddressText(order.deliveryAddress)}`,
-    '',
-    'Items:',
-    ...(items.length ? items : ['No items found']),
-    '',
-    `Product subtotal: ${money(order.amountTotal ?? order.productTotal)}`,
-    `Delivery charge: ${money(order.deliveryCharge ?? order.deliveryCost)}`,
-    `Bag charge: ${money(order.bagCharge ?? order.bagCost)}`,
-    `Discount: -${money(order.discountAmount ?? order.discount)}`,
-    `Grand total: ${money(order.finalAmount ?? order.finalTotal)}`,
-    '',
-    `Payment: ${order.paymentMethod || order.paymentDetails?.method || 'cod'} (${order.paymentStatus || order.paymentDetails?.status || 'pending'})`,
-    `Reference: ${order.paymentRef || order.paymentDetails?.upiReference || '-'}`,
-    '',
-    'Thank you for shopping with SVAYIRO.'
+    `Greetings!`,
+    `Your order status for ${itemsList || 'your item'} (Order #${order.orderRef || order.id}) is: *${formattedStatus}*.`,
+    ``,
+    `Please view and print your bill by clicking this link:`,
+    `${publicInvoiceLink}`,
+    ``,
+    `Thank you for shopping with us!`,
+    `Visit our website: ${websiteUrl}`
   ].join('\n');
 }
 
-function openWhatsAppInvoice(order: Order, invoiceText?: string) {
+/** Normal WhatsApp Sender */
+function openWhatsAppInvoice(order: Order, websiteUrl = 'https://svayiro.co.in') {
   const digits = String(order.customerPhone || '').replace(/\D/g, '');
   const phone = digits.length === 10 ? `91${digits}` : digits;
-  const message = invoiceText || buildWhatsAppInvoiceMessage(order);
+  const message = buildWhatsAppInvoiceMessage(order, websiteUrl);
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-}
-
-function escapePdfText(value: any) {
-  return String(value ?? '').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
-}
-
-function wrapPdfLine(line: string, width = 82) {
-  const words = String(line || '').split(/\s+/);
-  const lines: string[] = [];
-  let current = '';
-  words.forEach((word) => {
-    if ((current + ' ' + word).trim().length > width) {
-      if (current) lines.push(current);
-      current = word;
-    } else {
-      current = `${current} ${word}`.trim();
-    }
-  });
-  if (current) lines.push(current);
-  return lines.length ? lines : [''];
-}
-
-function buildInvoicePdfBlob(order: Order) {
-  const textLines = buildWhatsAppInvoiceMessage(order).split('\n').flatMap((line) => wrapPdfLine(line));
-  const contentLines = [
-    'BT',
-    '/F1 11 Tf',
-    '50 790 Td',
-    '14 TL',
-    ...textLines.map((line, index) => `${index === 0 ? '' : 'T* '}(${escapePdfText(line)}) Tj`)
-  ];
-  const content = contentLines.join('\n') + '\nET';
-  const objects = [
-    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
-    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
-    '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
-    `5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`
-  ];
-  let pdf = '%PDF-1.4\n';
-  const offsets = [0];
-  objects.forEach((obj) => {
-    offsets.push(pdf.length);
-    pdf += obj;
-  });
-  const xref = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  offsets.slice(1).forEach((offset) => {
-    pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
-  });
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return new Blob([pdf], { type: 'application/pdf' });
-}
-
-async function shareOrDownloadInvoicePdf(order: Order, showToast: Props['showToast']) {
-  const invoiceNo = String(order.orderRef || order.id).replace(/[^a-zA-Z0-9_-]/g, '');
-  const fileName = `SVAYIRO-Invoice-${invoiceNo}.pdf`;
-  const blob = buildInvoicePdfBlob(order);
-  const file = new File([blob], fileName, { type: 'application/pdf' });
-  const nav = navigator as Navigator & {
-    canShare?: (data: { files?: File[] }) => boolean;
-    share?: (data: { files?: File[]; title?: string; text?: string }) => Promise<void>;
-  };
-
-  if (nav.canShare?.({ files: [file] }) && nav.share) {
-    await nav.share({
-      files: [file],
-      title: fileName,
-      text: `SVAYIRO invoice ${order.orderRef || order.id}`
-    });
-    return;
-  }
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  showToast('Invoice PDF downloaded. Attach that PDF in WhatsApp if your browser cannot share files directly.', 'info');
 }
 
 function printShopInvoice(order: Order) {
@@ -331,12 +237,14 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
   const [queueLoading, setQueueLoading] = useState(false);
   const [codChoiceOrder, setCodChoiceOrder] = useState<Order | null>(null);
   const [codCollection, setCodCollection] = useState<{ order: Order; qrDataUrl: string; upiUrl: string; providerRef: string } | null>(null);
+  
   const isOwner = roles.includes('admin');
   const isDeliveryPartner = roles.includes('delivery_partner') && !isOwner;
   const canSendInvoices = isOwner || roles.includes('customer_care');
+  const websiteUrl = shop?.websiteUrl || 'https://svayiro.co.in';
+
   const canSendWhatsAppBill = (order: Order) => {
-    const completedOrCancelled = order.status === 'delivered' || order.status === 'cancelled';
-    return completedOrCancelled && (canSendInvoices || (isDeliveryPartner && order.status === 'delivered' && order.deliveryMethod === 'delivery'));
+    return true; // Allow sending WhatsApp bill directly
   };
 
   const loadInvoiceQueue = async () => {
@@ -369,14 +277,27 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
   const activeFilteredOrders = filteredOrders.filter((order) => order.status !== 'delivered');
   const completedFilteredOrders = filteredOrders.filter((order) => order.status === 'delivered');
 
+  // Advanced status handler with COD & UPI guards
   const handleAdvanceStatus = async (order: Order) => {
-    const paymentStatus = order.paymentStatus || order.paymentDetails?.status || 'pending';
-    const paymentMethod = order.paymentMethod || order.paymentDetails?.method || 'cod';
-    if (paymentMethod === 'upi' && paymentStatus !== 'paid') {
-      showToast('Verify the UPI payment in the bank/UPI app before accepting this order.', 'warning');
+    const paymentStatus = (order.paymentStatus || order.paymentDetails?.status || 'pending').toLowerCase();
+    const paymentMethod = (order.paymentMethod || order.paymentDetails?.method || 'cod').toLowerCase();
+    const nextStatus = nextStatusMap[order.status] || 'delivered';
+
+    // GUARD 1: COD not paid -> don't allow to mark delivered
+    const isCod = paymentMethod === 'cod' || paymentMethod === 'cash';
+    if (nextStatus === 'delivered' && isCod && paymentStatus !== 'paid') {
+      showToast('Cannot mark as Delivered! COD payment is not set as paid. Please mark payment as Paid first.', 'error');
       return;
     }
-    const nextStatus = nextStatusMap[order.status] || 'delivered';
+
+    // GUARD 2: UPI checks for accepting order
+    if (nextStatus === 'accepted' && paymentMethod === 'upi') {
+      if (paymentStatus === 'failed') {
+        showToast('Cannot accept order! Customer UPI payment has failed.', 'error');
+        return;
+      }
+    }
+
     if (nextStatus === order.status) return;
     setLoadingId(order.id);
     try {
@@ -423,33 +344,20 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
     }
   };
 
-  const handleSendWhatsAppInvoice = async (order: Order) => {
+  // Normal WhatsApp Invoice Sender
+  const handleSendWhatsAppInvoice = (order: Order) => {
     if (!hasValidCustomerPhone(order)) {
       showToast('Enter a valid 10-digit customer phone before sending invoice.', 'error');
       return;
     }
-    setLoadingId(order.id);
-    let invoiceText = '';
-    try {
-      const link = await api.adminInvoiceLink(order.id);
-      invoiceText = link.invoiceText;
-      await shareOrDownloadInvoicePdf(order, showToast);
-      await api.sendWhatsAppInvoice(order.id);
-      showToast('Invoice PDF prepared and WhatsApp invoice text sent to customer.', 'success');
-    } catch (err: any) {
-      openWhatsAppInvoice(order, invoiceText);
-      showToast(invoiceText ? 'WhatsApp opened with secure invoice link for manual sending.' : (err.message || 'Unable to create invoice link.'), invoiceText ? 'warning' : 'error');
-    } finally {
-      setLoadingId(null);
-    }
+    openWhatsAppInvoice(order, websiteUrl);
+    showToast('Normal WhatsApp opened with pre-filled status and print bill link.', 'success');
   };
 
   const handlePrintInvoice = (order: Order) => {
-    if (!hasValidCustomerPhone(order)) {
-      showToast('Enter a valid 10-digit customer phone before printing invoice.', 'error');
-      return;
-    }
-    printShopInvoice(order);
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const publicLink = `${origin}/invoice/${order.id}`;
+    window.open(publicLink, '_blank');
   };
 
   const handleMarkCodPaid = async (order: Order) => {
@@ -525,13 +433,8 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
     }
   };
 
+  // Accept Order and Verify UPI
   const handleVerifyUpiPaid = async (order: Order) => {
-    const ref = order.paymentRef || order.paymentDetails?.upiReference;
-    if (!ref) {
-      showToast('No UPI reference submitted by customer.', 'error');
-      return;
-    }
-    if (!window.confirm(`Verify UPI payment reference ${ref} in your bank/UPI app first. Mark this order as paid and accepted?`)) return;
     setLoadingId(order.id);
     try {
       await api.updateOrderStatus(order.id, 'accepted', 'paid');
@@ -642,15 +545,20 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
               </thead>
               <tbody>
                 {invoiceQueue.map((order, index) => {
-                  const paymentStatus = order.paymentStatus || order.paymentDetails?.status || 'pending';
-                  const paymentMethod = order.paymentMethod || order.paymentDetails?.method || 'cod';
+                  const paymentStatus = (order.paymentStatus || order.paymentDetails?.status || 'pending').toLowerCase();
+                  const paymentMethod = (order.paymentMethod || order.paymentDetails?.method || 'cod').toLowerCase();
+                  const isCod = paymentMethod === 'cod' || paymentMethod === 'cash';
+                  const isUpi = paymentMethod === 'upi';
                   const nextStatus = nextStatusMap[order.status] || 'delivered';
-                  const canProgress = order.status !== 'delivered' && order.status !== 'cancelled' && !(paymentMethod === 'upi' && paymentStatus !== 'paid');
+
+                  const canProgress = order.status !== 'delivered' && order.status !== 'cancelled' && !(isUpi && paymentStatus !== 'paid') && !(nextStatus === 'delivered' && isCod && paymentStatus !== 'paid');
+                  
                   const canCollectCod = isDeliveryPartner
-                    && paymentMethod === 'cod'
+                    && isCod
                     && paymentStatus !== 'paid'
                     && order.deliveryMethod === 'delivery'
                     && ['packed', 'out_for_delivery', 'delivered'].includes(order.status);
+
                   return (
                     <tr key={order.id} className="border-t border-slate-100 dark:border-slate-800">
                       <td className="px-3 py-3">
@@ -683,6 +591,9 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                         <p className="font-bold uppercase">{paymentMethod}</p>
                         <p className={`text-[10px] font-black uppercase ${paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>{paymentStatus}</p>
                         {order.paymentRef && <p className="font-mono text-[10px] text-slate-500">{order.paymentRef}</p>}
+                        {isUpi && paymentStatus !== 'paid' && (
+                          <span className="mt-1 block text-[9px] font-bold text-amber-600 animate-pulse">Verification Pending from Store Side</span>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-right font-black">{money(order.finalTotal)}</td>
                       <td className="px-3 py-3">
@@ -703,14 +614,14 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                             >
                               Collect COD
                             </button>
-                          ) : paymentMethod === 'upi' && paymentStatus !== 'paid' && isOwner ? (
+                          ) : isUpi && paymentStatus !== 'paid' ? (
                             <button
                               type="button"
                               disabled={loadingId === order.id}
                               onClick={() => handleVerifyUpiPaid(order)}
                               className="rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[10px] font-black text-white disabled:opacity-50"
                             >
-                              Verify UPI
+                              Verify UPI & Accept
                             </button>
                           ) : (
                             <button
@@ -733,7 +644,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
         )}
       </section>
 
-      {/* Filters */}
+      {/* Search & Status Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
@@ -763,22 +674,24 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
           {activeFilteredOrders.map((order) => {
             const isExpanded = expandedId === order.id;
             const colors = statusColors[order.status] || statusColors.pending;
-            const paymentStatus = order.paymentStatus || order.paymentDetails?.status || 'pending';
-            const paymentMethod = order.paymentMethod || order.paymentDetails?.method || 'cod';
-            const canMarkCodPaid = paymentMethod === 'cod'
+            const paymentStatus = (order.paymentStatus || order.paymentDetails?.status || 'pending').toLowerCase();
+            const paymentMethod = (order.paymentMethod || order.paymentDetails?.method || 'cod').toLowerCase();
+            const isCod = paymentMethod === 'cod' || paymentMethod === 'cash';
+            const isUpi = paymentMethod === 'upi';
+
+            const canMarkCodPaid = isCod
               && paymentStatus !== 'paid'
               && order.status !== 'cancelled'
-              && (order.status === 'out_for_delivery' || order.deliveryMethod === 'pickup');
+              && (order.status === 'out_for_delivery' || order.deliveryMethod === 'pickup' || order.status === 'packed');
+            
             const canCollectCod = isDeliveryPartner
-              && paymentMethod === 'cod'
+              && isCod
               && paymentStatus !== 'paid'
               && order.deliveryMethod === 'delivery'
               && ['packed', 'out_for_delivery', 'delivered'].includes(order.status);
-            const canVerifyUpiPaid = paymentMethod === 'upi'
-              && paymentStatus !== 'paid'
-              && isOwner
-              && order.status !== 'cancelled'
-              && Boolean(order.paymentRef || order.paymentDetails?.upiReference);
+            
+            const canVerifyUpiPaid = isUpi && paymentStatus !== 'paid';
+
             return (
               <div key={order.id} className={`rounded-xl border shadow-sm transition-all ${isDarkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'} ${isExpanded ? 'ring-2 ring-indigo-500' : ''}`}>
                 {/* Header Row */}
@@ -788,6 +701,14 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                     <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${colors}`}>
                       {order.status.replace(/_/g, ' ')}
                     </span>
+
+                    {/* Store Verification Pending Badge for UPI */}
+                    {isUpi && paymentStatus !== 'paid' && (
+                      <span className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 animate-pulse">
+                        Verification Pending from Store Side
+                      </span>
+                    )}
+
                     <span className="text-xs opacity-70">{order.customerName}</span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -891,29 +812,40 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       ) : (
                         <span className="text-xs font-bold opacity-70 py-2">Order {order.status === 'delivered' ? 'completed' : 'cancelled'}</span>
                       )}
+                      
                       <button className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold flex items-center gap-1.5 dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
                         <Printer className="h-3.5 w-3.5" /> Print Bill
                       </button>
-                      {canMarkCodPaid && isOwner && (
+
+                      {canMarkCodPaid && (
                         <button disabled={loadingId === order.id} className="rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50" onClick={() => handleMarkCodPaid(order)}>
                           {loadingId === order.id ? 'Updating...' : 'Mark COD Paid'}
                         </button>
                       )}
+
                       {canCollectCod && (
                         <button disabled={loadingId === order.id} className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50" onClick={() => setCodChoiceOrder(order)}>
                           Collect COD
                         </button>
                       )}
+
                       {canVerifyUpiPaid && (
                         <button disabled={loadingId === order.id} className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50" onClick={() => handleVerifyUpiPaid(order)}>
-                          {loadingId === order.id ? 'Verifying...' : 'Verify UPI Paid'}
+                          {loadingId === order.id ? 'Verifying...' : 'Verify UPI & Accept'}
                         </button>
                       )}
+
                       {canSendWhatsAppBill(order) && (
-                        <button disabled={loadingId === order.id} className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200" onClick={() => handleSendWhatsAppInvoice(order)}>
-                          {loadingId === order.id ? 'Sending...' : (isDeliveryPartner ? 'Send WhatsApp Bill' : 'Send / Resend WhatsApp')}
+                        <button 
+                          disabled={loadingId === order.id} 
+                          className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 flex items-center gap-1.5" 
+                          onClick={() => handleSendWhatsAppInvoice(order)}
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          Send WhatsApp Bill
                         </button>
                       )}
+
                       {isOwner && (
                         <button
                           disabled={loadingId === order.id}
@@ -931,12 +863,13 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
               </div>
             );
           })}
+
           {completedFilteredOrders.length > 0 && (
             <section className={`mt-6 rounded-xl border p-4 shadow-sm ${isDarkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
               <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-sm font-black">Completed Delivered Invoices</h3>
-                  <p className="text-[11px] text-slate-500">Delivered orders are stored here and do not count in the active invoice/order notification badge.</p>
+                  <p className="text-[11px] text-slate-500">Delivered orders are stored here.</p>
                 </div>
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                   {completedFilteredOrders.length} Completed
@@ -980,11 +913,9 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                               <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-black dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
                                 Print
                               </button>
-                              {canSendWhatsAppBill(order) && (
-                                <button disabled={loadingId === order.id} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200" onClick={() => handleSendWhatsAppInvoice(order)}>
-                                  {loadingId === order.id ? 'Sending...' : 'WhatsApp Bill'}
-                                </button>
-                              )}
+                              <button disabled={loadingId === order.id} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 flex items-center gap-1" onClick={() => handleSendWhatsAppInvoice(order)}>
+                                <Send className="w-3 h-3" /> WhatsApp Bill
+                              </button>
                               {isOwner && (
                                 <button disabled={loadingId === order.id} className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[10px] font-black text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200" onClick={() => handleDeleteOrder(order)}>
                                   Archive
@@ -1002,6 +933,8 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
           )}
         </div>
       )}
+
+      {/* COD Choice Modal */}
       {codChoiceOrder && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className={`w-full max-w-md rounded-2xl border p-5 shadow-2xl ${isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'}`}>
@@ -1019,9 +952,6 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center dark:border-slate-800 dark:bg-slate-950">
               <p className="text-[10px] font-black uppercase text-slate-500">Amount to collect</p>
               <p className="mt-1 text-3xl font-black">{money(codChoiceOrder.finalTotal)}</p>
-              <p className="mt-2 text-xs font-semibold text-slate-500">
-                If customer gives cash, collect exact cash and mark cash paid. If customer wants UPI, show QR and submit the UTR/reference for owner verification.
-              </p>
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1047,6 +977,8 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
           </div>
         </div>
       )}
+
+      {/* COD Collection QR Modal */}
       {codCollection && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className={`w-full max-w-md rounded-2xl border p-5 shadow-2xl ${isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'}`}>
@@ -1065,9 +997,6 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
               <p className="mb-2 text-xs font-black uppercase text-emerald-700 dark:text-emerald-300">Fixed payable amount</p>
               <p className="mb-3 text-3xl font-black">{money(codCollection.order.finalTotal)}</p>
               <img src={codCollection.qrDataUrl} alt="COD UPI QR" className="mx-auto h-56 w-56 rounded-xl bg-white p-2 shadow-sm" />
-              <a href={codCollection.upiUrl} className="mt-3 inline-block text-xs font-black text-indigo-700 underline">
-                Open UPI app on this device
-              </a>
             </div>
 
             <label className="mt-4 block">
@@ -1079,7 +1008,6 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                 className={inputClass}
               />
             </label>
-            <p className="mt-2 text-[11px] text-amber-600">This only submits payment for owner verification. It does not mark the order as paid.</p>
 
             <div className="mt-5 flex gap-2">
               <button type="button" onClick={() => setCodCollection(null)} className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-xs font-black dark:border-slate-700">
@@ -1095,4 +1023,3 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
     </div>
   );
 }
-
