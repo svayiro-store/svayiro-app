@@ -116,6 +116,10 @@ export default function OrdersView({
             const isCancelled = ord.status === 'cancelled';
             const isExpanded = !!expandedOrders[ord.id];
 
+            const isUpi = (ord.paymentMethod || ord.paymentDetails?.method || '').toLowerCase() === 'upi';
+            const payStatus = (ord.paymentStatus || ord.paymentDetails?.status || 'pending').toLowerCase();
+            const isUpiPendingVerification = isUpi && payStatus !== 'paid' && payStatus !== 'failed';
+
             return (
               <div 
                 key={ord.id}
@@ -140,10 +144,17 @@ export default function OrdersView({
                     <p className="text-[11px] opacity-60 font-mono">{formatDateTimeDDMMYYYY(ord.createdAt)}</p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[10px] px-3 py-1 rounded-full uppercase font-black tracking-widest border shadow-sm ${statusColors[ord.status] || 'bg-slate-100'}`}>
                       {isCancelled ? '❌ Cancelled' : ord.status.replace(/_/g, ' ')}
                     </span>
+
+                    {/* Customer UPI Store Verification Pending Badge */}
+                    {isUpiPendingVerification && (
+                      <span className="text-[10px] px-2.5 py-1 rounded-full uppercase font-bold tracking-wider bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900 animate-pulse flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3 animate-spin" /> Store Verification Pending
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -337,10 +348,10 @@ export default function OrdersView({
                         <p className="font-black text-lg text-indigo-700 dark:text-indigo-300 mt-0.5">₹{ord.finalTotal}</p>
                         <div className="text-[11px] opacity-75 font-mono mt-1 flex items-center gap-1.5">
                           <span className="bg-slate-200 dark:bg-slate-800 px-1.5 py-0.2 rounded text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300">
-                            {ord.paymentDetails.method}
+                            {ord.paymentDetails?.method || ord.paymentMethod || 'COD'}
                           </span>
-                          <span className={`font-semibold uppercase ${ord.paymentDetails.status === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                            ({ord.paymentDetails.status})
+                          <span className={`font-semibold uppercase ${(ord.paymentDetails?.status || ord.paymentStatus) === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                            ({ord.paymentDetails?.status || ord.paymentStatus || 'pending'})
                           </span>
                         </div>
                       </div>
@@ -415,7 +426,6 @@ export default function OrdersView({
 
                           <button 
                             onClick={() => {
-                              // Instant Reorder
                               clearCart(true);
                               for (const item of ord.items) {
                                 addToCart(item.productId, item.quantity, true);
