@@ -356,7 +356,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
 
   const handlePrintInvoice = (order: Order) => {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const publicLink = `${origin}/invoice=${order.id}`;
+  const publicLink = `${origin}/invoice/${order.id}`;
   window.open(publicLink, '_blank');
 };
 
