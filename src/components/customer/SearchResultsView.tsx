@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, ChevronDown, Compass, Heart, Minus, Plus, Share2, SlidersHorizontal } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, Compass, Heart, Minus, Plus, Share2, ShoppingCart, SlidersHorizontal, Star } from 'lucide-react';
 import { Category, Product, User as UserType } from '../../types';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
@@ -126,7 +126,7 @@ export default function SearchResultsView({
           <p className="mt-1 text-xs opacity-60">Try another spelling or a broader search word.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 p-3 sm:gap-4 sm:p-4 md:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] justify-start gap-2 p-3 sm:grid-cols-[repeat(auto-fill,minmax(155px,190px))] sm:gap-3 sm:p-4 lg:grid-cols-[repeat(auto-fill,minmax(165px,215px))]">
           {products.map((prod) => {
             const hasDiscount = prod.offerPrice > 0;
             const itemInCart = cart.find(c => c.productId === prod.id);
@@ -135,47 +135,113 @@ export default function SearchResultsView({
             const isWishlisted = activeUser?.wishlist.includes(prod.id);
             const categoryName = categories.find(c => c.id === prod.categoryId)?.name || 'Grocery';
             return (
-              <div key={prod.id} className={`group overflow-hidden rounded-xl border transition hover:shadow-md ${isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-100 bg-white'}`}>
-                <div className="relative aspect-[4/3] cursor-pointer overflow-hidden bg-slate-50" onClick={() => setSelectedProduct(prod)}>
-                  <img src={prod.images?.[0] || productImageFallback} alt={prod.name} className="h-full w-full object-cover transition group-hover:scale-105" referrerPolicy="no-referrer" />
-                  <button type="button" onClick={(e) => { e.stopPropagation(); onShareProduct?.(prod); }} className="absolute right-10 top-2 rounded-full border bg-white/85 p-1.5 text-slate-500 shadow hover:text-indigo-600">
-                    <Share2 className="h-3.5 w-3.5" />
+              <div
+                key={prod.id}
+                className={`w-full rounded-lg border overflow-hidden shadow-xs flex flex-col justify-between group transition-all duration-300 transform hover:-translate-y-0.5 ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/30' : 'border-slate-200 bg-white hover:shadow-md'}`}
+              >
+                <div className="relative aspect-square overflow-hidden cursor-pointer bg-slate-50 animate-fadeIn" onClick={() => setSelectedProduct(prod)}>
+                  <img
+                    src={prod.images?.[0] || productImageFallback}
+                    alt={prod.name}
+                    className="w-full h-full object-contain bg-white transition-transform duration-300 group-hover:scale-105"
+                    referrerPolicy="no-referrer"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onShareProduct?.(prod); }}
+                    className="absolute top-1 right-7 sm:right-8 p-1 rounded-full border shadow bg-white/80 border-slate-200 text-slate-500 hover:text-indigo-600 hover:bg-white transition-all z-10"
+                    title="Share Product"
+                  >
+                    <Share2 className="h-3 w-3" />
                   </button>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); toggleWishlist(prod.id); }} className={`absolute right-2 top-2 rounded-full border p-1.5 shadow ${isWishlisted ? 'border-rose-200 bg-rose-50 text-rose-500' : 'border-slate-200 bg-white/85 text-slate-500'}`}>
-                    <Heart className="h-3.5 w-3.5" fill={isWishlisted ? 'currentColor' : 'none'} />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleWishlist(prod.id); }}
+                    className={`absolute top-1 right-1 p-1 rounded-full border shadow transition-all ${isWishlisted ? 'bg-rose-50 border-rose-200 text-rose-500' : 'bg-white/80 border-slate-200 text-slate-500 hover:bg-white'}`}
+                    title="Wishlist"
+                  >
+                    <Heart className="h-3 w-3" fill={isWishlisted ? 'currentColor' : 'none'} />
                   </button>
-                  {hasDiscount && <span className="absolute left-2 top-2 rounded-full bg-rose-600 px-2 py-1 text-[10px] font-black text-white">{Math.round(100 - (prod.offerPrice / prod.basePrice) * 100)}%</span>}
+                  {hasDiscount && (
+                    <span className="absolute top-1.5 left-1.5 bg-red-600 text-white font-black text-[10px] px-2 py-1 rounded-full uppercase tracking-wider font-mono shadow">
+                      {Math.round(100 - (prod.offerPrice / prod.basePrice) * 100)}%
+                    </span>
+                  )}
+                  {prod.stockCount === 0 && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-2 sm:p-4">
+                      <span className="bg-red-600 text-white font-extrabold text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded-full uppercase">Out of stock</span>
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-1.5 p-2.5 text-left">
-                  <p className="truncate text-[10px] font-semibold uppercase text-slate-500">{categoryName}</p>
-                  <button type="button" onClick={() => setSelectedProduct(prod)} className="line-clamp-2 text-left text-xs font-semibold leading-snug text-slate-900 hover:text-indigo-600 dark:text-white">
-                    {prod.name}
-                  </button>
-                  <div className="flex items-center gap-2 text-[10px]">
-                    <span className="rounded bg-emerald-600 px-1.5 py-0.5 font-black text-white">{prod.ratingAverage || 'New'} star</span>
-                    <span className="text-slate-500">{prod.weight ? `${prod.weight / 1000} kg` : 'Pack'}</span>
-                  </div>
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <span className="text-sm font-black text-slate-950 dark:text-white">Rs {hasDiscount ? prod.offerPrice : prod.basePrice}</span>
-                    {hasDiscount && <span className="text-xs text-slate-400 line-through">Rs {prod.basePrice}</span>}
-                  </div>
-                  {isLowStock && (
-                    <div className="flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                      <AlertTriangle className="h-3 w-3" />
-                      Only {prod.stockCount} {prod.stockCount === 1 ? 'is' : 'are'} left
+                <div className="p-1.5 sm:p-2 flex-1 flex flex-col justify-between gap-1 text-left">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[8px] sm:text-[9px] opacity-75 font-mono uppercase truncate max-w-[70%]">
+                        {categoryName}
+                      </span>
+                      <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+                        <Star className="h-2.5 w-2.5 text-amber-500 fill-amber-500" />
+                        <span className="text-[9px] sm:text-[10px] font-bold">{prod.ratingAverage || 'New'}</span>
+                      </div>
                     </div>
-                  )}
-                  {itemInCart ? (
-                    <div className="flex items-center justify-between rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-indigo-600">
-                      <button onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)}><Minus className="h-4 w-4" /></button>
-                      <span className="font-mono text-sm font-black">{itemInCart.quantity}</span>
-                      <button onClick={() => updateCartQty(prod.id, itemInCart.quantity + 1)}><Plus className="h-4 w-4" /></button>
+                    <h4
+                      onClick={() => setSelectedProduct(prod)}
+                      className="font-bold text-[11px] sm:text-xs leading-snug tracking-tight line-clamp-1 hover:text-indigo-500 cursor-pointer text-left"
+                    >
+                      {prod.name}
+                    </h4>
+                    {prod.description && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProduct(prod)}
+                        className="block text-left text-[9px] leading-tight opacity-70 hover:text-indigo-500 hover:opacity-100 line-clamp-1"
+                      >
+                        {prod.description.length > 40 ? `${prod.description.slice(0, 40)}... ` : prod.description}
+                        {prod.description.length > 40 && <span className="font-bold text-indigo-600 dark:text-indigo-400">more...</span>}
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-baseline justify-between flex-wrap gap-0.5">
+                      <div className="flex items-baseline gap-1 sm:gap-2">
+                        <span className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400">
+                          Rs {hasDiscount ? prod.offerPrice : prod.basePrice}
+                        </span>
+                        {hasDiscount && (
+                          <span className="text-slate-400 line-through text-[9px] sm:text-[10px] font-mono">Rs {prod.basePrice}</span>
+                        )}
+                      </div>
+                      <span className="text-[8px] sm:text-[9px] opacity-70 font-mono">({prod.weight / 1000} kg)</span>
                     </div>
-                  ) : (
-                    <button disabled={prod.stockCount === 0} onClick={() => addToCart(prod.id)} className="w-full rounded-full bg-indigo-600 px-3 py-1.5 text-[11px] font-black text-white disabled:bg-slate-300">
-                      {prod.stockCount === 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </button>
-                  )}
+                    {isLowStock && (
+                      <div className="flex items-center gap-1 text-[8px] text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-1.5 py-0.5 rounded-md">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        <span className="truncate">Only {prod.stockCount} left</span>
+                      </div>
+                    )}
+                    <div className="pt-0.5">
+                      {itemInCart ? (
+                        <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900 rounded-full px-1.5 sm:px-2.5 py-0.5 text-indigo-600 dark:text-indigo-400">
+                          <button onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)} className="p-0.5 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-full">
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <span className="text-xs font-bold w-5 text-center font-mono">{itemInCart.quantity}</span>
+                          <button onClick={() => updateCartQty(prod.id, itemInCart.quantity + 1)} className="p-0.5 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-full">
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          disabled={prod.stockCount === 0}
+                          onClick={() => addToCart(prod.id)}
+                          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-full text-[12px] font-bold shadow flex items-center justify-center gap-2 disabled:opacity-50 transition"
+                        >
+                          <ShoppingCart className="h-3 w-3" />
+                          <span>{prod.stockCount === 0 ? 'Out of stock' : 'Add To Bag'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             );

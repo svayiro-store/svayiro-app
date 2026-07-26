@@ -990,7 +990,7 @@ function Toggle({
         <button
           type="button"
           onClick={() => onChange(true)}
-          className={`rounded-md px-3 py-1.5 transition ${checked ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+          className={`rounded-md px-3 py-1.5 transition-colors duration-75 ease-out ${checked ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
           aria-pressed={checked}
         >
           {checkedLabel}
@@ -998,7 +998,7 @@ function Toggle({
         <button
           type="button"
           onClick={() => onChange(false)}
-          className={`rounded-md px-3 py-1.5 transition ${!checked ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+          className={`rounded-md px-3 py-1.5 transition-colors duration-75 ease-out ${!checked ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
           aria-pressed={!checked}
         >
           {uncheckedLabel}

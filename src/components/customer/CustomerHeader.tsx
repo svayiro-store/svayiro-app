@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Compass, Heart, ShoppingBag, FileText, User, Calendar, Search, X, Clock,
+  Store, Heart, ShoppingBag, FileText, User, Calendar, Search, X, Clock,
   Bell, Megaphone, Tag, CalendarClock, CheckCheck
 } from 'lucide-react';
 import { CustomerTab, Notification, Product, ShopProfile, User as UserType } from '../../types';
@@ -444,7 +444,7 @@ export default function CustomerHeader({
           <div className="hidden md:flex items-center justify-between border-t border-slate-200/80 dark:border-slate-800/80 pt-2.5 mt-1">
             <div className="flex items-center gap-1">
               {[
-                { id: 'home', label: 'Storefront', icon: Compass },
+                { id: 'home', label: 'Storefront', icon: Store },
                 { id: 'wishlist', label: 'My Wishlist', icon: Heart, count: wishlistCount },
                 { id: 'cart', label: 'Shopping Bag', icon: ShoppingBag, count: cartCount, pulse: cartCount > 0 },
                 { id: 'orders', label: 'Order History', icon: FileText },

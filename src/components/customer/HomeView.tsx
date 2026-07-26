@@ -460,17 +460,26 @@ export default function HomeView({
                     className="h-full w-full object-cover"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <h2 className="line-clamp-2 max-w-[84%] text-base font-black leading-tight text-white drop-shadow">
-                      {banner.title || 'SVAYIRO Premium Groceries'}
-                    </h2>
-                    {clickable && (
-                      <p className="mt-1 text-[6px] font-bold uppercase tracking-wide text-white/80">
-                        Tap to open
-                      </p>
-                    )}
-                  </div>
+                  {(banner.title || clickable) && (
+                    <div className="absolute inset-x-0 bottom-0 p-4">
+                      {banner.title && (
+                        <h2
+                          className="line-clamp-2 max-w-[84%] text-base font-black leading-tight text-white"
+                          style={{ textShadow: '0 2px 0 rgba(15,23,42,0.95), 0 5px 14px rgba(15,23,42,0.65)' }}
+                        >
+                          {banner.title}
+                        </h2>
+                      )}
+                      {clickable && (
+                        <p
+                          className="mt-1 text-[6px] font-bold uppercase tracking-wide text-white"
+                          style={{ textShadow: '0 1px 0 rgba(15,23,42,0.95), 0 3px 10px rgba(15,23,42,0.70)' }}
+                        >
+                          Tap to open
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </article>
               );
             })}
@@ -726,7 +735,7 @@ export default function HomeView({
                     referrerPolicy="no-referrer"
                   />
                   {hasDiscount && (
-                    <span className="absolute left-1 top-1 rounded-full bg-rose-600 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wide text-white shadow">
+                    <span className="absolute left-1 top-1 rounded-full bg-rose-600 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow">
                       Special
                     </span>
                   )}
@@ -865,7 +874,7 @@ export default function HomeView({
                       </button>
                       {/* Percent discount label */}
                       {hasDiscount && (
-                        <span className="absolute top-1 left-1 bg-red-600 text-white font-black text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                        <span className="absolute top-1.5 left-1.5 bg-red-600 text-white font-black text-[10px] px-2 py-1 rounded-full uppercase tracking-wider font-mono shadow">
                           {Math.round(100 - (prod.offerPrice / prod.basePrice) * 100)}%
                         </span>
                       )}

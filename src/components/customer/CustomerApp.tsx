@@ -5,7 +5,7 @@
 
 import React, { Suspense, lazy, useState, useEffect, useMemo } from 'react';
 import { 
-  X, AlertTriangle, Compass, Heart, ShoppingBag, FileText, User, 
+  X, AlertTriangle, Store, Heart, ShoppingBag, FileText, User, 
   MapPin, Clipboard, QrCode 
 } from 'lucide-react';
 import { api } from '../../api';
@@ -2168,7 +2168,7 @@ export default function CustomerApp({
             onClick={() => setProtectedActiveTab('home')}
             className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'home' ? 'text-indigo-600' : 'text-slate-400'}`}
           >
-            <Compass className="h-5 w-5" />
+            <Store className="h-5 w-5" />
             <span className="text-[10px] font-semibold">Store</span>
           </button>
           

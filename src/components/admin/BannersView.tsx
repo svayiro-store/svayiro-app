@@ -30,7 +30,7 @@ function normalizeBanner(banner: any): Banner {
 }
 
 function BannerDevicePreview({ imageUrl, title }: { imageUrl: string; title: string }) {
-  const previewTitle = title.trim() || 'New arrivals of veggies';
+  const previewTitle = title.trim();
 
   return (
     <div>
@@ -46,10 +46,16 @@ function BannerDevicePreview({ imageUrl, title }: { imageUrl: string; title: str
             <ImageIcon className="h-8 w-8 text-slate-400" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/20 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 p-4">
-          <h2 className="line-clamp-2 max-w-[84%] text-base font-black leading-tight text-white drop-shadow">{previewTitle}</h2>
-        </div>
+        {previewTitle && (
+          <div className="absolute inset-x-0 bottom-0 p-4">
+            <h2
+              className="line-clamp-2 max-w-[84%] text-base font-black leading-tight text-white"
+              style={{ textShadow: '0 2px 0 rgba(15,23,42,0.95), 0 5px 14px rgba(15,23,42,0.65)' }}
+            >
+              {previewTitle}
+            </h2>
+          </div>
+        )}
         <div className="absolute bottom-3 right-4 z-10 flex gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
           <span className="h-1.5 w-6 rounded-full bg-indigo-600" />
@@ -117,10 +123,6 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
   };
 
   const handleCreate = async () => {
-    if (!title.trim()) {
-      showToast('Banner title is required.', 'warning');
-      return;
-    }
     const finalImageUrl = imagePreview || imageUrl.trim();
     if (!finalImageUrl) {
       showToast('Please provide a banner image (upload or URL).', 'warning');
@@ -185,8 +187,8 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
           <div className="space-y-4">
             <label className="block">
-              <span className={labelClass}>Banner Title</span>
-              <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Fresh Arrivals" />
+              <span className={labelClass}>Banner Title <span className="font-semibold normal-case text-slate-400">(optional)</span></span>
+              <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Optional display text, e.g. Fresh Arrivals" />
             </label>
             <label className="block">
               <span className={labelClass}>Banner Image</span>
