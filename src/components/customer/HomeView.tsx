@@ -117,6 +117,13 @@ export default function HomeView({
 
   // Only top-level categories show as circles here; subcategories expand inline below
   const topLevelCategories = categories.filter(cat => !cat.parentId);
+  const selectedCategoryDetails = selectedCategory ? categories.find(cat => cat.id === selectedCategory) : null;
+  const selectedParentCategory = selectedCategoryDetails
+    ? selectedCategoryDetails.parentId
+      ? categories.find(cat => cat.id === selectedCategoryDetails.parentId) || null
+      : selectedCategoryDetails
+    : null;
+  const activeSectionId = expandedCategoryId || selectedParentCategory?.id || null;
 
   const scrollToProducts = () => {
     const productsEl = document.getElementById('catalog-products-list-anchor');
@@ -128,7 +135,9 @@ export default function HomeView({
   const handleCategoryCircleClick = (cat: Category) => {
     const hasSubcategories = categories.some(c => c.parentId === cat.id);
     if (hasSubcategories) {
-      setExpandedCategoryId(prev => (prev === cat.id ? null : cat.id));
+      setSelectedCategory(cat.id);
+      setExpandedCategoryId(cat.id);
+      scrollToProducts();
     } else {
       setSelectedCategory(cat.id);
       setExpandedCategoryId(null);
@@ -486,7 +495,7 @@ export default function HomeView({
       <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <h3 className="font-serif text-[14px] md:text-base font-extrabold tracking-tight uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-            Shop by Category
+            Shop Sections
           </h3>
           {selectedCategory && (
             <button
@@ -524,8 +533,8 @@ export default function HomeView({
 
           {/* Main list of category circles (top-level only) */}
           {topLevelCategories.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            const isExpanded = expandedCategoryId === cat.id;
+            const isSelected = selectedCategory === cat.id || selectedParentCategory?.id === cat.id;
+            const isExpanded = activeSectionId === cat.id;
             const hasSubcategories = categories.some(c => c.parentId === cat.id);
             return (
               <div
@@ -569,9 +578,9 @@ export default function HomeView({
         </div>
 
         {/* Inline subcategory row - bigger round circles, expands under the tapped main category */}
-        {expandedCategoryId && (() => {
-          const parentCat = categories.find(c => c.id === expandedCategoryId);
-          const subs = categories.filter(c => c.parentId === expandedCategoryId);
+        {activeSectionId && (() => {
+          const parentCat = categories.find(c => c.id === activeSectionId);
+          const subs = categories.filter(c => c.parentId === activeSectionId);
           if (!parentCat || subs.length === 0) return null;
 
           const ringPalette = [
@@ -583,20 +592,28 @@ export default function HomeView({
           ];
 
           return (
-            <div className={`rounded-2xl border p-3 animate-fadeIn ${isDarkMode ? 'border-indigo-900/50 bg-indigo-950/10' : 'border-indigo-100 bg-indigo-50/40'}`}>
-              <p className="px-1 pb-2 text-[11px] font-black uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-                Browse in {parentCat.name}
-              </p>
-              <div className="flex items-center gap-6 overflow-x-auto pb-1 px-1 w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className={`rounded-xl border p-3 animate-fadeIn ${isDarkMode ? 'border-indigo-900/50 bg-indigo-950/10' : 'border-indigo-100 bg-indigo-50/40'}`}>
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">Section</p>
+                  <h4 className="font-serif text-lg font-black text-slate-950 dark:text-white">{parentCat.name}</h4>
+                  {parentCat.description && <p className="mt-1 line-clamp-2 text-xs text-slate-600 dark:text-slate-300">{parentCat.description}</p>}
+                </div>
+                <span className="shrink-0 rounded-full bg-indigo-700 px-3 py-1 text-[10px] font-black uppercase text-white">
+                  {subs.length} aisles
+                </span>
+              </div>
+              <div className="flex items-center gap-3 overflow-x-auto pb-1 px-1 w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {/* Shortcut to view everything under the main category */}
                 <div
                   onClick={() => {
                     setSelectedCategory(parentCat.id);
+                    setExpandedCategoryId(parentCat.id);
                     scrollToProducts();
                   }}
                   className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
                 >
-                  <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center border-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
+                  <div className={`w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center border-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
                     selectedCategory === parentCat.id
                       ? 'border-indigo-700 bg-indigo-100 dark:bg-indigo-900/40 ring-4 ring-indigo-500/20'
                       : 'border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800'
@@ -615,16 +632,17 @@ export default function HomeView({
                       key={sub.id}
                       onClick={() => {
                         setSelectedCategory(sub.id);
+                        setExpandedCategoryId(parentCat.id);
                         scrollToProducts();
                       }}
                       className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
                     >
-                      <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center border-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
+                      <div className={`w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center border-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
                         isSubSelected
                           ? 'border-indigo-700 ring-4 ring-indigo-500/20 bg-indigo-100 dark:bg-indigo-900/40'
                           : ringPalette[idx % ringPalette.length]
                       }`}>
-                        <div className="relative w-[86%] h-[86%] rounded-full overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center shadow-inner">
+                        <div className="relative w-[86%] h-[86%] rounded-lg overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center shadow-inner">
                           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase select-none">
                             {sub.name.substring(0, 2)}
                           </span>
@@ -655,11 +673,14 @@ export default function HomeView({
       {selectedCategory && (
         <div className={`p-4 rounded-xl flex items-center justify-between border ${isDarkMode ? 'border-indigo-900 bg-indigo-950/20' : 'border-indigo-100 bg-indigo-50/50'} text-xs font-semibold`}>
           <div className="flex items-center gap-2">
-            <span className="p-1 rounded bg-indigo-500 text-white font-mono uppercase text-[9px] font-black">Filtered View</span>
-            <span>Showing products under <strong className="text-indigo-600 dark:text-indigo-400">"{categories.find(c => c.id === selectedCategory)?.name}"</strong></span>
+            <span className="p-1 rounded bg-indigo-500 text-white font-mono uppercase text-[9px] font-black">Section View</span>
+            <span>
+              You are shopping in <strong className="text-indigo-600 dark:text-indigo-400">"{selectedParentCategory?.name || selectedCategoryDetails?.name}"</strong>
+              {selectedCategoryDetails?.parentId && <> / <strong className="text-indigo-600 dark:text-indigo-400">"{selectedCategoryDetails.name}"</strong></>}
+            </span>
           </div>
           <button
-            onClick={() => setSelectedCategory(null)}
+            onClick={() => { setSelectedCategory(null); setExpandedCategoryId(null); }}
             className="bg-indigo-600 text-white text-[10px] font-black px-3 py-1.5 rounded-full hover:bg-indigo-500 shadow transition"
           >
             x
@@ -850,7 +871,7 @@ export default function HomeView({
                       )}
                       {prod.stockCount === 0 && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-2 sm:p-4">
-                          <span className="bg-red-600 text-white font-extrabold text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded-full uppercase">Sold out</span>
+                          <span className="bg-red-600 text-white font-extrabold text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded-full uppercase">Out of stock</span>
                         </div>
                       )}
                     </div>

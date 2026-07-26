@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { ArrowLeft, Heart, X, AlertTriangle, Star, Minus, Plus, ShoppingCart, Share2 } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Heart, X, AlertTriangle, Star, Minus, Plus, ShoppingCart, Share2 } from 'lucide-react';
 import { Product, Category, User as UserType, Review } from '../../types';
 import { ReviewList } from './ReviewList';
 import { commonStyles } from './commonStyles';
@@ -73,6 +73,8 @@ export default function ProductDetailView({
 
   const lowStockThreshold = selectedProduct.lowStockAlertThreshold ?? 10;
   const isLowStock = selectedProduct.stockCount > 0 && selectedProduct.stockCount <= lowStockThreshold;
+  const productImages = selectedProduct.images?.length ? selectedProduct.images : [productImageFallback];
+  const hasMultipleImages = productImages.length > 1;
   const activePrice = selectedProduct.offerPrice > 0 ? selectedProduct.offerPrice : selectedProduct.basePrice;
   const detailTotal = activePrice * detailQty;
   const selectedWords = new Set(
@@ -95,6 +97,12 @@ export default function ProductDetailView({
     .sort((a, b) => b.score - a.score || a.priceGap - b.priceGap)
     .slice(0, 6)
     .map((entry) => entry.product);
+  const goToPreviousImage = () => {
+    setActiveImageIndex(activeImageIndex === 0 ? productImages.length - 1 : activeImageIndex - 1);
+  };
+  const goToNextImage = () => {
+    setActiveImageIndex(activeImageIndex === productImages.length - 1 ? 0 : activeImageIndex + 1);
+  };
 
   return (
     <div className="mx-auto mb-6 flex w-full max-w-6xl flex-col rounded-2xl border border-slate-200/60 bg-white p-4 font-sans shadow-sm animate-fadeIn select-none dark:border-slate-800/60 dark:bg-slate-900 md:p-5">
@@ -151,11 +159,42 @@ export default function ProductDetailView({
         <div className="flex w-full max-w-[420px] flex-col gap-3 justify-self-center lg:sticky lg:top-24">
           <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200/50 bg-slate-100 shadow-sm group dark:border-slate-800/50 dark:bg-[#111827]">
             <img 
-              src={selectedProduct.images?.[activeImageIndex] || selectedProduct.images?.[0] || productImageFallback} 
+              src={productImages[activeImageIndex] || productImages[0]} 
               alt={selectedProduct.name} 
               className="h-full w-full object-contain p-2 transition-all duration-500 group-hover:scale-[1.02]" 
               referrerPolicy="no-referrer"
             />
+            {hasMultipleImages && (
+              <>
+                <button
+                  type="button"
+                  onClick={goToPreviousImage}
+                  className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-slate-800 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white dark:border-slate-700 dark:bg-slate-950/85 dark:text-white"
+                  aria-label="Previous product image"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={goToNextImage}
+                  className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-slate-800 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white dark:border-slate-700 dark:bg-slate-950/85 dark:text-white"
+                  aria-label="Next product image"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/35 px-2.5 py-1.5 backdrop-blur">
+                  {productImages.map((_, index) => (
+                    <button
+                      key={`image-dot-${index}`}
+                      type="button"
+                      onClick={() => setActiveImageIndex(index)}
+                      className={`h-1.5 rounded-full transition-all ${activeImageIndex === index ? 'w-5 bg-white' : 'w-1.5 bg-white/45 hover:bg-white/75'}`}
+                      aria-label={`Show product image ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
             
             {/* Dynamic tag */}
             {isLowStock && (
@@ -166,15 +205,15 @@ export default function ProductDetailView({
             )}
             {selectedProduct.stockCount === 0 && (
               <div className="absolute left-3 top-3 rounded-full bg-rose-500 px-3 py-1.5 text-[10px] font-bold uppercase text-white shadow-lg">
-                <span>Out of Stock</span>
+                <span>Out of stock</span>
               </div>
             )}
           </div>
 
           {/* Thumbnails list */}
-          {(selectedProduct.images?.length || 0) > 1 && (
+          {hasMultipleImages && (
             <div className="flex gap-3 overflow-x-auto py-1 scrollbar-none">
-              {selectedProduct.images?.map((img, idx) => (
+              {productImages.map((img, idx) => (
                 <button 
                   key={idx} 
                   onClick={() => setActiveImageIndex(idx)}
@@ -293,7 +332,7 @@ export default function ProductDetailView({
           {/* ATC Buttons panel */}
           <div className="space-y-4 text-left">
             {selectedProduct.stockCount === 0 ? (
-              <button disabled className="w-full bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-bold py-4 text-xs rounded-2xl cursor-not-allowed uppercase tracking-wider">Product Out of stock</button>
+              <button disabled className="w-full bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-bold py-4 text-xs rounded-2xl cursor-not-allowed uppercase tracking-wider">Product out of stock</button>
             ) : (
               <button 
                 onClick={() => {

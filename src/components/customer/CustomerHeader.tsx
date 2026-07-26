@@ -311,7 +311,7 @@ export default function CustomerHeader({
 
             {/* Search bar (Desktop View) */}
             <div className="flex-1 max-w-md relative hidden md:block">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
               <input 
                 id="customer_desktop_search"
                 name="customer_desktop_search"
@@ -324,7 +324,7 @@ export default function CustomerHeader({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') submitSearch();
                 }}
-                className={`w-full pl-9 pr-20 py-2 text-sm rounded-full border shadow-sm transition-all ${isDarkMode ? 'border-[#334155] bg-[#1e293b] focus:border-indigo-500 text-white' : 'border-slate-200 bg-white focus:border-indigo-500 focus:bg-white focus:shadow-md'}`}
+                className={`h-12 w-full rounded-2xl border pl-12 pr-24 text-sm font-semibold shadow-[0_10px_28px_rgba(15,23,42,0.08)] outline-none transition-all placeholder:text-slate-400 focus:ring-4 focus:ring-indigo-500/10 ${isDarkMode ? 'border-[#334155] bg-[#1e293b] focus:border-indigo-500 text-white' : 'border-slate-200 bg-white focus:border-indigo-500 focus:bg-white focus:shadow-md'}`}
               />
               {searchQuery && (
                 <button
@@ -333,7 +333,7 @@ export default function CustomerHeader({
                     setSearchQuery('');
                     onClearSearch?.();
                   }}
-                  className="absolute right-11 top-2.5 rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-white"
+                  className="absolute right-14 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-white"
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
@@ -342,7 +342,7 @@ export default function CustomerHeader({
               <button
                 type="button"
                 onClick={submitSearch}
-                className="absolute right-2 top-2 rounded-full p-1 text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950"
+                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl bg-indigo-700 text-white shadow-sm hover:bg-indigo-600 dark:bg-indigo-600 dark:hover:bg-indigo-500"
                 aria-label="Search"
               >
                 <Search className="h-4 w-4" />
@@ -403,7 +403,7 @@ export default function CustomerHeader({
           {/* Mobile Search Bar */}
           {(activeTab === 'home' || activeTab === 'search') && (
             <div className="relative md:hidden pb-1 w-full animate-fade-in">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input 
                 id="customer_mobile_search"
                 name="customer_mobile_search"
@@ -416,7 +416,7 @@ export default function CustomerHeader({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') submitSearch();
                 }}
-                className={`w-full pl-8 pr-20 py-2 text-xs rounded-full border shadow-sm transition-all ${isDarkMode ? 'border-[#334155] bg-[#1a2230] focus:border-indigo-500 text-white' : 'border-slate-200 bg-white focus:border-indigo-400 focus:bg-white focus:shadow-md'}`}
+                className={`h-11 w-full rounded-2xl border pl-11 pr-24 text-sm font-semibold shadow-[0_8px_22px_rgba(15,23,42,0.08)] outline-none transition-all placeholder:text-slate-400 focus:ring-4 focus:ring-indigo-500/10 ${isDarkMode ? 'border-[#334155] bg-[#1a2230] focus:border-indigo-500 text-white' : 'border-slate-200 bg-white focus:border-indigo-400 focus:bg-white focus:shadow-md'}`}
               />
               {searchQuery && (
                 <button
@@ -425,13 +425,13 @@ export default function CustomerHeader({
                     setSearchQuery('');
                     onClearSearch?.();
                   }}
-                  className="absolute right-11 top-2 rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-white"
+                  className="absolute right-14 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-white"
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
-              <button type="button" onClick={submitSearch} className="absolute right-2 top-1.5 rounded-full p-1 text-indigo-600 dark:text-indigo-300" aria-label="Search">
+              <button type="button" onClick={submitSearch} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl bg-indigo-700 text-white shadow-sm dark:bg-indigo-600" aria-label="Search">
                 <Search className="h-4 w-4" />
               </button>
               {isSearchLoading && <span className="absolute -bottom-4 left-3 text-[9px] font-semibold text-slate-400">Searching...</span>}
