@@ -77,36 +77,29 @@ function hasValidCustomerPhone(order: Order) {
 
 /** Pre-texted WhatsApp message for normal WhatsApp */
 function buildWhatsAppInvoiceMessage(order: Order, invoiceUrl: string, websiteUrl = 'https://svayiro.co.in') {
-  const itemsList = (order.items || [])
-    .slice(0, 4)
-    .map((item: any) => `${item.productName || item.name || 'Item'} (Qty: ${item.quantity || 1})`)
-    .join(', ');
-  const moreItems = (order.items || []).length > 4 ? ` + ${(order.items || []).length - 4} more` : '';
-
   const formattedStatus = String(order.status || 'pending').replace(/_/g, ' ').toUpperCase();
   const deliveredLine = order.status === 'delivered'
     ? 'Your SVAYIRO order has been delivered successfully. We hope everything reached you safely and fresh.'
     : 'Your SVAYIRO order update and bill are ready.';
 
   return [
-    `Namaste ${order.customerName || 'Customer'},`,
+    `Namaste *${order.customerName || 'Customer'}*,`,
     deliveredLine,
     '',
-    `Order: ${order.orderRef || order.id}`,
-    `Status: ${formattedStatus}`,
-    `Amount: ${money(order.finalTotal)}`,
-    `Payment: ${order.paymentMethod || order.paymentDetails?.method || 'cod'} (${order.paymentStatus || order.paymentDetails?.status || 'pending'})`,
-    itemsList ? `Items: ${itemsList}${moreItems}` : 'Items: See bill for complete details',
+    `*Order:* ${order.orderRef || order.id}`,
+    `*Status:* ${formattedStatus}`,
+    `*Amount:* ${money(order.finalTotal)}`,
+    `*Payment:* ${order.paymentMethod || order.paymentDetails?.method || 'cod'} (${order.paymentStatus || order.paymentDetails?.status || 'pending'})`,
     '',
-    'View / print bill:',
+    '*View / print bill:*',
     invoiceUrl,
     '',
-    'Shop again:',
+    '*Shop again:*',
     websiteUrl,
     '',
     'For support, reply to this message with your order number.',
-    'SVAYIRO',
-    'Trust In Every Choice.'
+    '*SVAYIRO*',
+    '_Trust In Every Choice._'
   ].join('\n');
 }
 

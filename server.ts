@@ -946,11 +946,6 @@ function buildOrderInvoiceMessageWithLink(order: any, invoiceUrl: string) {
     ].join('\n');
   }
 
-  const itemSummary = (normalized.items || [])
-    .slice(0, 4)
-    .map((item: any) => `${item.productName || 'Item'} x ${Number(item.quantity || 1)}`)
-    .join(', ');
-  const moreItems = (normalized.items || []).length > 4 ? ` + ${(normalized.items || []).length - 4} more` : '';
   const status = String(normalized.status || 'pending').replace(/_/g, ' ').toUpperCase();
   const payment = `${normalized.paymentMethod || 'cod'} (${normalized.paymentStatus || 'pending'})`;
   const deliveredLine = normalized.status === 'delivered'
@@ -958,24 +953,23 @@ function buildOrderInvoiceMessageWithLink(order: any, invoiceUrl: string) {
     : 'Your SVAYIRO order update and bill are ready.';
 
   return [
-    `Namaste ${normalized.customerName || 'Customer'},`,
+    `Namaste *${normalized.customerName || 'Customer'}*,`,
     deliveredLine,
     '',
-    `Order: ${normalized.orderRef || normalized.id}`,
-    `Status: ${status}`,
-    `Amount: ${money(normalized.finalAmount)}`,
-    `Payment: ${payment}`,
-    itemSummary ? `Items: ${itemSummary}${moreItems}` : 'Items: See bill for complete details',
+    `*Order:* ${normalized.orderRef || normalized.id}`,
+    `*Status:* ${status}`,
+    `*Amount:* ${money(normalized.finalAmount)}`,
+    `*Payment:* ${payment}`,
     '',
-    'View / print bill:',
+    '*View / print bill:*',
     invoiceUrl,
     '',
-    'Shop again:',
+    '*Shop again:*',
     websiteUrl,
     '',
     'For support, reply to this message with your order number.',
-    'SVAYIRO',
-    'Trust In Every Choice.'
+    '*SVAYIRO*',
+    '_Trust In Every Choice._'
   ].join('\n');
 }
 

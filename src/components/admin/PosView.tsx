@@ -77,34 +77,28 @@ const panelClass = 'rounded-xl border border-slate-200 bg-white shadow-sm dark:b
 /** Pre-texted WhatsApp message for POS Walk-In Customer */
 function buildPosWhatsAppMessage(
   customerName: string, 
-  billItems: Array<{ name: string; quantity: number }>, 
   grandTotal: number, 
   invoiceUrl?: string, 
   websiteUrl = 'https://svayiro.co.in'
 ) {
   const publicInvoiceLink = invoiceUrl || websiteUrl;
-  const itemsList = billItems
-    .slice(0, 4)
-    .map((item) => `${item.name} (Qty: ${item.quantity})`)
-    .join(', ');
-  const moreItems = billItems.length > 4 ? ` + ${billItems.length - 4} more` : '';
 
   return [
-    `Namaste ${customerName || 'Customer'},`,
+    `Namaste *${customerName || 'Customer'}*,`,
     `Your SVAYIRO store bill is ready.`,
     '',
-    `Status: COMPLETED`,
-    `Grand Total: Rs. ${grandTotal.toFixed(2)}`,
-    itemsList ? `Items: ${itemsList}${moreItems}` : 'Items: See bill for complete details',
+    `*Status:* COMPLETED`,
+    `*Amount:* Rs. ${grandTotal.toFixed(2)}`,
     '',
-    'View / print bill:',
+    '*View / print bill:*',
     publicInvoiceLink,
     '',
-    'Shop again:',
+    '*Shop again:*',
     websiteUrl,
     '',
     'Thank you for shopping with SVAYIRO.',
-    'Trust In Every Choice.'
+    '*SVAYIRO*',
+    '_Trust In Every Choice._'
   ].join('\n');
 }
 
@@ -391,13 +385,9 @@ export default function PosView({
       alert('Complete the sale first so the public invoice link can be created.');
       return;
     }
-    const billItems = (lastCompletedOrder?.items || offlineCart).map((item: any) => ({
-      name: item.productName || item.name || 'Item',
-      quantity: Number(item.quantity || 1)
-    }));
     const customerName = lastCompletedOrder?.customerName || lastCompletedOrder?.customer_name || session.customerName;
     const grandTotal = Number(lastCompletedOrder?.finalTotal ?? lastCompletedOrder?.final_amount ?? total);
-    const message = buildPosWhatsAppMessage(customerName, billItems, grandTotal, lastInvoiceUrl, 'https://svayiro.co.in');
+    const message = buildPosWhatsAppMessage(customerName, grandTotal, lastInvoiceUrl, 'https://svayiro.co.in');
     openPosWhatsAppBill(targetPhone, message);
   };
 
