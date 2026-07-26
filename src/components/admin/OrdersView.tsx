@@ -32,9 +32,6 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
 };
 
-const handlePrintInvoice = (order: Order) => {
-  printShopInvoice(order);
-};
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
 
 const money = (value: any) => `Rs. ${Number(value || 0).toFixed(2)}`;
@@ -79,10 +76,7 @@ function hasValidCustomerPhone(order: Order) {
 }
 
 /** Pre-texted WhatsApp message for normal WhatsApp */
-function buildWhatsAppInvoiceMessage(order: Order, websiteUrl = 'https://svayiro.co.in') {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://svayiro.co.in';
-  const publicInvoiceLink = `${origin}/invoice/${order.id}`;
-
+function buildWhatsAppInvoiceMessage(order: Order, invoiceUrl: string, websiteUrl = 'https://svayiro.co.in') {
   const itemsList = (order.items || [])
     .map((item: any) => `${item.productName || item.name || 'Item'} (Qty: ${item.quantity || 1})`)
     .join(', ');
@@ -94,7 +88,7 @@ function buildWhatsAppInvoiceMessage(order: Order, websiteUrl = 'https://svayiro
     `Your order status for ${itemsList || 'your item'} (Order #${order.orderRef || order.id}) is: *${formattedStatus}*.`,
     ``,
     `Please view and print your bill by clicking this link:`,
-    `${publicInvoiceLink}`,
+    `${invoiceUrl}`,
     ``,
     `Thank you for shopping with us!`,
     `Visit our website: ${websiteUrl}`
@@ -102,10 +96,10 @@ function buildWhatsAppInvoiceMessage(order: Order, websiteUrl = 'https://svayiro
 }
 
 /** Normal WhatsApp Sender */
-function openWhatsAppInvoice(order: Order, websiteUrl = 'https://svayiro.co.in') {
+function openWhatsAppInvoice(order: Order, invoiceUrl: string, websiteUrl = 'https://svayiro.co.in') {
   const digits = String(order.customerPhone || '').replace(/\D/g, '');
   const phone = digits.length === 10 ? `91${digits}` : digits;
-  const message = buildWhatsAppInvoiceMessage(order, websiteUrl);
+  const message = buildWhatsAppInvoiceMessage(order, invoiceUrl, websiteUrl);
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
 }
 
@@ -244,7 +238,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
   const isOwner = roles.includes('admin');
   const isDeliveryPartner = roles.includes('delivery_partner') && !isOwner;
   const canSendInvoices = isOwner || roles.includes('customer_care');
-  const websiteUrl = shop?.websiteUrl || 'https://svayiro.co.in';
+  const websiteUrl = (typeof window !== 'undefined' && window.location.origin) || 'https://svayiro.co.in';
 
   const canSendWhatsAppBill = (order: Order) => {
     return true; // Allow sending WhatsApp bill directly
@@ -348,20 +342,35 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
   };
 
   // Normal WhatsApp Invoice Sender
-  const handleSendWhatsAppInvoice = (order: Order) => {
+  const handleSendWhatsAppInvoice = async (order: Order) => {
     if (!hasValidCustomerPhone(order)) {
       showToast('Enter a valid 10-digit customer phone before sending invoice.', 'error');
       return;
     }
-    openWhatsAppInvoice(order, websiteUrl);
-    showToast('Normal WhatsApp opened with pre-filled status and print bill link.', 'success');
+    setLoadingId(order.id);
+    try {
+      const invoice = await api.adminInvoiceLink(order.id);
+      openWhatsAppInvoice(order, invoice.invoiceUrl, websiteUrl);
+      showToast('Normal WhatsApp opened with the public printable invoice link.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Unable to create public invoice link.', 'error');
+    } finally {
+      setLoadingId(null);
+    }
   };
 
-  const handlePrintInvoice = (order: Order) => {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const publicLink = `${origin}/invoice/${order.id}`;
-  window.open(publicLink, '_blank');
-};
+  const handlePrintInvoice = async (order: Order) => {
+    setLoadingId(order.id);
+    try {
+      const invoice = await api.adminInvoiceLink(order.id);
+      window.open(invoice.invoiceUrl, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      showToast(err.message || 'Unable to open public invoice link.', 'error');
+      printShopInvoice(order);
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   const handleMarkCodPaid = async (order: Order) => {
     setLoadingId(order.id);

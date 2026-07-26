@@ -77,15 +77,13 @@ const panelClass = 'rounded-xl border border-slate-200 bg-white shadow-sm dark:b
 /** Pre-texted WhatsApp message for POS Walk-In Customer */
 function buildPosWhatsAppMessage(
   customerName: string, 
-  offlineCart: PosCartItem[], 
+  billItems: Array<{ name: string; quantity: number }>, 
   grandTotal: number, 
-  orderIdOrRef?: string, 
+  invoiceUrl?: string, 
   websiteUrl = 'https://svayiro.co.in'
 ) {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://svayiro.co.in';
-  const publicInvoiceLink = orderIdOrRef ? `${origin}/invoice/${orderIdOrRef}` : `${origin}`;
-
-  const itemsList = offlineCart
+  const publicInvoiceLink = invoiceUrl || websiteUrl;
+  const itemsList = billItems
     .map((item) => `${item.name} (Qty: ${item.quantity})`)
     .join(', ');
 
@@ -151,6 +149,7 @@ export default function PosView({
   const [cleanupBusy, setCleanupBusy] = useState(false);
   const [catalogAddFlash, setCatalogAddFlash] = useState(false);
   const [lastCompletedOrder, setLastCompletedOrder] = useState<any | null>(null);
+  const [lastInvoiceUrl, setLastInvoiceUrl] = useState('');
 
   const sessionKey = activeRegisterId || registers[0]?.id || 'register_1';
   const session = sessions[sessionKey] || emptyRegisterSession();
@@ -323,9 +322,20 @@ export default function PosView({
       alert('No cart items to print.');
       return;
     }
-    const lines = offlineCart.map((item) => {
-      const amount = item.price * item.quantity;
-      return `<tr><td>${item.name}</td><td>${item.quantity}</td><td>Rs. ${item.price.toFixed(2)}</td><td>Rs. ${amount.toFixed(2)}</td></tr>`;
+    if (lastInvoiceUrl) {
+      window.open(lastInvoiceUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    const billItems = lastCompletedOrder?.items || offlineCart;
+    const billTotal = Number(lastCompletedOrder?.finalTotal ?? lastCompletedOrder?.final_amount ?? total);
+    const billBagCost = Number(lastCompletedOrder?.bagCharge ?? lastCompletedOrder?.bag_charge ?? bagCost);
+    const billPaymentMethod = String(lastCompletedOrder?.paymentMethod ?? lastCompletedOrder?.payment_method ?? session.paymentMethod).toUpperCase();
+    const billPaymentRef = lastCompletedOrder?.paymentRef ?? lastCompletedOrder?.payment_ref ?? session.upiReference;
+    const lines = billItems.map((item: any) => {
+      const qty = Number(item.quantity || 1);
+      const unit = Number(item.unitPrice ?? item.unit_price ?? item.price ?? 0);
+      const amount = Number(item.totalPrice ?? item.total_price ?? unit * qty);
+      return `<tr><td>${item.productName || item.name || 'Item'}</td><td>${qty}</td><td>Rs. ${unit.toFixed(2)}</td><td>Rs. ${amount.toFixed(2)}</td></tr>`;
     }).join('');
 
     const popup = window.open('', '_blank', 'width=420,height=640');
@@ -348,9 +358,9 @@ export default function PosView({
           <div class="meta">${formatDateTimeDDMMYYYY(new Date())}</div>
           <div class="meta">Customer: ${session.customerName || 'Walk-In Customer'} | ${session.customerPhone || '-'}</div>
           <table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>${lines}</tbody></table>
-          ${bagCost > 0 ? `<div class="total">Bag charge: Rs. ${bagCost.toFixed(2)}</div>` : ''}
-          <div class="total">Grand total: Rs. ${total.toFixed(2)}</div>
-          <div class="meta">Payment: ${session.paymentMethod.toUpperCase()} ${session.upiReference ? `(${session.upiReference})` : ''}</div>
+          ${billBagCost > 0 ? `<div class="total">Bag charge: Rs. ${billBagCost.toFixed(2)}</div>` : ''}
+          <div class="total">Grand total: Rs. ${billTotal.toFixed(2)}</div>
+          <div class="meta">Payment: ${billPaymentMethod} ${billPaymentRef ? `(${billPaymentRef})` : ''}</div>
           ${session.transactionNote ? `<div class="meta">Note: ${session.transactionNote}</div>` : ''}
         </body>
       </html>
@@ -363,13 +373,24 @@ export default function PosView({
   /** Action 2: Send WhatsApp Bill */
   const handleSendPosWhatsApp = () => {
     const digits = session.customerPhone.replace(/\D/g, '');
-    if (!/^[6-9]\d{9}$/.test(digits)) {
+    const completedPhone = String(lastCompletedOrder?.customerPhone ?? lastCompletedOrder?.customer_phone ?? '').replace(/\D/g, '');
+    const targetPhone = digits || completedPhone;
+    if (!/^[6-9]\d{9}$/.test(targetPhone)) {
       alert('Mobile number is required. Enter a valid 10-digit Indian mobile number.');
       return;
     }
-    const orderId = lastCompletedOrder?.id || lastCompletedOrder?.orderRef || '';
-    const message = buildPosWhatsAppMessage(session.customerName, offlineCart, total, orderId, 'https://svayiro.co.in');
-    openPosWhatsAppBill(digits, message);
+    if (!lastInvoiceUrl) {
+      alert('Complete the sale first so the public invoice link can be created.');
+      return;
+    }
+    const billItems = (lastCompletedOrder?.items || offlineCart).map((item: any) => ({
+      name: item.productName || item.name || 'Item',
+      quantity: Number(item.quantity || 1)
+    }));
+    const customerName = lastCompletedOrder?.customerName || lastCompletedOrder?.customer_name || session.customerName;
+    const grandTotal = Number(lastCompletedOrder?.finalTotal ?? lastCompletedOrder?.final_amount ?? total);
+    const message = buildPosWhatsAppMessage(customerName, billItems, grandTotal, lastInvoiceUrl, 'https://svayiro.co.in');
+    openPosWhatsAppBill(targetPhone, message);
   };
 
   /** Action 3: Complete Sale Only (Decrements stock, clears session) */
@@ -396,6 +417,16 @@ export default function PosView({
       });
 
       setLastCompletedOrder(saleOrder);
+      if (saleOrder?.id) {
+        try {
+          const invoice = await api.adminInvoiceLink(saleOrder.id);
+          setLastInvoiceUrl(invoice.invoiceUrl);
+        } catch {
+          setLastInvoiceUrl('');
+        }
+      } else {
+        setLastInvoiceUrl('');
+      }
       alert('Sale completed successfully! Inventory updated.');
       updateSession(emptyRegisterSession());
     } catch (err: any) {
