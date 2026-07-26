@@ -309,8 +309,22 @@ export default function App() {
   const loadMoreCustomerProducts = async (params: { categoryId?: string | null; limit?: number } = {}) => {
     const limit = params.limit || 10;
     const categoryId = params.categoryId || null;
+    const selectedCategoryIds = new Set<string>();
+    if (categoryId) {
+      selectedCategoryIds.add(categoryId);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        categories.forEach((category) => {
+          if (category.parentId && selectedCategoryIds.has(category.parentId) && !selectedCategoryIds.has(category.id)) {
+            selectedCategoryIds.add(category.id);
+            changed = true;
+          }
+        });
+      }
+    }
     const offset = categoryId
-      ? products.filter(product => product.categoryId === categoryId).length
+      ? products.filter(product => selectedCategoryIds.has(product.categoryId)).length
       : products.length;
     const nextProducts = await api.searchProducts({ categoryId, limit, offset });
     const normalized = nextProducts.map(normalizeProduct);

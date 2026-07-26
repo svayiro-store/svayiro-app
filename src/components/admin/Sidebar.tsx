@@ -50,29 +50,14 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
   ];
 
   return (
-    <aside className={`w-full md:w-64 border-b md:border-r shrink-0 transition-colors p-4 ${isDarkMode ? 'border-[#1e293b] bg-[#090d16]' : 'border-slate-200 bg-white'}`}>
-      <div className="flex items-center gap-2 mb-6">
+    <aside className={`w-full md:w-64 md:min-h-screen md:sticky md:top-0 border-b md:border-r shrink-0 transition-colors p-4 flex flex-col ${isDarkMode ? 'border-[#1e293b] bg-[#090d16]' : 'border-slate-200 bg-white'}`}>
+      <div className="flex items-center gap-2 mb-4 md:mb-6">
         <Settings className="h-6 w-6 text-indigo-500" />
         <h2 className="font-extrabold text-indigo-700 text-lg font-mono tracking-wider dark:text-indigo-300">SVAYIRO CONSOLE</h2>
       </div>
 
-      <nav className="flex md:flex-col overflow-x-auto gap-1 border-t md:border-t-0 pt-3 md:pt-0 pb-2 text-xs">
-        {items.filter((item) => (menuRoles[item.id] || ['admin']).some((role) => roles.includes(role))).map(item => {
-          const Icon = item.icon as any;
-          return (
-            <button key={item.id} onClick={() => setActiveMenu(item.id)} className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg select-none text-left whitespace-nowrap transition-all ${activeMenu === item.id ? 'bg-indigo-700 text-white font-bold shadow-md' : 'opacity-75 hover:opacity-100 text-slate-700 dark:text-slate-300'}`}>
-              <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4 shrink-0 text-slate-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300" />
-                <span>{item.label}</span>
-              </div>
-              {item.badge ? <span className="text-[9px] px-1.5 py-0.2 rounded font-black font-mono leading-none bg-rose-50 text-rose-500">{item.badge}</span> : null}
-            </button>
-          );
-        })}
-      </nav>
-
       {(canOpenCustomerStorefront || onLogout) && (
-        <div className="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800/80 hidden md:block space-y-2">
+        <div className="order-2 md:order-3 mb-3 md:mb-0 md:mt-8 pt-3 md:pt-4 border-t border-slate-200 dark:border-slate-800/80 grid grid-cols-2 md:grid-cols-1 gap-2">
           {canOpenCustomerStorefront && (
             <button onClick={() => onSwitchMode('customer')} className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 rounded-lg">
               <ShoppingBag className="h-4 w-4 text-indigo-500" />
@@ -87,6 +72,21 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
           )}
         </div>
       )}
+
+      <nav className="order-3 md:order-2 flex md:flex-col overflow-x-auto md:overflow-y-auto gap-1 border-t md:border-t-0 pt-3 md:pt-0 pb-2 text-xs md:flex-1">
+        {items.filter((item) => (menuRoles[item.id] || ['admin']).some((role) => roles.includes(role))).map(item => {
+          const Icon = item.icon as any;
+          return (
+            <button key={item.id} onClick={() => setActiveMenu(item.id)} className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg select-none text-left whitespace-nowrap transition-all ${activeMenu === item.id ? 'bg-indigo-700 text-white font-bold shadow-md' : 'opacity-75 hover:opacity-100 text-slate-700 dark:text-slate-300'}`}>
+              <div className="flex items-center gap-2">
+                <Icon className="h-4 w-4 shrink-0 text-slate-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300" />
+                <span>{item.label}</span>
+              </div>
+              {item.badge ? <span className="text-[9px] px-1.5 py-0.2 rounded font-black font-mono leading-none bg-rose-50 text-rose-500">{item.badge}</span> : null}
+            </button>
+          );
+        })}
+      </nav>
     </aside>
   );
 }

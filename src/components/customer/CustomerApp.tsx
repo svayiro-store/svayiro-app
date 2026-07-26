@@ -1744,10 +1744,21 @@ export default function CustomerApp({
   const filteredProducts = useMemo(() => {
     let list = [...products];
     if (selectedCategory) {
-      list = list.filter(p => p.categoryId === selectedCategory);
+      const allowedCategoryIds = new Set<string>([selectedCategory]);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        categories.forEach((category) => {
+          if (category.parentId && allowedCategoryIds.has(category.parentId) && !allowedCategoryIds.has(category.id)) {
+            allowedCategoryIds.add(category.id);
+            changed = true;
+          }
+        });
+      }
+      list = list.filter(p => allowedCategoryIds.has(p.categoryId));
     }
     return list.filter(p => p.isEnabled);
-  }, [products, selectedCategory]);
+  }, [products, categories, selectedCategory]);
 
   const searchResultsProducts = useMemo(() => {
     const query = submittedSearchQuery.trim().toLowerCase();

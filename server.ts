@@ -928,11 +928,54 @@ function buildOrderInvoiceMessage(order: any) {
 }
 
 function buildOrderInvoiceMessageWithLink(order: any, invoiceUrl: string) {
+  const normalized = normalizeOrder(order);
+  const websiteUrl = getPublicBaseUrl();
+  if (!normalized) {
+    return [
+      'Namaste,',
+      'Your SVAYIRO bill is ready.',
+      '',
+      'View / print bill:',
+      invoiceUrl,
+      '',
+      'Shop again:',
+      websiteUrl,
+      '',
+      'SVAYIRO',
+      'Trust In Every Choice.'
+    ].join('\n');
+  }
+
+  const itemSummary = (normalized.items || [])
+    .slice(0, 4)
+    .map((item: any) => `${item.productName || 'Item'} x ${Number(item.quantity || 1)}`)
+    .join(', ');
+  const moreItems = (normalized.items || []).length > 4 ? ` + ${(normalized.items || []).length - 4} more` : '';
+  const status = String(normalized.status || 'pending').replace(/_/g, ' ').toUpperCase();
+  const payment = `${normalized.paymentMethod || 'cod'} (${normalized.paymentStatus || 'pending'})`;
+  const deliveredLine = normalized.status === 'delivered'
+    ? 'Your order has been delivered successfully. We hope everything reached you safely and fresh.'
+    : 'Your SVAYIRO order update and bill are ready.';
+
   return [
-    buildOrderInvoiceMessage(order),
+    `Namaste ${normalized.customerName || 'Customer'},`,
+    deliveredLine,
     '',
-    `View invoice: ${invoiceUrl}`,
-    'You can open this link to view or print the bill anytime.'
+    `Order: ${normalized.orderRef || normalized.id}`,
+    `Status: ${status}`,
+    `Amount: ${money(normalized.finalAmount)}`,
+    `Payment: ${payment}`,
+    itemSummary ? `Items: ${itemSummary}${moreItems}` : 'Items: See bill for complete details',
+    '',
+    'View / print bill:',
+    invoiceUrl,
+    '',
+    'Shop again:',
+    websiteUrl,
+    '',
+    'For support, reply to this message with your order number.',
+    'SVAYIRO',
+    'Trust In Every Choice.'
   ].join('\n');
 }
 
@@ -3439,7 +3482,15 @@ app.get('/api/products', async (req, res) => {
 
     if (categoryId) {
       params.push(categoryId);
-      where.push(`category_id = $${params.length}`);
+      where.push(`category_id IN (
+        WITH RECURSIVE category_tree AS (
+          SELECT id FROM categories WHERE id = $${params.length}::uuid
+          UNION ALL
+          SELECT c.id FROM categories c
+          INNER JOIN category_tree ct ON c.parent_id = ct.id
+        )
+        SELECT id FROM category_tree
+      )`);
     }
 
     if (search) {

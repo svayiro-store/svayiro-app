@@ -84,19 +84,27 @@ function buildPosWhatsAppMessage(
 ) {
   const publicInvoiceLink = invoiceUrl || websiteUrl;
   const itemsList = billItems
+    .slice(0, 4)
     .map((item) => `${item.name} (Qty: ${item.quantity})`)
     .join(', ');
+  const moreItems = billItems.length > 4 ? ` + ${billItems.length - 4} more` : '';
 
   return [
-    `Greetings ${customerName || 'Customer'}!`,
-    `Your order status for ${itemsList || 'your walk-in billing'} is: *COMPLETED*.`,
-    ``,
-    `Please view and print your bill by clicking this link:`,
-    `${publicInvoiceLink}`,
-    ``,
+    `Namaste ${customerName || 'Customer'},`,
+    `Your SVAYIRO store bill is ready.`,
+    '',
+    `Status: COMPLETED`,
     `Grand Total: Rs. ${grandTotal.toFixed(2)}`,
-    `Thank you for shopping with us!`,
-    `Visit our website: ${websiteUrl}`
+    itemsList ? `Items: ${itemsList}${moreItems}` : 'Items: See bill for complete details',
+    '',
+    'View / print bill:',
+    publicInvoiceLink,
+    '',
+    'Shop again:',
+    websiteUrl,
+    '',
+    'Thank you for shopping with SVAYIRO.',
+    'Trust In Every Choice.'
   ].join('\n');
 }
 

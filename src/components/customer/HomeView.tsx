@@ -799,7 +799,7 @@ export default function HomeView({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(155px,190px))] lg:grid-cols-[repeat(auto-fill,minmax(165px,215px))] justify-start gap-2 sm:gap-3">
               {visibleProducts.map((prod) => {
                 const hasDiscount = prod.offerPrice > 0;
                 const itemInCart = cart.find(c => c.productId === prod.id);
@@ -809,14 +809,14 @@ export default function HomeView({
                 return (
                   <div
                     key={prod.id}
-                    className={`rounded-lg border overflow-hidden shadow-xs flex flex-col justify-between group transition-all duration-300 transform hover:-translate-y-0.5 ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/30' : 'border-slate-200 bg-white hover:shadow-md'}`}
+                    className={`w-full rounded-lg border overflow-hidden shadow-xs flex flex-col justify-between group transition-all duration-300 transform hover:-translate-y-0.5 ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/30' : 'border-slate-200 bg-white hover:shadow-md'}`}
                   >
                     {/* Top Banner aspect */}
                     <div className="relative aspect-square overflow-hidden cursor-pointer bg-slate-50 animate-fadeIn" onClick={() => setSelectedProduct(prod)}>
                       <img
                         src={prod.images?.[0] || productImageFallback}
                         alt={prod.name}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="w-full h-full object-contain bg-white transition-transform duration-300 group-hover:scale-105"
                         referrerPolicy="no-referrer"
                       />
                       {/* Share product button */}
