@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { Order, ShopProfile } from '../../types';
 import { api } from '../../api';
@@ -235,13 +235,29 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
   const [codChoiceOrder, setCodChoiceOrder] = useState<Order | null>(null);
   const [codCollection, setCodCollection] = useState<{ order: Order; qrDataUrl: string; upiUrl: string; providerRef: string } | null>(null);
   
-  const isOwner = roles.includes('admin');
-  const isDeliveryPartner = roles.includes('delivery_partner') && !isOwner;
-  const canSendInvoices = isOwner || roles.includes('customer_care');
+  const normalizedRoles = useMemo(() => roles.map((role) => String(role).trim()), [roles]);
+  const isOwner = normalizedRoles.includes('admin');
+  const isCustomerCare = normalizedRoles.includes('customer_care') && !isOwner;
+  const isDeliveryPartner = normalizedRoles.includes('delivery_partner') && !isOwner;
+  const canSendInvoices = isOwner || isCustomerCare || isDeliveryPartner;
   const websiteUrl = (typeof window !== 'undefined' && window.location.origin) || 'https://svayiro.co.in';
 
   const canSendWhatsAppBill = (order: Order) => {
-    return true; // Allow sending WhatsApp bill directly
+    if (!canSendInvoices) return false;
+    if (isOwner || isCustomerCare) return true;
+    return isDeliveryPartner && order.deliveryMethod === 'delivery' && ['delivered', 'cancelled'].includes(order.status);
+  };
+
+  const canPrintBill = (order: Order) => {
+    if (isOwner || isCustomerCare) return true;
+    return isDeliveryPartner && order.deliveryMethod === 'delivery';
+  };
+
+  const canUpdateOrderStatus = (order: Order) => {
+    if (isOwner || isCustomerCare) return order.status !== 'delivered' && order.status !== 'cancelled';
+    if (!isDeliveryPartner) return false;
+    if (order.deliveryMethod !== 'delivery') return false;
+    return ['packed', 'out_for_delivery'].includes(order.status);
   };
 
   const loadInvoiceQueue = async () => {
@@ -563,7 +579,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                   const isUpi = paymentMethod === 'upi';
                   const nextStatus = nextStatusMap[order.status] || 'delivered';
 
-                  const canProgress = order.status !== 'delivered' && order.status !== 'cancelled' && !(isUpi && paymentStatus !== 'paid') && !(nextStatus === 'delivered' && isCod && paymentStatus !== 'paid');
+                  const canProgress = canUpdateOrderStatus(order) && !(isUpi && paymentStatus !== 'paid') && !(nextStatus === 'delivered' && isCod && paymentStatus !== 'paid');
                   
                   const canCollectCodDelivery = (isDeliveryPartner || isOwner)
                     && isCod
@@ -571,7 +587,8 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                     && order.deliveryMethod === 'delivery'
                     && ['packed', 'out_for_delivery', 'delivered'].includes(order.status);
 
-                  const canCollectCodPickup = isCod
+                  const canCollectCodPickup = isOwner
+                    && isCod
                     && paymentStatus !== 'paid'
                     && order.deliveryMethod === 'pickup';
                   const canCollectCod = canCollectCodDelivery || canCollectCodPickup;
@@ -615,13 +632,15 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       <td className="px-3 py-3 text-right font-black">{money(order.finalTotal)}</td>
                       <td className="px-3 py-3">
                         <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handlePrintInvoice(order)}
-                            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-black hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-                          >
-                            Print
-                          </button>
+                          {canPrintBill(order) && (
+                            <button
+                              type="button"
+                              onClick={() => handlePrintInvoice(order)}
+                              className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-black hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                            >
+                              Print
+                            </button>
+                          )}
                           {canCollectCod ? (
                             <button
                               type="button"
@@ -641,14 +660,16 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                               Verify UPI & Accept
                             </button>
                           ) : (
-                            <button
-                              type="button"
-                              disabled={loadingId === order.id || !canProgress}
-                              onClick={() => handleAdvanceStatus(order)}
-                              className="rounded-lg bg-indigo-700 px-2.5 py-1.5 text-[10px] font-black text-white disabled:opacity-50"
-                            >
-                              Mark {nextStatus.replace(/_/g, ' ')}
-                            </button>
+                            canUpdateOrderStatus(order) && (
+                              <button
+                                type="button"
+                                disabled={loadingId === order.id || !canProgress}
+                                onClick={() => handleAdvanceStatus(order)}
+                                className="rounded-lg bg-indigo-700 px-2.5 py-1.5 text-[10px] font-black text-white disabled:opacity-50"
+                              >
+                                Mark {nextStatus.replace(/_/g, ' ')}
+                              </button>
+                            )
                           )}
                         </div>
                       </td>
@@ -696,7 +717,8 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
             const isCod = paymentMethod === 'cod' || paymentMethod === 'cash';
             const isUpi = paymentMethod === 'upi';
 
-            const canMarkCodPaid = isCod
+            const canMarkCodPaid = isOwner
+              && isCod
               && paymentStatus !== 'paid'
               && order.status !== 'cancelled'
               && (order.status === 'out_for_delivery' || order.deliveryMethod === 'pickup' || order.status === 'packed');
@@ -707,7 +729,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
               && order.deliveryMethod === 'delivery'
               && ['packed', 'out_for_delivery', 'delivered'].includes(order.status);
             
-            const canVerifyUpiPaid = isUpi && paymentStatus !== 'paid';
+            const canVerifyUpiPaid = isOwner && isUpi && paymentStatus !== 'paid';
 
             return (
               <div key={order.id} className={`rounded-xl border shadow-sm transition-all ${isDarkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'} ${isExpanded ? 'ring-2 ring-indigo-500' : ''}`}>
@@ -807,7 +829,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
 
                     {/* Actions */}
                     <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
-                      {order.status !== 'delivered' && order.status !== 'cancelled' ? (
+                      {canUpdateOrderStatus(order) ? (
                         <>
                           <button
                             disabled={loadingId === order.id}
@@ -830,9 +852,11 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                         <span className="text-xs font-bold opacity-70 py-2">Order {order.status === 'delivered' ? 'completed' : 'cancelled'}</span>
                       )}
                       
-                      <button className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold flex items-center gap-1.5 dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
-                        <Printer className="h-3.5 w-3.5" /> Print Bill
-                      </button>
+                      {canPrintBill(order) && (
+                        <button className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold flex items-center gap-1.5 dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
+                          <Printer className="h-3.5 w-3.5" /> Print Bill
+                        </button>
+                      )}
 
                       {canMarkCodPaid && (
                         <button disabled={loadingId === order.id} className="rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50" onClick={() => handleMarkCodPaid(order)}>
@@ -927,12 +951,16 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                           <td className="px-3 py-3 text-right font-black">{money(order.finalTotal)}</td>
                           <td className="px-3 py-3">
                             <div className="flex justify-end gap-2">
-                              <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-black dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
-                                Print
-                              </button>
-                              <button disabled={loadingId === order.id} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 flex items-center gap-1" onClick={() => handleSendWhatsAppInvoice(order)}>
-                                <Send className="w-3 h-3" /> WhatsApp Bill
-                              </button>
+                              {canPrintBill(order) && (
+                                <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-black dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
+                                  Print
+                                </button>
+                              )}
+                              {canSendWhatsAppBill(order) && (
+                                <button disabled={loadingId === order.id} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 flex items-center gap-1" onClick={() => handleSendWhatsAppInvoice(order)}>
+                                  <Send className="w-3 h-3" /> WhatsApp Bill
+                                </button>
+                              )}
                               {isOwner && (
                                 <button disabled={loadingId === order.id} className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[10px] font-black text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200" onClick={() => handleDeleteOrder(order)}>
                                   Archive
