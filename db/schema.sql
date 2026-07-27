@@ -110,6 +110,7 @@ CREATE TABLE categories (
 CREATE TABLE products (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   category_id uuid REFERENCES categories(id) ON DELETE SET NULL,
+  subcategory_id uuid REFERENCES categories(id) ON DELETE SET NULL,
   sku varchar(100) UNIQUE,
   name varchar(400) NOT NULL,
   slug varchar(400) UNIQUE NOT NULL,
@@ -126,6 +127,15 @@ CREATE TABLE products (
   CONSTRAINT chk_products_prices_nonnegative CHECK (base_price >= 0 AND offer_price >= 0),
   CONSTRAINT chk_products_stock_nonnegative CHECK (stock_count >= 0),
   CONSTRAINT chk_products_weight_nonnegative CHECK (weight_grams >= 0)
+);
+
+-- Products can appear in multiple category/subcategory sections.
+CREATE TABLE product_categories (
+  product_id uuid REFERENCES products(id) ON DELETE CASCADE,
+  category_id uuid REFERENCES categories(id) ON DELETE CASCADE,
+  is_primary boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  PRIMARY KEY (product_id, category_id)
 );
 
 -- Product images (ordered)
@@ -430,6 +440,9 @@ CREATE TABLE customer_search_history (
 
 -- Indexes
 CREATE INDEX idx_products_category ON products(category_id);
+CREATE INDEX idx_products_subcategory ON products(subcategory_id);
+CREATE INDEX idx_product_categories_category ON product_categories(category_id);
+CREATE INDEX idx_product_categories_product ON product_categories(product_id);
 CREATE INDEX idx_products_stock ON products(stock_count);
 CREATE INDEX idx_orders_user ON orders(user_id);
 CREATE INDEX idx_orders_phone ON orders(customer_phone);

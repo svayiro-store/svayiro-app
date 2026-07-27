@@ -1191,6 +1191,11 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
   const images = rawImages
     .map((image: any) => typeof image === 'string' ? image : image?.url)
     .filter((url: any) => typeof url === 'string' && url.trim());
+  const categoryIds = Array.isArray(product.category_ids)
+    ? product.category_ids.filter((id: any) => typeof id === 'string' && id.trim())
+    : Array.isArray(product.categoryIds)
+      ? product.categoryIds.filter((id: any) => typeof id === 'string' && id.trim())
+      : [product.category_id || product.categoryId, product.subcategory_id || product.subcategoryId].filter(Boolean);
 
   return {
     ...product,
@@ -1200,6 +1205,7 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
     unit: product.unit || '',
     categoryId: product.category_id || product.categoryId || '',
     subcategoryId: product.subcategory_id || product.subcategoryId || undefined,
+    categoryIds: Array.from(new Set(categoryIds)),
     basePrice: Number(product.base_price ?? product.basePrice ?? 0),
     offerPrice: Number(product.offer_price ?? product.offerPrice ?? 0),
     stockCount: Number(product.stock_count ?? product.stockCount ?? 0),
@@ -1215,6 +1221,23 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
     createdAt: product.created_at || product.createdAt,
     updatedAt: product.updated_at || product.updatedAt
   };
+}
+
+function uniqueCategoryIds(input: any, fallbackCategoryId?: string | null, fallbackSubcategoryId?: string | null) {
+  const raw = Array.isArray(input) ? input : [];
+  return Array.from(new Set([...raw, fallbackCategoryId, fallbackSubcategoryId]
+    .map((id) => typeof id === 'string' ? id.trim() : '')
+    .filter(Boolean)));
+}
+
+async function syncProductCategories(client: any, productId: string, categoryIds: string[], primaryCategoryId?: string | null) {
+  await client.query('DELETE FROM product_categories WHERE product_id = $1', [productId]);
+  for (const categoryId of categoryIds) {
+    await client.query(
+      'INSERT INTO product_categories(product_id, category_id, is_primary, created_at) VALUES($1,$2,$3,now()) ON CONFLICT (product_id, category_id) DO UPDATE SET is_primary = EXCLUDED.is_primary',
+      [productId, categoryId, categoryId === primaryCategoryId]
+    );
+  }
 }
 
 function normalizeBanner(banner: any) {
@@ -3472,11 +3495,15 @@ app.get('/api/products', async (req, res) => {
     const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 50) : 120;
     const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
     const params: any[] = [];
-    const where = ['is_enabled = true'];
+    const where = ['p.is_enabled = true'];
 
     if (categoryId) {
       params.push(categoryId);
-      where.push(`category_id IN (
+      where.push(`EXISTS (
+        SELECT 1
+        FROM product_categories pc_filter
+        WHERE pc_filter.product_id = p.id
+          AND pc_filter.category_id IN (
         WITH RECURSIVE category_tree AS (
           SELECT id FROM categories WHERE id = $${params.length}::uuid
           UNION ALL
@@ -3484,20 +3511,29 @@ app.get('/api/products', async (req, res) => {
           INNER JOIN category_tree ct ON c.parent_id = ct.id
         )
         SELECT id FROM category_tree
+          )
       )`);
     }
 
     if (search) {
       params.push(`%${search.toLowerCase()}%`);
       const param = `$${params.length}`;
-      where.push(`(lower(coalesce(name, '')) LIKE ${param} OR lower(coalesce(description, '')) LIKE ${param} OR lower(coalesce(sku, '')) LIKE ${param})`);
+      where.push(`(lower(coalesce(p.name, '')) LIKE ${param} OR lower(coalesce(p.description, '')) LIKE ${param} OR lower(coalesce(p.sku, '')) LIKE ${param})`);
     }
 
     params.push(limit);
     const limitParam = `$${params.length}`;
     params.push(offset);
     const offsetParam = `$${params.length}`;
-    const sql = `SELECT * FROM products WHERE ${where.join(' AND ')} ORDER BY created_at DESC LIMIT ${limitParam} OFFSET ${offsetParam}`;
+    const sql = `
+      SELECT p.*, COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+      FROM products p
+      LEFT JOIN product_categories pc ON pc.product_id = p.id
+      WHERE ${where.join(' AND ')}
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+      LIMIT ${limitParam} OFFSET ${offsetParam}
+    `;
     const { rows } = await pgQuery(sql, params);
     if (rows.length === 0) return res.json([]);
     const productIds = rows.map((row: any) => row.id);
@@ -3518,7 +3554,13 @@ app.get('/api/products', async (req, res) => {
 app.get('/api/products/:id', async (req, res) => {
   const id = req.params.id;
   try {
-    const p = await pgQuery('SELECT * FROM products WHERE id = $1', [id]);
+    const p = await pgQuery(`
+      SELECT p.*, COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+      FROM products p
+      LEFT JOIN product_categories pc ON pc.product_id = p.id
+      WHERE p.id = $1
+      GROUP BY p.id
+    `, [id]);
     if (p.rowCount === 0) return res.status(404).json({ error: 'Product not found' });
     const imgs = await pgQuery('SELECT id, url, position FROM product_images WHERE product_id = $1 ORDER BY position ASC', [id]);
     const prod = p.rows[0];
@@ -3618,6 +3660,7 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
       const generatedSku = await generateUniqueProductSku(client, productData.name);
       const ins = await client.query('INSERT INTO products(category_id, subcategory_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) RETURNING *', [productData.categoryId, productData.subcategoryId || null, generatedSku, productData.name, productData.slug || (productData.name.toLowerCase().replace(/\s+/g, '-')), productData.description || null, Number(productData.basePrice) || 0, Number(productData.offerPrice) || 0, Number(productData.stockCount) || 0, Number(productData.weight) || 0, productData.isEnabled !== undefined ? productData.isEnabled : true, productData.lowStockAlertThreshold || 5, metadata]);
       const prod = ins.rows[0];
+      await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, productData.categoryId, productData.subcategoryId), productData.categoryId);
       // insert images
       if (Array.isArray(productData.images) && productData.images.length > 0) {
         for (let i = 0; i < productData.images.length; i++) {
@@ -3660,6 +3703,7 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
       // update product
       const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), subcategory_id = $2, sku = COALESCE($3,sku), name = COALESCE($4,name), slug = COALESCE($5,slug), description = COALESCE($6,description), base_price = COALESCE($7,base_price), offer_price = COALESCE($8,offer_price), stock_count = $9, weight_grams = COALESCE($10,weight_grams), is_enabled = COALESCE($11,is_enabled), low_stock_threshold = COALESCE($12,low_stock_threshold), metadata = COALESCE($13,metadata), updated_at = now() WHERE id = $14 RETURNING *', [productData.categoryId, productData.subcategoryId || null, productData.sku, productData.name, productData.slug, productData.description, productData.basePrice !== undefined ? Number(productData.basePrice) : null, productData.offerPrice !== undefined ? Number(productData.offerPrice) : null, newStock, productData.weight !== undefined ? Number(productData.weight) : null, productData.isEnabled, productData.lowStockAlertThreshold, metadata, id]);
       const prod = upd.rows[0];
+      await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, prod.category_id, prod.subcategory_id), prod.category_id);
       // handle images replacement
       if (Array.isArray(productData.images)) {
         await client.query('DELETE FROM product_images WHERE product_id = $1', [id]);
@@ -5437,6 +5481,30 @@ async function ensureRuntimeSchemaCompatibility() {
   await pgQuery('ALTER TABLE advance_requests ADD COLUMN IF NOT EXISTS order_id uuid');
   await pgQuery('ALTER TABLE advance_requests ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()');
   await pgQuery('ALTER TABLE order_items ADD COLUMN IF NOT EXISTS purchase_unit_cost numeric NOT NULL DEFAULT 0');
+  await pgQuery('ALTER TABLE products ADD COLUMN IF NOT EXISTS subcategory_id uuid REFERENCES categories(id) ON DELETE SET NULL');
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS product_categories (
+      product_id uuid REFERENCES products(id) ON DELETE CASCADE,
+      category_id uuid REFERENCES categories(id) ON DELETE CASCADE,
+      is_primary boolean DEFAULT false,
+      created_at timestamptz DEFAULT now(),
+      PRIMARY KEY (product_id, category_id)
+    )
+  `);
+  await pgQuery(`
+    INSERT INTO product_categories(product_id, category_id, is_primary)
+    SELECT id, category_id, true
+    FROM products
+    WHERE category_id IS NOT NULL
+    ON CONFLICT (product_id, category_id) DO UPDATE SET is_primary = product_categories.is_primary OR EXCLUDED.is_primary
+  `);
+  await pgQuery(`
+    INSERT INTO product_categories(product_id, category_id, is_primary)
+    SELECT id, subcategory_id, false
+    FROM products
+    WHERE subcategory_id IS NOT NULL
+    ON CONFLICT (product_id, category_id) DO NOTHING
+  `);
   await pgQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_archived_at timestamptz');
   await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS free_delivery_radius_km numeric DEFAULT 0');
   await pgQuery("ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS social_links jsonb DEFAULT '[]'");
@@ -5664,6 +5732,9 @@ async function ensureRuntimeSchemaCompatibility() {
   `);
   await pgQuery('CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(customer_phone)');
   await pgQuery('CREATE INDEX IF NOT EXISTS idx_orders_admin_archived ON orders(admin_archived_at)');
+  await pgQuery('CREATE INDEX IF NOT EXISTS idx_products_subcategory ON products(subcategory_id)');
+  await pgQuery('CREATE INDEX IF NOT EXISTS idx_product_categories_category ON product_categories(category_id)');
+  await pgQuery('CREATE INDEX IF NOT EXISTS idx_product_categories_product ON product_categories(product_id)');
   await pgQuery('CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id)');
   await pgQuery('CREATE INDEX IF NOT EXISTS idx_wishlists_user ON wishlists(user_id)');
   await pgQuery('CREATE INDEX IF NOT EXISTS idx_payment_records_order ON payment_records(order_id)');

@@ -133,7 +133,11 @@ export default function SearchResultsView({
             const lowStockThreshold = prod.lowStockAlertThreshold ?? 10;
             const isLowStock = prod.stockCount > 0 && prod.stockCount <= lowStockThreshold;
             const isWishlisted = activeUser?.wishlist.includes(prod.id);
-            const categoryName = categories.find(c => c.id === prod.categoryId)?.name || 'Grocery';
+            const assignedCategoryIds = Array.from(new Set([prod.categoryId, (prod as any).subcategoryId, ...(prod.categoryIds || [])].filter(Boolean) as string[]));
+            const categoryName = assignedCategoryIds
+              .map((categoryId) => categories.find(c => c.id === categoryId)?.name)
+              .filter(Boolean)
+              .join(', ') || 'Grocery';
             return (
               <div
                 key={prod.id}

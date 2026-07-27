@@ -1755,7 +1755,10 @@ export default function CustomerApp({
           }
         });
       }
-      list = list.filter(p => allowedCategoryIds.has(p.categoryId));
+      list = list.filter((p) => {
+        const assignedCategoryIds = Array.from(new Set([p.categoryId, (p as any).subcategoryId, ...(p.categoryIds || [])].filter(Boolean) as string[]));
+        return assignedCategoryIds.some((categoryId) => allowedCategoryIds.has(categoryId));
+      });
     }
     return list.filter(p => p.isEnabled);
   }, [products, categories, selectedCategory]);
@@ -1766,7 +1769,10 @@ export default function CustomerApp({
 
     if (query && !serverFilteredProducts) {
       list = list.filter((p) => {
-        const categoryName = categories.find((cat) => cat.id === p.categoryId)?.name || '';
+        const categoryName = Array.from(new Set([p.categoryId, (p as any).subcategoryId, ...(p.categoryIds || [])].filter(Boolean) as string[]))
+          .map((categoryId) => categories.find((cat) => cat.id === categoryId)?.name)
+          .filter(Boolean)
+          .join(' ');
         const haystack = [
           p.name,
           p.description,

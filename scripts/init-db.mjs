@@ -54,6 +54,30 @@ async function run() {
     await client.query('ALTER TABLE advance_requests ADD COLUMN IF NOT EXISTS order_id uuid');
     await client.query('ALTER TABLE advance_requests ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()');
     await client.query('ALTER TABLE order_items ADD COLUMN IF NOT EXISTS purchase_unit_cost numeric NOT NULL DEFAULT 0');
+    await client.query('ALTER TABLE products ADD COLUMN IF NOT EXISTS subcategory_id uuid REFERENCES categories(id) ON DELETE SET NULL');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS product_categories (
+        product_id uuid REFERENCES products(id) ON DELETE CASCADE,
+        category_id uuid REFERENCES categories(id) ON DELETE CASCADE,
+        is_primary boolean DEFAULT false,
+        created_at timestamptz DEFAULT now(),
+        PRIMARY KEY (product_id, category_id)
+      )
+    `);
+    await client.query(`
+      INSERT INTO product_categories(product_id, category_id, is_primary)
+      SELECT id, category_id, true
+      FROM products
+      WHERE category_id IS NOT NULL
+      ON CONFLICT (product_id, category_id) DO UPDATE SET is_primary = product_categories.is_primary OR EXCLUDED.is_primary
+    `);
+    await client.query(`
+      INSERT INTO product_categories(product_id, category_id, is_primary)
+      SELECT id, subcategory_id, false
+      FROM products
+      WHERE subcategory_id IS NOT NULL
+      ON CONFLICT (product_id, category_id) DO NOTHING
+    `);
     await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text');
     await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth date');
     await client.query('CREATE INDEX IF NOT EXISTS idx_inventory_created_at ON inventory_logs(created_at DESC)');
@@ -183,6 +207,9 @@ async function run() {
       )
     `);
     await client.query('CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(customer_phone)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_products_subcategory ON products(subcategory_id)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_product_categories_category ON product_categories(category_id)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_product_categories_product ON product_categories(product_id)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_wishlists_user ON wishlists(user_id)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_payment_records_order ON payment_records(order_id)');

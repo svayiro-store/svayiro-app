@@ -12,12 +12,54 @@ interface Props {
 }
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const CODE128_PATTERNS = [
+  '212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'
+];
+
+function productCode(product: Product) {
+  return String(product.sku || product.id.substring(0, 8).toUpperCase()).trim().toUpperCase();
+}
+
+function code128SvgDataUri(value: string) {
+  const safeValue = value.replace(/[^\x20-\x7E]/g, '').slice(0, 80) || 'SVAYIRO';
+  const codes = [104, ...safeValue.split('').map((char) => char.charCodeAt(0) - 32)];
+  const checksum = codes.reduce((sum, code, index) => sum + (index === 0 ? code : code * index), 0) % 103;
+  const sequence = [...codes, checksum, 106];
+  let x = 10;
+  const height = 52;
+  const moduleWidth = 2;
+  const bars = sequence.map((code) => {
+    const pattern = CODE128_PATTERNS[code];
+    let local = '';
+    [...pattern].forEach((widthChar, index) => {
+      const width = Number(widthChar) * moduleWidth;
+      if (index % 2 === 0) {
+        local += `<rect x="${x}" y="8" width="${width}" height="${height}" fill="#020617"/>`;
+      }
+      x += width;
+    });
+    return local;
+  }).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${x + 10}" height="76" viewBox="0 0 ${x + 10} 76"><rect width="100%" height="100%" fill="#fff"/>${bars}<text x="${(x + 10) / 2}" y="72" text-anchor="middle" font-family="monospace" font-size="10" fill="#020617">${safeValue}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char] || char));
+}
 
 interface ProductForm {
   name: string;
   description: string;
   categoryId: string;
   subcategoryId?: string;
+  categoryIds: string[];
   purchasePrice: string;
   basePrice: string;
   offerPrice: string;
@@ -35,6 +77,7 @@ const emptyForm = (): ProductForm => ({
   description: '',
   categoryId: '',
   subcategoryId: undefined,
+  categoryIds: [],
   purchasePrice: '',
   basePrice: '',
   offerPrice: '0',
@@ -59,6 +102,8 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const [productSubcategoryFilter, setProductSubcategoryFilter] = useState('');
   const [codeSearch, setCodeSearch] = useState('');
   const [codeCategoryFilter, setCodeCategoryFilter] = useState('');
+  const [selectedCodeIds, setSelectedCodeIds] = useState<Set<string>>(new Set());
+  const [includePriceOnSticker, setIncludePriceOnSticker] = useState(false);
   const [form, setForm] = useState<ProductForm>(emptyForm());
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -100,6 +145,31 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
+  const toggleProductCategory = (categoryId: string) => {
+    setForm((prev) => {
+      const categoryIds = prev.categoryIds.includes(categoryId)
+        ? prev.categoryIds.filter((id) => id !== categoryId)
+        : [...prev.categoryIds, categoryId];
+      const nextPrimary = categoryIds.includes(prev.categoryId) ? prev.categoryId : categoryIds[0] || '';
+      const nextSubcategory = prev.subcategoryId && categoryIds.includes(prev.subcategoryId) ? prev.subcategoryId : undefined;
+      return {
+        ...prev,
+        categoryIds,
+        categoryId: nextPrimary,
+        subcategoryId: nextSubcategory
+      };
+    });
+  };
+
+  const setPrimaryCategory = (categoryId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      categoryId,
+      categoryIds: prev.categoryIds.includes(categoryId) ? prev.categoryIds : [...prev.categoryIds, categoryId],
+      subcategoryId: prev.subcategoryId && categories.find((cat) => cat.id === prev.subcategoryId)?.parentId === categoryId ? prev.subcategoryId : undefined
+    }));
+  };
+
   const handleAddImages = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setUploadingImages(true);
@@ -137,7 +207,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
 
   const validate = (): string => {
     if (!form.name.trim()) return 'Product name is required.';
-    if (!form.categoryId) return 'Please select a category.';
+    if (!form.categoryId || form.categoryIds.length === 0) return 'Please select at least one category.';
     if (!form.purchasePrice || Number(form.purchasePrice) <= 0) return 'Real item cost must be greater than 0. This is admin-only and hidden from customers.';
     if (!form.basePrice || Number(form.basePrice) < 0) return 'Base price must be a non-negative number.';
     if (Number(form.basePrice) < Number(form.purchasePrice)) return 'Selling price should not be below real item cost.';
@@ -160,6 +230,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
         description: form.description.trim(),
         categoryId: form.categoryId,
         subcategoryId: form.subcategoryId || undefined,
+        categoryIds: Array.from(new Set([form.categoryId, form.subcategoryId, ...form.categoryIds].filter(Boolean) as string[])),
         purchasePrice: Number(form.purchasePrice),
         basePrice: Number(form.basePrice),
         offerPrice: Number(form.offerPrice) || 0,
@@ -199,6 +270,9 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       description: prod.description || '',
       categoryId: prod.categoryId,
       subcategoryId: (prod as any).subcategoryId,
+      categoryIds: Array.isArray(prod.categoryIds) && prod.categoryIds.length > 0
+        ? prod.categoryIds
+        : [prod.categoryId, (prod as any).subcategoryId].filter(Boolean),
       purchasePrice: String(prod.purchasePrice || ''),
       basePrice: String(prod.basePrice),
       offerPrice: String(prod.offerPrice || 0),
@@ -236,6 +310,13 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     return categories.filter(cat => cat.parentId === form.categoryId);
   }, [form.categoryId, categories]);
 
+  const productCategoryIds = (product: Product) => {
+    const ids = Array.isArray(product.categoryIds) ? product.categoryIds : [];
+    return Array.from(new Set([product.categoryId, (product as any).subcategoryId, ...ids].filter(Boolean) as string[]));
+  };
+
+  const productMatchesCategory = (product: Product, categoryId: string) => productCategoryIds(product).includes(categoryId);
+
   // Filter logic
   const filteredProducts = useMemo(() => {
     let result = products;
@@ -243,14 +324,14 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       const query = productSearch.toLowerCase();
       result = result.filter(p =>
         p.name.toLowerCase().includes(query) ||
-        categories.find(c => c.id === p.categoryId)?.name.toLowerCase().includes(query)
+        productCategoryIds(p).some((categoryId) => categories.find(c => c.id === categoryId)?.name.toLowerCase().includes(query))
       );
     }
     if (productCategoryFilter) {
-      result = result.filter(p => p.categoryId === productCategoryFilter);
+      result = result.filter(p => productMatchesCategory(p, productCategoryFilter));
     }
     if (productSubcategoryFilter) {
-      result = result.filter(p => (p as any).subcategoryId === productSubcategoryFilter);
+      result = result.filter(p => productMatchesCategory(p, productSubcategoryFilter));
     }
     return result;
   }, [products, productSearch, productCategoryFilter, productSubcategoryFilter, categories]);
@@ -262,14 +343,76 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       result = result.filter(p =>
         (p.name?.toLowerCase().includes(query) || false) ||
         (p.id?.substring(0, 8).toLowerCase().includes(query) || false) ||
-        categories.find(c => c.id === p.categoryId)?.name.toLowerCase().includes(query)
+        productCategoryIds(p).some((categoryId) => categories.find(c => c.id === categoryId)?.name.toLowerCase().includes(query))
       );
     }
     if (codeCategoryFilter) {
-      result = result.filter(p => p.categoryId === codeCategoryFilter);
+      result = result.filter(p => productMatchesCategory(p, codeCategoryFilter));
     }
     return result;
   }, [products, codeSearch, codeCategoryFilter, categories]);
+
+  const toggleCodeSelection = (productId: string) => {
+    setSelectedCodeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const printBarcodeLabels = (items: Product[]) => {
+    if (items.length === 0) {
+      alert('Select at least one product label to print.');
+      return;
+    }
+    const labelHtml = items.map((product) => {
+      const code = productCode(product);
+      const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
+      const priceLine = includePriceOnSticker
+        ? `<div class="price"><span>MRP: Rs ${Number(product.basePrice).toFixed(2)}</span>${product.offerPrice > 0 ? `<span>Offer: Rs ${Number(activePrice).toFixed(2)}</span>` : ''}</div>`
+        : '';
+      return `
+        <section class="label">
+          <div class="brand">SVAYIRO</div>
+          <div class="name">${escapeHtml(product.name)}</div>
+          <div class="meta">${Number(product.weight || 0) > 0 ? `${Number(product.weight) / 1000} kg` : ''}</div>
+          ${priceLine}
+          <img class="barcode" src="${code128SvgDataUri(code)}" alt="${code}" />
+        </section>
+      `;
+    }).join('');
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      alert('Popup blocked. Allow popups to print barcode labels.');
+      return;
+    }
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>SVAYIRO Product Barcode Labels</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 12px; font-family: Arial, sans-serif; color: #020617; }
+            .sheet { display: grid; grid-template-columns: repeat(3, 64mm); gap: 6mm; align-items: start; }
+            .label { width: 64mm; min-height: 38mm; border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px; page-break-inside: avoid; overflow: hidden; }
+            .brand { font-size: 11px; font-weight: 900; letter-spacing: .12em; color: #0f1b8f; }
+            .name { margin-top: 3px; font-size: 12px; line-height: 1.2; font-weight: 800; min-height: 28px; }
+            .meta { font-size: 10px; color: #475569; min-height: 12px; }
+            .price { display: flex; justify-content: space-between; gap: 6px; margin-top: 3px; font-size: 10px; font-weight: 800; color: #047857; }
+            .barcode { display: block; width: 100%; height: 22mm; object-fit: contain; margin-top: 3px; }
+            @page { size: A4; margin: 10mm; }
+          </style>
+        </head>
+        <body>
+          <main class="sheet">${labelHtml}</main>
+          <script>window.onload = () => { window.focus(); window.print(); };</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   // Get parent categories (for filtering)
   const parentCategories = useMemo(() => {
@@ -289,8 +432,15 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const categoryLabel = (categoryId: string, subcategoryId?: string) => {
     const cat = categories.find(c => c.id === categoryId);
     const subcat = subcategoryId ? categories.find(c => c.id === subcategoryId) : null;
-    if (!cat) return '—';
-    return subcat ? `${cat.name} › ${subcat.name}` : cat.name;
+    if (!cat) return '-';
+    return subcat ? `${cat.name} > ${subcat.name}` : cat.name;
+  };
+
+  const productCategoryLabel = (product: Product) => {
+    const names = productCategoryIds(product)
+      .map((id) => categories.find((category) => category.id === id)?.name)
+      .filter(Boolean) as string[];
+    return names.length > 0 ? names.join(', ') : categoryLabel(product.categoryId, (product as any).subcategoryId);
   };
 
   return (
@@ -341,13 +491,12 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
             {/* Category and Subcategory Selection */}
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className={labelClass}>Category *</span>
+                <span className={labelClass}>Primary Category *</span>
                 <select
                   className={inputClass}
                   value={form.categoryId}
                   onChange={(e) => {
-                    updateForm('categoryId', e.target.value);
-                    updateForm('subcategoryId', undefined); // Reset subcategory
+                    setPrimaryCategory(e.target.value);
                   }}
                 >
                   <option value="">-- Select Category --</option>
@@ -364,7 +513,14 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 <select
                   className={inputClass}
                   value={form.subcategoryId || ''}
-                  onChange={(e) => updateForm('subcategoryId', e.target.value || undefined)}
+                  onChange={(e) => {
+                    const nextSubcategoryId = e.target.value || undefined;
+                    setForm((prev) => ({
+                      ...prev,
+                      subcategoryId: nextSubcategoryId,
+                      categoryIds: Array.from(new Set([prev.categoryId, nextSubcategoryId, ...prev.categoryIds].filter(Boolean) as string[]))
+                    }));
+                  }}
                   disabled={!form.categoryId || subcategoriesForSelectedCategory.length === 0}
                 >
                   <option value="">-- No Subcategory --</option>
@@ -377,6 +533,46 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                   )}
                 </select>
               </label>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+              <div className="mb-3">
+                <span className={labelClass}>Show Product In Categories *</span>
+                <p className="text-[10px] font-semibold text-slate-500">Tick every category or subcategory where this product should appear on the customer storefront.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {parentCategories.map((cat) => {
+                  const childCategories = categories.filter((subcat) => subcat.parentId === cat.id);
+                  return (
+                    <div key={cat.id} className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <label className="flex items-center gap-2 text-xs font-black text-slate-800 dark:text-slate-100">
+                        <input
+                          type="checkbox"
+                          checked={form.categoryIds.includes(cat.id)}
+                          onChange={() => toggleProductCategory(cat.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-500"
+                        />
+                        {cat.name}
+                      </label>
+                      {childCategories.length > 0 && (
+                        <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+                          {childCategories.map((subcat) => (
+                            <label key={subcat.id} className="flex items-center gap-2 pl-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                              <input
+                                type="checkbox"
+                                checked={form.categoryIds.includes(subcat.id)}
+                                onChange={() => toggleProductCategory(subcat.id)}
+                                className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-700 focus:ring-indigo-500"
+                              />
+                              {subcat.name}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <label className="block">
@@ -526,66 +722,71 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       {/* Products List */}
       <div className="space-y-4">
         {catalogueView === 'products' && (
-          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-end lg:justify-between">
-            <div className="grid flex-1 gap-3 sm:grid-cols-[1fr_200px_200px]">
-              <label>
-                <span className={labelClass}>Search Product / Category / SKU</span>
-                <input
-                  className={inputClass}
-                  value={productSearch}
-                  onChange={(event) => setProductSearch(event.target.value)}
-                  placeholder="Search by product name, category, or product code"
-                />
-              </label>
-              <label>
-                <span className={labelClass}>Filter Category</span>
-                <select
-                  className={inputClass}
-                  value={productCategoryFilter}
-                  onChange={(event) => {
-                    setProductCategoryFilter(event.target.value);
-                    setProductSubcategoryFilter(''); // Reset subcategory filter
-                  }}
-                >
-                  <option value="">All Categories</option>
-                  {parentCategories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span className={labelClass}>Filter Subcategory</span>
-                <select
-                  className={inputClass}
-                  value={productSubcategoryFilter}
-                  onChange={(event) => setProductSubcategoryFilter(event.target.value)}
-                  disabled={!productCategoryFilter || subcategoriesForFilter.length === 0}
-                >
-                  <option value="">All Subcategories</option>
-                  {subcategoriesForFilter.length === 0 ? (
-                    <option value="" disabled>{productCategoryFilter ? 'No subcategories' : 'Select category first'}</option>
-                  ) : (
-                    subcategoriesForFilter.map((subcat) => (
-                      <option key={subcat.id} value={subcat.id}>{subcat.name}</option>
-                    ))
-                  )}
-                </select>
-              </label>
+          filteredProducts.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No products found matching your search criteria.</p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setProductSearch('');
-                setProductCategoryFilter('');
-                setProductSubcategoryFilter('');
-              }}
-              className="rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-950"
-            >
-              Clear Search
-            </button>
-          </div>
+          ) : (
+            <div className="rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="grid grid-cols-6 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                <span className="col-span-2">Product</span>
+                <span>Category</span>
+                <span>Price</span>
+                <span>Stock</span>
+                <span>Action</span>
+              </div>
+              {filteredProducts.map((product) => {
+                const thumbnail = Array.isArray(product.images) && product.images.length > 0
+                  ? (typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as any)?.url)
+                  : '';
+                return (
+                  <div
+                    key={product.id}
+                    id={`admin-product-${product.id}`}
+                    className="grid grid-cols-6 gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center"
+                  >
+                    <div className="col-span-2 flex items-center gap-3">
+                      {thumbnail ? (
+                        <img src={thumbnail} alt={product.name} className="h-10 w-10 rounded-lg object-cover border border-slate-200" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700">
+                          <ImageIcon className="h-4 w-4 text-slate-400" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold">{product.name}</div>
+                        <div className="text-[10px] opacity-70 font-mono">{product.sku || product.id.substring(0, 8)}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs opacity-80">{productCategoryLabel(product)}</div>
+                    <div className="text-xs">
+                      {product.offerPrice > 0 ? (
+                        <>
+                          <span className="font-bold text-emerald-600">Rs {product.offerPrice}</span>{' '}
+                          <span className="text-[10px] line-through opacity-50">Rs {product.basePrice}</span>
+                        </>
+                      ) : (
+                        <span className="font-bold">Rs {product.basePrice}</span>
+                      )}
+                    </div>
+                    <div className="text-xs">
+                      <span className={`rounded px-2 py-1 font-bold ${product.stockCount === 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400' : product.stockCount <= ((product as any).lowStockAlertThreshold || 5) ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
+                        {product.stockCount}
+                      </span>
+                      {!product.isEnabled && (
+                        <span className="ml-1 rounded bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Disabled</span>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => startEdit(product)} className="rounded bg-indigo-600 px-3 py-1 text-xs text-white">Edit</button>
+                      <button onClick={() => handleDelete(product.id)} className="rounded bg-rose-600 px-3 py-1 text-xs text-white">Delete</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         )}
-
         {catalogueView === 'codes' && (
           <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-end lg:justify-between">
             <div className="grid flex-1 gap-3 sm:grid-cols-[1fr_200px]">
@@ -616,11 +817,45 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               onClick={() => {
                 setCodeSearch('');
                 setCodeCategoryFilter('');
+                setSelectedCodeIds(new Set());
               }}
               className="rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-950"
             >
               Clear Search
             </button>
+          </div>
+        )}
+
+        {catalogueView === 'codes' && (
+          <div className="flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3 dark:border-indigo-900 dark:bg-indigo-950/30 lg:flex-row lg:items-center lg:justify-between">
+            <label className="flex items-start gap-3 text-xs font-bold text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                checked={includePriceOnSticker}
+                onChange={(event) => setIncludePriceOnSticker(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-500"
+              />
+              <span>
+                Show MRP / offer price on printed sticker
+                <span className="block text-[10px] font-semibold text-slate-500">Off by default. Keep off when prices change often.</span>
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => printBarcodeLabels(codeProducts.filter((product) => selectedCodeIds.has(product.id)))}
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white shadow hover:bg-indigo-600"
+              >
+                <Printer className="h-4 w-4" /> Print Selected
+              </button>
+              <button
+                type="button"
+                onClick={() => printBarcodeLabels(codeProducts)}
+                className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-700 shadow-sm hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
+              >
+                <Printer className="h-4 w-4" /> Print All Showing
+              </button>
+            </div>
           </div>
         )}
 
@@ -666,7 +901,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                         <div className="text-[10px] opacity-70 font-mono">{product.sku || product.id.substring(0, 8)}</div>
                       </div>
                     </div>
-                    <div className="text-xs opacity-80">{categoryLabel(product.categoryId, (product as any).subcategoryId)}</div>
+                    <div className="text-xs opacity-80">{productCategoryLabel(product)}</div>
                     <div className="text-xs">
                       {product.offerPrice > 0 ? (
                         <>
@@ -695,32 +930,72 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
             </div>
           )
         )}
-
         {catalogueView === 'codes' && (
           codeProducts.length === 0 ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
               <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No products found matching your search criteria.</p>
             </div>
           ) : (
-            <div className="rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="grid grid-cols-4 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+            <div className="overflow-hidden rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+              <div className="overflow-x-auto">
+              <div className="min-w-[980px]">
+              <div className="grid grid-cols-[44px_150px_minmax(0,1.2fr)_150px_minmax(0,1fr)_120px_120px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                <span>Select</span>
                 <span>Product Code</span>
                 <span>Name</span>
+                <span>Barcode</span>
                 <span>Category</span>
-                <span>Created</span>
+                <span>Sticker Price</span>
+                <span>Action</span>
               </div>
-              {codeProducts.map((product) => (
-                <div key={product.id} className="grid grid-cols-4 gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center">
-                  <div className="font-mono text-xs font-bold">{product.sku || product.id.substring(0, 8).toUpperCase()}</div>
-                  <div className="text-xs">{product.name}</div>
-                  <div className="text-xs opacity-80">{categoryLabel(product.categoryId, (product as any).subcategoryId)}</div>
-                  <div className="text-[10px] opacity-70">{(product as any).createdAt ? formatDateTimeDDMMYYYY(new Date((product as any).createdAt)) : '—'}</div>
-                </div>
-              ))}
-            </div>
-          )
+              {codeProducts.map((product) => {
+                const code = productCode(product);
+                const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
+                return (
+                  <div key={product.id} className="grid grid-cols-[44px_150px_minmax(0,1.2fr)_150px_minmax(0,1fr)_120px_120px] gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center">
+                    <div>
+                      <input
+                        type="checkbox"
+                        checked={selectedCodeIds.has(product.id)}
+                        onChange={() => toggleCodeSelection(product.id)}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <div className="font-mono text-xs font-bold">{code}</div>
+                      <div className="text-[9px] opacity-60">{(product as any).createdAt ? formatDateTimeDDMMYYYY(new Date((product as any).createdAt)) : '-'}</div>
+                    </div>
+                    <div className="text-xs font-bold">{product.name}</div>
+                    <img src={code128SvgDataUri(code)} alt={code} className="h-12 w-36 rounded border border-slate-200 bg-white object-contain p-1" />
+                    <div className="text-xs opacity-80">{productCategoryLabel(product)}</div>
+                    <div className="text-xs font-bold">
+                      {includePriceOnSticker ? (
+                        <div>
+                          <div>MRP Rs {Number(product.basePrice).toFixed(2)}</div>
+                          {product.offerPrice > 0 && <div className="text-emerald-600">Offer Rs {Number(activePrice).toFixed(2)}</div>}
+                        </div>
+                      ) : (
+                        <span className="rounded bg-slate-100 px-2 py-1 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">Hidden</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => printBarcodeLabels([product])}
+                      className="inline-flex items-center justify-center gap-1 rounded bg-indigo-700 px-3 py-2 text-[10px] font-black text-white hover:bg-indigo-600"
+                    >
+                      <Printer className="h-3.5 w-3.5" /> Print
+                    </button>
+                  </div>
+                );
+              })}
+              </div>
+              </div>
+            </div>          )
         )}
       </div>
     </div>
   );
 }
+
+
+

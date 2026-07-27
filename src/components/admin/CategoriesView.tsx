@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Category } from '../../types';
 import { api } from '../../api';
-import { Plus, Trash2, Upload, Image as ImageIcon, Link2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Upload, Image as ImageIcon, Link2, ChevronDown, ChevronRight, ArrowDown, ArrowUp, Save } from 'lucide-react';
 import { compressImageFile } from '../../utils/imageCompression';
 
 interface Props {
@@ -24,6 +24,20 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
+  const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [savingOrder, setSavingOrder] = useState(false);
+
+  const categoryPosition = (category: Category) => Number((category as any).position ?? category.order ?? 0);
+
+  const sortByPosition = (items: Category[]) => {
+    return [...items].sort((a, b) => categoryPosition(a) - categoryPosition(b) || String(a.createdAt || '').localeCompare(String(b.createdAt || '')) || a.name.localeCompare(b.name));
+  };
+
+  useEffect(() => {
+    setOrderedCategories(sortByPosition(categories));
+    setSelectedIds((prev) => new Set([...prev].filter((id) => categories.some((category) => category.id === id))));
+  }, [categories]);
 
   const handleImageFileSelect = async (file: File | null) => {
     if (!file) return;
@@ -151,15 +165,106 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
   };
 
   // Get top-level categories (no parent)
-  const topLevelCategories = categories.filter(c => !c.parentId);
+  const topLevelCategories = useMemo(() => sortByPosition(orderedCategories.filter(c => !c.parentId)), [orderedCategories]);
   
   // Get subcategories for a given parent
   const getSubcategories = (parentId: string) => {
-    return categories.filter(c => c.parentId === parentId);
+    return sortByPosition(orderedCategories.filter(c => c.parentId === parentId));
   };
 
   // Get available parent categories for selection (excluding self)
   const availableParentCategories = categories.filter(c => c.id !== editingId && !c.parentId);
+  const hasOrderChanges = orderedCategories.some((category) => {
+    const original = categories.find((item) => item.id === category.id);
+    return original && categoryPosition(original) !== categoryPosition(category);
+  });
+
+  const toggleSelected = (categoryId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
+  };
+
+  const renumberSiblings = (siblings: Category[]) => {
+    return siblings.map((category, index) => ({
+      ...category,
+      order: index + 1,
+      position: index + 1
+    } as Category & { position: number }));
+  };
+
+  const replaceSiblings = (siblings: Category[]) => {
+    const siblingMap = new Map(siblings.map((category) => [category.id, category]));
+    setOrderedCategories((prev) => prev.map((category) => siblingMap.get(category.id) || category));
+  };
+
+  const moveOneCategory = (category: Category, direction: 'up' | 'down') => {
+    const siblings = getSubcategories(category.parentId || '').filter(Boolean);
+    const siblingList = category.parentId ? siblings : topLevelCategories;
+    const currentIndex = siblingList.findIndex((item) => item.id === category.id);
+    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (currentIndex < 0 || swapIndex < 0 || swapIndex >= siblingList.length) return;
+    const nextSiblings = [...siblingList];
+    [nextSiblings[currentIndex], nextSiblings[swapIndex]] = [nextSiblings[swapIndex], nextSiblings[currentIndex]];
+    replaceSiblings(renumberSiblings(nextSiblings));
+  };
+
+  const moveSelectedCategories = (direction: 'up' | 'down') => {
+    if (selectedIds.size === 0) {
+      showToast('Select one or more categories first.', 'warning');
+      return;
+    }
+    const parentKeys = Array.from(new Set(orderedCategories.filter((category) => selectedIds.has(category.id)).map((category) => category.parentId || 'root')));
+    const updates = new Map<string, Category>();
+
+    parentKeys.forEach((parentKey) => {
+      const siblings = sortByPosition(orderedCategories.filter((category) => (category.parentId || 'root') === parentKey));
+      const nextSiblings = [...siblings];
+      if (direction === 'up') {
+        for (let index = 1; index < nextSiblings.length; index += 1) {
+          if (selectedIds.has(nextSiblings[index].id) && !selectedIds.has(nextSiblings[index - 1].id)) {
+            [nextSiblings[index - 1], nextSiblings[index]] = [nextSiblings[index], nextSiblings[index - 1]];
+          }
+        }
+      } else {
+        for (let index = nextSiblings.length - 2; index >= 0; index -= 1) {
+          if (selectedIds.has(nextSiblings[index].id) && !selectedIds.has(nextSiblings[index + 1].id)) {
+            [nextSiblings[index], nextSiblings[index + 1]] = [nextSiblings[index + 1], nextSiblings[index]];
+          }
+        }
+      }
+      renumberSiblings(nextSiblings).forEach((category) => updates.set(category.id, category));
+    });
+
+    setOrderedCategories((prev) => prev.map((category) => updates.get(category.id) || category));
+  };
+
+  const saveCategoryOrder = async () => {
+    const changed = orderedCategories.filter((category) => {
+      const original = categories.find((item) => item.id === category.id);
+      return original && categoryPosition(original) !== categoryPosition(category);
+    });
+    if (changed.length === 0) {
+      showToast('Category order is already up to date.', 'info');
+      return;
+    }
+    setSavingOrder(true);
+    try {
+      await Promise.all(changed.map((category) => api.updateCategory(category.id, {
+        order: categoryPosition(category),
+        parentId: category.parentId || undefined
+      })));
+      showToast('Category order saved.', 'success');
+      refresh();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save category order.', 'error');
+    } finally {
+      setSavingOrder(false);
+    }
+  };
 
   const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
   const labelClass = 'mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500';
@@ -278,8 +383,34 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
         <div className="p-6 border rounded text-center opacity-80">No categories have been added.</div>
       ) : (
         <div className="rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 overflow-hidden">
-          <div className="grid grid-cols-5 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-            <span className="col-span-2">Name / Image</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wide text-slate-800 dark:text-slate-100">Category Display Order</h3>
+              <p className="text-[10px] font-semibold text-slate-500">Tick categories, move them up/down, then save. Parent and subcategory order are handled separately.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => moveSelectedCategories('up')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-black uppercase text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
+                <ArrowUp className="h-3.5 w-3.5" /> Selected Up
+              </button>
+              <button onClick={() => moveSelectedCategories('down')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-black uppercase text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
+                <ArrowDown className="h-3.5 w-3.5" /> Selected Down
+              </button>
+              <button
+                onClick={saveCategoryOrder}
+                disabled={savingOrder || !hasOrderChanges}
+                className="inline-flex items-center gap-1 rounded-lg bg-indigo-700 px-3 py-2 text-[10px] font-black uppercase text-white shadow disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Save className="h-3.5 w-3.5" /> {savingOrder ? 'Saving...' : 'Save Order'}
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+          <div className="min-w-[860px]">
+          <div className="grid grid-cols-[44px_minmax(0,2fr)_90px_80px_minmax(0,1fr)_190px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+            <span>Select</span>
+            <span>Name / Image</span>
+            <span>Order</span>
             <span>Type</span>
             <span>Slug</span>
             <span>Action</span>
@@ -293,8 +424,11 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
             return (
               <div key={category.id}>
                 {/* Parent Category Row */}
-                <div className="grid grid-cols-5 gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center bg-slate-50 dark:bg-slate-800/30">
-                  <div className="col-span-2 flex items-center gap-3">
+                <div className="grid grid-cols-[44px_minmax(0,2fr)_90px_80px_minmax(0,1fr)_190px] gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center bg-slate-50 dark:bg-slate-800/30">
+                  <div>
+                    <input type="checkbox" checked={selectedIds.has(category.id)} onChange={() => toggleSelected(category.id)} className="h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-500" />
+                  </div>
+                  <div className="flex items-center gap-3">
                     {subcategories.length > 0 && (
                       <button
                         onClick={() => toggleExpandParent(category.id)}
@@ -316,10 +450,15 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
                     </div>
                   </div>
                   <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded px-2 py-1">
+                    #{categoryPosition(category)}
+                  </div>
+                  <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded px-2 py-1">
                     Parent
                   </div>
                   <div className="text-xs opacity-70 font-mono">{category.slug || category.id.substring(0, 8)}</div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => moveOneCategory(category, 'up')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200"><ArrowUp className="h-3 w-3" /></button>
+                    <button onClick={() => moveOneCategory(category, 'down')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200"><ArrowDown className="h-3 w-3" /></button>
                     <button onClick={() => startEdit(category)} className="rounded bg-indigo-600 px-3 py-1 text-xs text-white">Edit</button>
                     <button onClick={() => handleDelete(category.id)} className="rounded bg-rose-600 px-3 py-1 text-xs text-white">Delete</button>
                   </div>
@@ -327,8 +466,11 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
 
                 {/* Subcategories */}
                 {isExpanded && subcategories.map((subcat) => (
-                  <div key={subcat.id} className="grid grid-cols-5 gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center ml-8 bg-white dark:bg-slate-900">
-                    <div className="col-span-2 flex items-center gap-3">
+                  <div key={subcat.id} className="grid grid-cols-[44px_minmax(0,2fr)_90px_80px_minmax(0,1fr)_190px] gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center bg-white dark:bg-slate-900">
+                    <div>
+                      <input type="checkbox" checked={selectedIds.has(subcat.id)} onChange={() => toggleSelected(subcat.id)} className="h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-500" />
+                    </div>
+                    <div className="flex items-center gap-3 pl-8">
                       <div className="w-6" /> {/* Spacing for alignment */}
                       {subcat.imageUrl ? (
                         <img src={subcat.imageUrl} alt={subcat.name} className="h-10 w-10 rounded-full object-cover border border-slate-200" referrerPolicy="no-referrer" />
@@ -338,15 +480,20 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
                         </div>
                       )}
                       <div>
-                        <div className="font-semibold">↳ {subcat.name}</div>
+                        <div className="font-semibold">Sub: {subcat.name}</div>
                         {subcat.description && <div className="text-[10px] opacity-70 truncate max-w-[180px]">{subcat.description}</div>}
                       </div>
+                    </div>
+                    <div className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
+                      #{categoryPosition(subcat)}
                     </div>
                     <div className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
                       Sub
                     </div>
                     <div className="text-xs opacity-70 font-mono">{subcat.slug || subcat.id.substring(0, 8)}</div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => moveOneCategory(subcat, 'up')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200"><ArrowUp className="h-3 w-3" /></button>
+                      <button onClick={() => moveOneCategory(subcat, 'down')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200"><ArrowDown className="h-3 w-3" /></button>
                       <button onClick={() => startEdit(subcat)} className="rounded bg-indigo-600 px-3 py-1 text-xs text-white">Edit</button>
                       <button onClick={() => handleDelete(subcat.id)} className="rounded bg-rose-600 px-3 py-1 text-xs text-white">Delete</button>
                     </div>
@@ -355,6 +502,8 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
               </div>
             );
           })}
+          </div>
+          </div>
         </div>
       )}
     </div>

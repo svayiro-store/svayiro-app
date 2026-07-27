@@ -89,7 +89,9 @@ export default function ProductDetailView({
     .map((product) => {
       const productWords = `${product.name} ${product.description}`.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/);
       const wordScore = productWords.reduce((score, word) => score + (selectedWords.has(word) ? 1 : 0), 0);
-      const categoryScore = product.categoryId === selectedProduct.categoryId ? 8 : 0;
+      const selectedCategoryIds = new Set([selectedProduct.categoryId, (selectedProduct as any).subcategoryId, ...(selectedProduct.categoryIds || [])].filter(Boolean) as string[]);
+      const productCategoryIds = [product.categoryId, (product as any).subcategoryId, ...(product.categoryIds || [])].filter(Boolean) as string[];
+      const categoryScore = productCategoryIds.some((categoryId) => selectedCategoryIds.has(categoryId)) ? 8 : 0;
       const priceGap = Math.abs((product.offerPrice || product.basePrice) - (selectedProduct.offerPrice || selectedProduct.basePrice));
       return { product, score: categoryScore + wordScore, priceGap };
     })

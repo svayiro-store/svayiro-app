@@ -72,6 +72,8 @@ export interface Category {
 export interface Product {
   id: string;
   categoryId: string;
+  categoryIds?: string[];
+  subcategoryId?: string;
   sku?: string;
   name: string;
   slug: string;
