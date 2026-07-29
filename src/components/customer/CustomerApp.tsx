@@ -1860,7 +1860,32 @@ export default function CustomerApp({
   }, [products, categories, searchQuery]);
 
   const searchPlaceholderItems = useMemo(() => {
-    const cleanName = (name: string) => name.trim().replace(/\s+/g, ' ');
+    const popularGroceryNames = [
+      'atta',
+      'rice',
+      'dal',
+      'cooking oil',
+      'ghee',
+      'sugar',
+      'jaggery',
+      'ragi',
+      'jowar',
+      'millets',
+      'spices',
+      'dry fruits',
+      'fresh vegetables',
+      'fruits',
+      'dairy products'
+    ];
+    const cleanName = (name: string) => name
+      .toLowerCase()
+      .replace(/\([^)]*\)/g, ' ')
+      .replace(/\b\d+(\.\d+)?\s*(kg|kgs|g|gm|gms|gram|grams|l|ltr|litre|litres|ml|pack|pcs|piece|pieces)\b/gi, ' ')
+      .replace(/\b\d+\s*[xX]\s*\d+\b/g, ' ')
+      .replace(/\b\d+(\.\d+)?\b/g, ' ')
+      .replace(/\b(premium|special|organic|natural|fresh|pure|best|new|combo|offer|loose|packet|pack)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     const scoredProducts = products
       .filter((product) => product.isEnabled)
       .map((product) => ({
@@ -1876,7 +1901,9 @@ export default function CustomerApp({
       .map((category) => cleanName(category.name || ''))
       .filter((name) => name.length > 1);
 
-    return Array.from(new Set([...productNames, ...categoryNames])).slice(0, 12);
+    return Array.from(new Set([...popularGroceryNames, ...productNames, ...categoryNames]))
+      .filter((name) => name.length > 1 && name.length <= 24)
+      .slice(0, 14);
   }, [products, categories]);
 
   const saveSearchHistory = (term: string) => {

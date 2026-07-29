@@ -199,7 +199,7 @@ export default function HomeView({
       window.setTimeout(() => {
         setVisibleProductCount((count) => Math.min(count + 10, filteredProducts.length));
         setIsLoadingMoreProducts(false);
-      }, 450);
+      }, 750);
       return;
     }
     try {

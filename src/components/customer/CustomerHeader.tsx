@@ -136,7 +136,7 @@ export default function CustomerHeader({
     if (rotatingSearchPlaceholders.length <= 1) return;
     const timer = window.setInterval(() => {
       setPlaceholderIndex((index) => (index + 1) % rotatingSearchPlaceholders.length);
-    }, 10000);
+    }, 5000);
     return () => window.clearInterval(timer);
   }, [rotatingSearchPlaceholders.length]);
 
