@@ -126,10 +126,12 @@ export default function HomeView({
   const activeSectionId = expandedCategoryId || selectedParentCategory?.id || null;
 
   const scrollToProducts = () => {
-    const productsEl = document.getElementById('catalog-products-list-anchor');
-    if (productsEl) {
-      productsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    window.setTimeout(() => {
+      const productsEl = document.getElementById('catalog-products-list-anchor');
+      if (productsEl) {
+        productsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 80);
   };
 
   const handleCategoryCircleClick = (cat: Category) => {
@@ -500,6 +502,113 @@ export default function HomeView({
         </section>
       )}
 
+      {/* Daily Quick-Pick */}
+      <div>
+        <div className="mb-3 flex items-end justify-between gap-3 text-left">
+          <div>
+            <h3 className="font-serif text-base md:text-lg font-black tracking-tight text-emerald-700 dark:text-emerald-300">Daily Quick-Pick</h3>
+            <p className="text-xs opacity-75">Fast-pick staples customers buy repeatedly.</p>
+          </div>
+          <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 sm:inline-flex">
+            Quick add
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {products.filter(p => p.isDailyEssential && p.isEnabled).slice(0, 4).map((prod) => {
+            const hasDiscount = prod.offerPrice > 0;
+            const itemInCart = cart.find(c => c.productId === prod.id);
+            const lowStockThreshold = prod.lowStockAlertThreshold ?? 10;
+            const isLowStock = prod.stockCount > 0 && prod.stockCount <= lowStockThreshold;
+            return (
+              <div
+                key={prod.id}
+                onClick={() => setSelectedProduct(prod)}
+                className={`group cursor-pointer rounded-xl border p-2 shadow-sm transition-all duration-300 relative overflow-hidden flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-md ${
+                  isDarkMode
+                    ? 'border-emerald-900/60 bg-slate-950 hover:border-emerald-700'
+                    : 'border-emerald-100 bg-white hover:border-emerald-300'
+                }`}
+              >
+                <div className="absolute bottom-0 left-0 top-0 w-1 bg-emerald-500" />
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-emerald-100/70 bg-emerald-50 shadow-inner dark:border-emerald-950 dark:bg-slate-900">
+                  <img
+                    src={prod.images?.[0] || productImageFallback}
+                    alt={prod.name}
+                    className="w-full h-full object-cover transition-transform duration-350 group-hover:scale-105"
+                    referrerPolicy="no-referrer"
+                  />
+                  {hasDiscount && (
+                    <span className="absolute left-1 top-1 rounded-full bg-rose-600 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow">
+                      Special
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 space-y-1 pr-9 text-left">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                      {prod.weight / 1000}kg
+                    </span>
+                    {prod.stockCount === 0 && (
+                      <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+                        OUT OF STOCK
+                      </span>
+                    )}
+                  </div>
+                  <h4
+                    className="line-clamp-1 text-xs font-black leading-tight tracking-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-slate-100 dark:group-hover:text-emerald-300"
+                  >
+                    {prod.name}
+                  </h4>
+                  <div className="flex items-baseline gap-1 flex-wrap">
+                    <span className="text-sm font-black text-emerald-700 dark:text-emerald-300">
+                      â‚¹{hasDiscount ? prod.offerPrice : prod.basePrice}
+                    </span>
+                    {hasDiscount && (
+                      <span className="text-slate-400 dark:text-slate-500 line-through text-[10px] font-mono">
+                        â‚¹{prod.basePrice}
+                      </span>
+                    )}
+                  </div>
+                  {isLowStock && (
+                    <span className="flex items-center gap-1 text-[9px] font-bold text-amber-600 dark:text-amber-500">
+                      âš ï¸ Only {prod.stockCount} left
+                    </span>
+                  )}
+                </div>
+                <div onClick={(e) => e.stopPropagation()} className="absolute bottom-2 right-2 flex shrink-0 flex-col gap-1">
+                  {itemInCart ? (
+                    <div className="flex items-center gap-1 rounded-full bg-emerald-600 p-0.5 text-white shadow">
+                      <button
+                        onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)}
+                        className="p-0.5 hover:bg-emerald-500 rounded-full"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="text-[10px] font-black font-mono w-5 text-center">{itemInCart.quantity}</span>
+                      <button
+                        onClick={() => updateCartQty(prod.id, itemInCart.quantity + 1)}
+                        className="p-0.5 hover:bg-emerald-500 rounded-full"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      disabled={prod.stockCount === 0}
+                      onClick={() => addToCart(prod.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-md transition hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600"
+                      title="Quick Add to Bag"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Premium Circular Categories Navigation Badges */}
       <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
@@ -612,7 +721,7 @@ export default function HomeView({
                   {subs.length} aisles
                 </span>
               </div>
-              <div className="flex items-center gap-3 overflow-x-auto pb-1 px-1 w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="grid grid-cols-4 gap-2 pb-1 px-1 w-full md:flex md:items-center md:gap-3 md:overflow-x-auto md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:hidden">
                 {/* Shortcut to view everything under the main category */}
                 <div
                   onClick={() => {
@@ -696,121 +805,6 @@ export default function HomeView({
           </button>
         </div>
       )}
-
-      {/* Daily Essentials */}
-      <div>
-        <div className="mb-3 flex items-end justify-between gap-3 text-left">
-          <div>
-            <h3 className="font-serif text-base md:text-lg font-black tracking-tight text-emerald-700 dark:text-emerald-300">Daily Essentials</h3>
-            <p className="text-xs opacity-75">Fast-pick staples customers buy repeatedly.</p>
-          </div>
-          <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 sm:inline-flex">
-            Quick add
-          </span>
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {products.filter(p => p.isDailyEssential && p.isEnabled).slice(0, 4).map((prod) => {
-            const hasDiscount = prod.offerPrice > 0;
-            const itemInCart = cart.find(c => c.productId === prod.id);
-            const lowStockThreshold = prod.lowStockAlertThreshold ?? 10;
-            const isLowStock = prod.stockCount > 0 && prod.stockCount <= lowStockThreshold;
-            return (
-              <div
-                key={prod.id}
-                onClick={() => setSelectedProduct(prod)}
-                className={`group cursor-pointer rounded-xl border p-2 shadow-sm transition-all duration-300 relative overflow-hidden flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-md ${
-                  isDarkMode
-                    ? 'border-emerald-900/60 bg-slate-950 hover:border-emerald-700'
-                    : 'border-emerald-100 bg-white hover:border-emerald-300'
-                }`}
-              >
-                {/* Left vertical border indicator */}
-                <div className="absolute bottom-0 left-0 top-0 w-1 bg-emerald-500" />
-                {/* Image block */}
-                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-emerald-100/70 bg-emerald-50 shadow-inner dark:border-emerald-950 dark:bg-slate-900">
-                  <img
-                    src={prod.images?.[0] || productImageFallback}
-                    alt={prod.name}
-                    className="w-full h-full object-cover transition-transform duration-350 group-hover:scale-105"
-                    referrerPolicy="no-referrer"
-                  />
-                  {hasDiscount && (
-                    <span className="absolute left-1 top-1 rounded-full bg-rose-600 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow">
-                      Special
-                    </span>
-                  )}
-                  <span className="hidden absolute bottom-2 left-2 rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-emerald-700 shadow-sm dark:bg-slate-950/90 dark:text-emerald-300">
-                    Essential
-                  </span>
-                </div>
-                {/* Details block */}
-                <div className="min-w-0 flex-1 space-y-1 pr-9 text-left">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                      {prod.weight / 1000}kg
-                    </span>
-                    {prod.stockCount === 0 && (
-                      <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                        SOLD OUT
-                      </span>
-                    )}
-                  </div>
-                  <h4
-                    className="line-clamp-1 text-xs font-black leading-tight tracking-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-slate-100 dark:group-hover:text-emerald-300"
-                  >
-                    {prod.name}
-                  </h4>
-                  <div className="flex items-baseline gap-1 flex-wrap">
-                    <span className="text-sm font-black text-emerald-700 dark:text-emerald-300">
-                      ₹{hasDiscount ? prod.offerPrice : prod.basePrice}
-                    </span>
-                    {hasDiscount && (
-                      <span className="text-slate-400 dark:text-slate-500 line-through text-[10px] font-mono">
-                        ₹{prod.basePrice}
-                      </span>
-                    )}
-                    <span className="hidden text-[9px] opacity-70 font-mono">({prod.weight / 1000} kg)</span>
-                  </div>
-                  {isLowStock && (
-                    <span className="flex items-center gap-1 text-[9px] font-bold text-amber-600 dark:text-amber-500">
-                      ⚠️ Only {prod.stockCount} left
-                    </span>
-                  )}
-                </div>
-                {/* Side quick-add trigger */}
-                <div onClick={(e) => e.stopPropagation()} className="absolute bottom-2 right-2 flex shrink-0 flex-col gap-1">
-                  {itemInCart ? (
-                    <div className="flex items-center gap-1 rounded-full bg-emerald-600 p-0.5 text-white shadow">
-                      <button
-                        onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)}
-                        className="p-0.5 hover:bg-emerald-500 rounded-full"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </button>
-                      <span className="text-[10px] font-black font-mono w-5 text-center">{itemInCart.quantity}</span>
-                      <button
-                        onClick={() => updateCartQty(prod.id, itemInCart.quantity + 1)}
-                        className="p-0.5 hover:bg-emerald-500 rounded-full"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      disabled={prod.stockCount === 0}
-                      onClick={() => addToCart(prod.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-md transition hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600"
-                      title="Quick Add to Bag"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Main Products Grid */}
       <div id="catalog-products-list-anchor" className="scroll-mt-24">

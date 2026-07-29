@@ -853,7 +853,7 @@ export default function CustomerApp({
     }
     try {
       setAuthEmail(email);
-      const res = await api.sendRegistrationOtp(email);
+      const res = await api.sendRegistrationOtp(email, phoneDigits);
       setOtpSentMessage(res.message);
       setIsOtpSent(true);
       setOtpExpiresAt(Date.now() + (res.expiresInSeconds ?? 300) * 1000);

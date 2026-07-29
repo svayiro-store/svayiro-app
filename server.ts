@@ -1223,6 +1223,19 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
   };
 }
 
+function normalizeCategory(category: any) {
+  if (!category) return null;
+  return {
+    ...category,
+    parentId: category.parent_id || category.parentId || undefined,
+    imageUrl: category.image_url || category.imageUrl || '',
+    isEnabled: category.is_enabled !== undefined ? Boolean(category.is_enabled) : category.isEnabled !== undefined ? Boolean(category.isEnabled) : true,
+    order: Number(category.position ?? category.order ?? 0),
+    createdAt: category.created_at || category.createdAt,
+    updatedAt: category.updated_at || category.updatedAt
+  };
+}
+
 function uniqueCategoryIds(input: any, fallbackCategoryId?: string | null, fallbackSubcategoryId?: string | null) {
   const raw = Array.isArray(input) ? input : [];
   return Array.from(new Set([...raw, fallbackCategoryId, fallbackSubcategoryId]
@@ -1990,6 +2003,11 @@ function isValidGmailAddress(value: any) {
   return REGEX.gmail.test(normalizeGmail(value));
 }
 
+function duplicateCustomerAccountMessage(field: 'email' | 'phone', value: string) {
+  const label = field === 'email' ? 'Gmail address' : 'phone number';
+  return `This ${label} (${value}) is already used for a SVAYIRO customer account. If this is your account and you forgot the password, click "Forgot password? Reset using email OTP" on the login screen.`;
+}
+
 function otpKey(scope: 'register' | 'reset', email: string) {
   return `${scope}:${normalizeGmail(email)}`;
 }
@@ -2046,16 +2064,29 @@ async function sendGmailSmtpMail(options: { toEmail: string; subject: string; te
 
 app.post('/api/auth/send-registration-otp', async (req, res) => {
   const email = normalizeGmail(req.body?.email);
+  const normalizedPhone = normalizePhone(req.body?.phone);
   if (!isValidGmailAddress(email)) {
     return res.status(400).json({ error: 'Enter a valid Gmail address ending with @gmail.com.' });
+  }
+  if (normalizedPhone && !isValidIndianMobile(normalizedPhone)) {
+    return res.status(400).json({ error: 'Valid 10-digit Indian mobile number is required.' });
   }
 
   try {
     const existing = await pgQuery(
-      "SELECT id FROM users WHERE lower(email) = lower($1) AND roles @> ARRAY['customer']::text[] LIMIT 1",
-      [email]
+      "SELECT id, phone, email FROM users WHERE roles @> ARRAY['customer']::text[] AND (lower(email) = lower($1) OR ($2::varchar <> '' AND phone = $2::varchar)) LIMIT 1",
+      [email, normalizedPhone || '']
     );
-    if (existing.rowCount > 0) return res.status(409).json({ error: 'This Gmail is already registered. Please login or reset password.' });
+    if (existing.rowCount > 0) {
+      const current = existing.rows[0];
+      if (String(current.email || '').toLowerCase() === email) {
+        return res.status(409).json({ error: duplicateCustomerAccountMessage('email', email) });
+      }
+      if (normalizedPhone && String(current.phone || '') === normalizedPhone) {
+        return res.status(409).json({ error: duplicateCustomerAccountMessage('phone', `+91 ${normalizedPhone}`) });
+      }
+      return res.status(409).json({ error: 'This account information is already registered. Use login or forgot password.' });
+    }
 
     const otp = generateOtp();
     otpStore[otpKey('register', email)] = { code: otp, expiresAt: Date.now() + OTP_EXPIRES_IN_MS };
@@ -2208,32 +2239,20 @@ app.post('/api/auth/register', async (req, res) => {
     const refreshToken = generateId('rtk');
     const passwordHash = hashPassword(password);
     const user = await runTransaction(async (client) => {
-      const existing = await client.query('SELECT * FROM users WHERE phone = $1 OR lower(email) = lower($2) FOR UPDATE', [normalizedPhone, email]);
+      const existing = await client.query('SELECT * FROM users WHERE phone = $1 OR lower(email) = lower($2) LIMIT 1 FOR UPDATE', [normalizedPhone, email]);
       if (existing.rowCount > 0) {
         const current = existing.rows[0];
-        assertDobChangeAllowed(current.date_of_birth, normalizedDob);
         const currentRoles = Array.isArray(current.roles) && current.roles.length ? current.roles : ['customer'];
         if (currentRoles.some((role: string) => ['admin', 'inventory_manager', 'delivery_partner', 'customer_care'].includes(role))) {
           throw new Error('This phone/email belongs to an owner or worker console account. Register customer access with a separate customer account.');
         }
-        if (!currentRoles.includes('customer')) currentRoles.push('customer');
-        const metadata = {
-          ...(current.metadata || {}),
-          authProvider: 'password',
-          termsAcceptedAt: new Date().toISOString(),
-          termsVersion: 'customer_terms_current',
-          refreshToken
-        };
-        const upd = await client.query(
-          `UPDATE users
-           SET name = $1, email = $2, phone = $3, password_hash = $4, date_of_birth = $5,
-               is_phone_verified = true, is_active = true, roles = $6, metadata = $7, updated_at = now()
-           WHERE id = $8
-           RETURNING *`,
-          [name, email, normalizedPhone, passwordHash, normalizedDob, currentRoles, metadata, current.id]
-        );
-        await syncUserRoles(client, current.id, currentRoles, null);
-        return upd.rows[0];
+        if (String(current.email || '').toLowerCase() === email) {
+          throw new HttpError(409, duplicateCustomerAccountMessage('email', email));
+        }
+        if (String(current.phone || '') === normalizedPhone) {
+          throw new HttpError(409, duplicateCustomerAccountMessage('phone', `+91 ${normalizedPhone}`));
+        }
+        throw new HttpError(409, 'This account information is already registered. Use login or forgot password.');
       }
       const metadata = { authProvider: 'password', termsAcceptedAt: new Date().toISOString(), termsVersion: 'customer_terms_current', refreshToken };
       const ins = await client.query(
@@ -2251,7 +2270,7 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (err: any) {
     console.error('POST /api/auth/register error', err);
     if (err?.code === '23505') return res.status(409).json({ error: 'Phone number or email is already registered.' });
-    return res.status(500).json({ error: err.message || 'Failed to register customer' });
+    return res.status(err?.statusCode || 500).json({ error: err.message || 'Failed to register customer' });
   }
 });
 
@@ -3366,7 +3385,7 @@ app.post('/api/calculate-distance', async (req, res) => {
 app.get('/api/categories', async (req, res) => {
   try {
     const { rows } = await pgQuery('SELECT *, parent_id AS "parentId" FROM categories ORDER BY position ASC, created_at DESC');
-    return res.json(rows);
+    return res.json(rows.map(normalizeCategory));
   } catch (err) {
     console.error('GET /api/categories error', err);
     return res.status(500).json({ error: 'Failed to fetch categories' });
@@ -3378,7 +3397,7 @@ app.get('/api/categories/:id', async (req, res) => {
   try {
     const p = await pgQuery('SELECT *, parent_id AS "parentId" FROM categories WHERE id = $1', [id]);
     if (p.rowCount === 0) return res.status(404).json({ error: 'Category not found' });
-    return res.json(p.rows[0]);
+    return res.json(normalizeCategory(p.rows[0]));
   } catch (err) {
     console.error('GET /api/categories/:id error', err);
     return res.status(500).json({ error: 'Failed to fetch category' });
@@ -3389,7 +3408,7 @@ app.get('/api/categories/:id', async (req, res) => {
 app.get('/api/admin/categories', authMiddleware, requirePermission('categories:manage'), async (req, res) => {
   try {
     const { rows } = await pgQuery('SELECT *, parent_id AS "parentId" FROM categories ORDER BY position ASC, created_at DESC');
-    return res.json(rows);
+    return res.json(rows.map(normalizeCategory));
   } catch (err) {
     console.error('GET /api/admin/categories error', err);
     return res.status(500).json({ error: 'Failed to fetch categories' });
@@ -3402,7 +3421,7 @@ app.post('/api/categories', authMiddleware, requirePermission('categories:manage
   if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join('; ') });
   try {
     const ins = await pgQuery('INSERT INTO categories(name, slug, description, image_url, parent_id, is_enabled, position, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,true,$6,$7,now(),now()) RETURNING *', [category.name, category.slug || category.name.toLowerCase().replace(/\s+/g, '-'), category.description || null, category.imageUrl || null, category.parentId || null, category.order || 0, category.metadata || {}]);
-    return res.json({ success: true, data: ins.rows[0] });
+    return res.json({ success: true, data: normalizeCategory(ins.rows[0]) });
   } catch (err) {
     console.error('POST /api/categories error', err);
     return res.status(500).json({ error: 'Failed to create category' });
@@ -3417,7 +3436,7 @@ app.get('/api/categories/:id/subcategories', async (req, res) => {
       'SELECT *, parent_id AS "parentId" FROM categories WHERE parent_id = $1 AND is_enabled = true ORDER BY position ASC, created_at DESC',
       [id]
     );
-    return res.json(rows);
+    return res.json(rows.map(normalizeCategory));
   } catch (err) {
     console.error('GET /api/categories/:id/subcategories error', err);
     return res.status(500).json({ error: 'Failed to fetch subcategories' });
@@ -3455,7 +3474,7 @@ app.put('/api/categories/:id', authMiddleware, requirePermission('categories:man
       ]
     );
     if (upd.rowCount === 0) return res.status(404).json({ error: 'Category not found' });
-    return res.json({ success: true, data: upd.rows[0] });
+    return res.json({ success: true, data: normalizeCategory(upd.rows[0]) });
   } catch (err) {
     console.error('PUT /api/categories/:id error', err);
     return res.status(500).json({ error: 'Failed to update category' });
@@ -5383,7 +5402,7 @@ app.get('/api/admin/reports', authMiddleware, isAdminMiddleware, async (req, res
       WHERE date_of_birth IS NOT NULL
         AND is_active IS DISTINCT FROM false
     `);
-    const upcomingBirthdays = buildUpcomingBirthdayRows(birthdayUsersRes.rows).filter((row: any) => row.daysUntil <= 30);
+    const upcomingBirthdays = buildUpcomingBirthdayRows(birthdayUsersRes.rows).filter((row: any) => row.daysUntil === 1);
 
     const mapChartRows = (rows: any[]) => rows.map(r => ({
       label: r.label,

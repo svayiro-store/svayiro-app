@@ -150,8 +150,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       const categoryIds = prev.categoryIds.includes(categoryId)
         ? prev.categoryIds.filter((id) => id !== categoryId)
         : [...prev.categoryIds, categoryId];
-      const nextPrimary = categoryIds.includes(prev.categoryId) ? prev.categoryId : categoryIds[0] || '';
-      const nextSubcategory = prev.subcategoryId && categoryIds.includes(prev.subcategoryId) ? prev.subcategoryId : undefined;
+      const { categoryId: nextPrimary, subcategoryId: nextSubcategory } = derivePrimaryCategoryFields(categoryIds);
       return {
         ...prev,
         categoryIds,
@@ -161,13 +160,17 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     });
   };
 
-  const setPrimaryCategory = (categoryId: string) => {
-    setForm((prev) => ({
-      ...prev,
-      categoryId,
-      categoryIds: prev.categoryIds.includes(categoryId) ? prev.categoryIds : [...prev.categoryIds, categoryId],
-      subcategoryId: prev.subcategoryId && categories.find((cat) => cat.id === prev.subcategoryId)?.parentId === categoryId ? prev.subcategoryId : undefined
-    }));
+  const derivePrimaryCategoryFields = (categoryIds: string[]) => {
+    const selected = categoryIds
+      .map((id) => categories.find((category) => category.id === id))
+      .filter(Boolean) as Category[];
+    const firstParent = selected.find((category) => !category.parentId);
+    const firstSubcategory = selected.find((category) => category.parentId);
+    const derivedParent = firstParent || (firstSubcategory?.parentId ? categories.find((category) => category.id === firstSubcategory.parentId) : undefined);
+    return {
+      categoryId: derivedParent?.id || selected[0]?.id || '',
+      subcategoryId: firstSubcategory?.id || undefined
+    };
   };
 
   const handleAddImages = async (files: FileList | null) => {
@@ -207,7 +210,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
 
   const validate = (): string => {
     if (!form.name.trim()) return 'Product name is required.';
-    if (!form.categoryId || form.categoryIds.length === 0) return 'Please select at least one category.';
+    if (form.categoryIds.length === 0) return 'Please select at least one category.';
     if (!form.purchasePrice || Number(form.purchasePrice) <= 0) return 'Real item cost must be greater than 0. This is admin-only and hidden from customers.';
     if (!form.basePrice || Number(form.basePrice) < 0) return 'Base price must be a non-negative number.';
     if (Number(form.basePrice) < Number(form.purchasePrice)) return 'Selling price should not be below real item cost.';
@@ -224,13 +227,14 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     }
     setSaving(true);
     try {
+      const primaryCategory = derivePrimaryCategoryFields(form.categoryIds);
       const payload = {
         name: form.name.trim(),
         slug: form.name.toLowerCase().replace(/\s+/g, '-'),
         description: form.description.trim(),
-        categoryId: form.categoryId,
-        subcategoryId: form.subcategoryId || undefined,
-        categoryIds: Array.from(new Set([form.categoryId, form.subcategoryId, ...form.categoryIds].filter(Boolean) as string[])),
+        categoryId: primaryCategory.categoryId,
+        subcategoryId: primaryCategory.subcategoryId,
+        categoryIds: Array.from(new Set(form.categoryIds)),
         purchasePrice: Number(form.purchasePrice),
         basePrice: Number(form.basePrice),
         offerPrice: Number(form.offerPrice) || 0,
@@ -303,12 +307,6 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       alert(err.message || 'Failed to delete product');
     }
   };
-
-  // Get subcategories for selected category
-  const subcategoriesForSelectedCategory = useMemo(() => {
-    if (!form.categoryId) return [];
-    return categories.filter(cat => cat.parentId === form.categoryId);
-  }, [form.categoryId, categories]);
 
   const productCategoryIds = (product: Product) => {
     const ids = Array.isArray(product.categoryIds) ? product.categoryIds : [];
@@ -467,7 +465,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
         </button>
       </div>
 
-      {/* Create/Edit Product Form */}
+      {catalogueView === 'products' && (
       <div className={sectionClass}>
         <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
           {editingId ? <><Plus className="h-4 w-4" /> Edit Product</> : <><Plus className="h-4 w-4" /> Add New Product</>}
@@ -486,53 +484,6 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                   Auto-generated after saving
                 </div>
               </div>
-            </div>
-
-            {/* Category and Subcategory Selection */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className={labelClass}>Primary Category *</span>
-                <select
-                  className={inputClass}
-                  value={form.categoryId}
-                  onChange={(e) => {
-                    setPrimaryCategory(e.target.value);
-                  }}
-                >
-                  <option value="">-- Select Category --</option>
-                  {parentCategories.length === 0 && (
-                    <option value="" disabled>No categories found. Create a category first.</option>
-                  )}
-                  {parentCategories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className={labelClass}>Subcategory (optional)</span>
-                <select
-                  className={inputClass}
-                  value={form.subcategoryId || ''}
-                  onChange={(e) => {
-                    const nextSubcategoryId = e.target.value || undefined;
-                    setForm((prev) => ({
-                      ...prev,
-                      subcategoryId: nextSubcategoryId,
-                      categoryIds: Array.from(new Set([prev.categoryId, nextSubcategoryId, ...prev.categoryIds].filter(Boolean) as string[]))
-                    }));
-                  }}
-                  disabled={!form.categoryId || subcategoriesForSelectedCategory.length === 0}
-                >
-                  <option value="">-- No Subcategory --</option>
-                  {subcategoriesForSelectedCategory.length === 0 ? (
-                    <option value="" disabled>{form.categoryId ? 'No subcategories' : 'Select category first'}</option>
-                  ) : (
-                    subcategoriesForSelectedCategory.map(subcat => (
-                      <option key={subcat.id} value={subcat.id}>{subcat.name}</option>
-                    ))
-                  )}
-                </select>
-              </label>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
@@ -718,6 +669,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
           </div>
         </div>
       </div>
+      )}
 
       {/* Products List */}
       <div className="space-y-4">

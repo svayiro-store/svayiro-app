@@ -73,7 +73,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
     yearly: 'Last 5 years'
   };
   const upcomingBirthdays = reports.upcomingBirthdays || [];
-  const todaysBirthdays = upcomingBirthdays.filter((customer: any) => customer.isToday);
+  const tomorrowBirthdays = upcomingBirthdays.filter((customer: any) => customer.daysUntil === 1);
   const filteredLowStockProducts = useMemo(() => {
     const query = lowStockSearch.trim().toLowerCase();
     if (!query) return lowStockProducts;
@@ -288,12 +288,12 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
             <Gift className="h-4 w-4 text-rose-500" />
             <div>
               <h3 className="font-bold text-sm">Birthday Alerts</h3>
-              <p className="text-[10px] font-semibold text-slate-400">Shows active customer, owner, and staff birthdays from saved profile DOB.</p>
+              <p className="text-[10px] font-semibold text-slate-400">Shows birthdays one day before the saved profile DOB.</p>
             </div>
           </div>
-          {todaysBirthdays.length > 0 && (
+          {tomorrowBirthdays.length > 0 && (
             <span className="rounded-full bg-rose-100 px-3 py-1 text-[10px] font-black uppercase text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
-              {todaysBirthdays.length} birthday today
+              {tomorrowBirthdays.length} birthday tomorrow
             </span>
           )}
         </div>
@@ -315,7 +315,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
         )}
         {upcomingBirthdays.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500 dark:border-slate-800">
-            No birthdays found in the next 30 days.
+            No birthdays scheduled for tomorrow.
           </div>
         ) : filteredBirthdays.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500 dark:border-slate-800">
@@ -333,8 +333,8 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
                     {customer.roleLabel && <p className="mt-0.5 text-[10px] font-bold uppercase text-indigo-400">{customer.roleLabel}</p>}
                     {customer.email && <p className="mt-0.5 truncate text-[10px] text-slate-400">{customer.email}</p>}
                   </div>
-                  <span className={`rounded-full px-2 py-1 text-[10px] font-black ${customer.isToday ? 'bg-rose-600 text-white' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'}`}>
-                    {customer.isToday ? 'Today' : `${customer.daysUntil}d`}
+                  <span className="rounded-full bg-rose-600 px-2 py-1 text-[10px] font-black text-white">
+                    Tomorrow
                   </span>
                 </div>
                 <div className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-[11px] font-bold dark:bg-slate-900/70">

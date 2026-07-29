@@ -209,10 +209,10 @@ export const api = {
       body: JSON.stringify({ email })
     }),
 
-  sendRegistrationOtp: (email: string) =>
+  sendRegistrationOtp: (email: string, phone?: string) =>
     apiRequest<{ success: boolean; message: string; devOtp?: string; expiresInSeconds?: number; resendAfterSeconds?: number }>('/auth/send-registration-otp', {
       method: 'POST',
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email, phone })
     }),
 
   // Geocode an address string to lat/lng using Google Maps or OpenStreetMap fallback
