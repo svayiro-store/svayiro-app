@@ -732,70 +732,63 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       {/* Products List */}
       <div className="space-y-4">
         {catalogueView === 'products' && (
-          filteredProducts.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No products found matching your search criteria.</p>
+          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-end lg:justify-between">
+            <div className="grid flex-1 gap-3 md:grid-cols-[1fr_220px_220px]">
+              <label>
+                <span className={labelClass}>Search listed products</span>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    className={`${inputClass} pl-9`}
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Search by product name or category..."
+                  />
+                </div>
+              </label>
+              <label>
+                <span className={labelClass}>Parent Category</span>
+                <select
+                  className={inputClass}
+                  value={productCategoryFilter}
+                  onChange={(event) => {
+                    setProductCategoryFilter(event.target.value);
+                    setProductSubcategoryFilter('');
+                  }}
+                >
+                  <option value="">All Categories</option>
+                  {parentCategories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className={labelClass}>Subcategory</span>
+                <select
+                  className={inputClass}
+                  value={productSubcategoryFilter}
+                  onChange={(event) => setProductSubcategoryFilter(event.target.value)}
+                  disabled={!productCategoryFilter}
+                >
+                  <option value="">All Subcategories</option>
+                  {subcategoriesForFilter.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+              </label>
             </div>
-          ) : (
-            <div className="max-h-[70vh] overflow-auto rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
-              <div className="grid min-w-[760px] grid-cols-6 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                <span className="col-span-2">Product</span>
-                <span>Category</span>
-                <span>Price</span>
-                <span>Stock</span>
-                <span>Action</span>
-              </div>
-              {filteredProducts.map((product) => {
-                const thumbnail = Array.isArray(product.images) && product.images.length > 0
-                  ? (typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as any)?.url)
-                  : '';
-                return (
-                  <div
-                    key={product.id}
-                    id={`admin-product-${product.id}`}
-                    className="grid min-w-[760px] grid-cols-6 gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center"
-                  >
-                    <div className="col-span-2 flex items-center gap-3">
-                      {thumbnail ? (
-                        <img src={thumbnail} alt={product.name} className="h-10 w-10 rounded-lg object-cover border border-slate-200" referrerPolicy="no-referrer" />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700">
-                          <ImageIcon className="h-4 w-4 text-slate-400" />
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-semibold">{product.name}</div>
-                        <div className="text-[10px] opacity-70 font-mono">{product.sku || product.id.substring(0, 8)}</div>
-                      </div>
-                    </div>
-                    <div className="text-xs opacity-80">{productCategoryLabel(product)}</div>
-                    <div className="text-xs">
-                      {product.offerPrice > 0 ? (
-                        <>
-                          <span className="font-bold text-emerald-600">Rs {product.offerPrice}</span>{' '}
-                          <span className="text-[10px] line-through opacity-50">Rs {product.basePrice}</span>
-                        </>
-                      ) : (
-                        <span className="font-bold">Rs {product.basePrice}</span>
-                      )}
-                    </div>
-                    <div className="text-xs">
-                      <span className={`rounded px-2 py-1 font-bold ${product.stockCount === 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400' : product.stockCount <= ((product as any).lowStockAlertThreshold || 5) ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
-                        {product.stockCount}
-                      </span>
-                      {!product.isEnabled && (
-                        <span className="ml-1 rounded bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Disabled</span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => startEdit(product)} className="rounded bg-indigo-600 px-3 py-1 text-xs text-white">Edit</button>
-                      <button onClick={() => handleDelete(product.id)} className="rounded bg-rose-600 px-3 py-1 text-xs text-white">Delete</button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )
+            <button
+              type="button"
+              onClick={() => {
+                setProductSearch('');
+                setProductCategoryFilter('');
+                setProductSubcategoryFilter('');
+              }}
+              className="rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-950"
+            >
+              Clear Search
+            </button>
+          </div>
         )}
         {catalogueView === 'codes' && (
           <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-end lg:justify-between">
