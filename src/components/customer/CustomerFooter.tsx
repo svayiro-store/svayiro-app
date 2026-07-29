@@ -289,7 +289,12 @@ export default function CustomerFooter({
 
         {/* Footer Bottom Bar */}
         <div className="max-w-7xl mx-auto mt-6 pt-6 border-t border-slate-100/60 dark:border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] font-mono opacity-85">
-          <p>Â© 2026 {shop.name}. All rights reserved.</p>
+          <p>© 2026 {shop.name}. All rights reserved.</p>
+          <p className="flex items-center gap-1">
+            <span>Made with</span>
+            <span className="text-rose-500" aria-label="love">?</span>
+            <span>in India</span>
+          </p>
         </div>
       </footer>
 

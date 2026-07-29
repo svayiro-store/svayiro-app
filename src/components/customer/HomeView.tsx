@@ -134,12 +134,21 @@ export default function HomeView({
     }, 80);
   };
 
+  const scrollToSubcategories = () => {
+    window.setTimeout(() => {
+      const subcategoryEl = document.getElementById('category-subsections-anchor');
+      if (subcategoryEl) {
+        subcategoryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 80);
+  };
+
   const handleCategoryCircleClick = (cat: Category) => {
     const hasSubcategories = categories.some(c => c.parentId === cat.id);
     if (hasSubcategories) {
       setSelectedCategory(cat.id);
       setExpandedCategoryId(cat.id);
-      scrollToProducts();
+      scrollToSubcategories();
     } else {
       setSelectedCategory(cat.id);
       setExpandedCategoryId(null);
@@ -710,7 +719,7 @@ export default function HomeView({
           ];
 
           return (
-            <div className={`rounded-xl border p-3 animate-fadeIn ${isDarkMode ? 'border-indigo-900/50 bg-indigo-950/10' : 'border-indigo-100 bg-indigo-50/40'}`}>
+            <div id="category-subsections-anchor" className={`scroll-mt-24 rounded-xl border p-3 animate-fadeIn ${isDarkMode ? 'border-indigo-900/50 bg-indigo-950/10' : 'border-indigo-100 bg-indigo-50/40'}`}>
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">Section</p>
@@ -823,7 +832,7 @@ export default function HomeView({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(155px,190px))] lg:grid-cols-[repeat(auto-fill,minmax(165px,215px))] justify-start gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3">
               {visibleProducts.map((prod) => {
                 const hasDiscount = prod.offerPrice > 0;
                 const itemInCart = cart.find(c => c.productId === prod.id);
@@ -964,9 +973,14 @@ export default function HomeView({
             {hasMoreProducts && (
               <div ref={productLoadMoreRef} className="mt-5 flex min-h-16 items-center justify-center">
                 {isLoadingMoreProducts && (
-                  <div className="flex items-center gap-3 rounded-full border border-indigo-100 bg-white px-4 py-2 text-xs font-black uppercase text-indigo-700 shadow-sm dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300">
-                    <span className="h-5 w-5 rounded-full border-2 border-indigo-200 border-t-indigo-700 animate-spin" />
-                    Loading products
+                  <div className="flex items-center gap-3 rounded-full border border-indigo-100 bg-white px-4 py-2 text-xs font-normal lowercase text-indigo-700 shadow-sm dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300">
+                    <span className="relative h-7 w-7">
+                      <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 shadow-[0_0_14px_rgba(253,224,71,0.70)]" />
+                      <span className="absolute inset-0 animate-spin rounded-full">
+                        <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.80)]" />
+                      </span>
+                    </span>
+                    loading..
                   </div>
                 )}
               </div>

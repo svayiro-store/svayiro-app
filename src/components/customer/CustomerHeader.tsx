@@ -19,6 +19,7 @@ interface CustomerHeaderProps {
   isSearchLoading?: boolean;
   searchDelayEnabled?: boolean;
   searchSuggestions?: Product[];
+  searchPlaceholderItems?: string[];
   onSelectSuggestion?: (product: Product) => void;
   searchHistory?: string[];
   onSubmitSearch?: (term: string) => void;
@@ -44,6 +45,7 @@ export default function CustomerHeader({
   isSearchLoading = false,
   searchDelayEnabled = true,
   searchSuggestions = [],
+  searchPlaceholderItems = [],
   onSelectSuggestion,
   searchHistory = [],
   onSubmitSearch,
@@ -58,7 +60,7 @@ export default function CustomerHeader({
 }: CustomerHeaderProps) {
   const isStoreOpen = shop.isOpen !== false;
   const status = shop.isOpen === false
-    ? { label: 'Closed', dotClass: 'bg-rose-500', pulse: false }
+    ? { label: 'Store Closed', dotClass: 'bg-rose-500', pulse: false }
     : shop.isHolidayMode
       ? { label: 'Holiday Advisory', dotClass: 'bg-amber-500', pulse: false }
       : { label: 'Operational', dotClass: 'bg-emerald-500', pulse: true };
@@ -68,7 +70,17 @@ export default function CustomerHeader({
   const logoDotClass = isStoreOpen ? 'bg-emerald-500' : 'bg-rose-500';
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const notificationWrapRef = useRef<HTMLDivElement | null>(null);
+  const defaultSearchPlaceholders = [
+    'Search staples, high-quality groceries, organic pulses...',
+    'Search atta, rice, dal, millets...',
+    'Search fresh vegetables, fruits, dairy...'
+  ];
+  const rotatingSearchPlaceholders = searchPlaceholderItems.length > 0
+    ? searchPlaceholderItems.map((item) => `Search "${item}"`)
+    : defaultSearchPlaceholders;
+  const activeSearchPlaceholder = rotatingSearchPlaceholders[placeholderIndex % rotatingSearchPlaceholders.length] || defaultSearchPlaceholders[0];
   const showSuggestions = isSearchFocused && searchQuery.trim().length >= 2 && searchSuggestions.length > 0;
   const showHistory = isSearchFocused && searchQuery.trim().length === 0 && searchHistory.length > 0;
   const customerNotifications = notifications.filter((notification) => (notification.audience || 'customer') === 'customer' && notification.type !== 'order');
@@ -115,6 +127,18 @@ export default function CustomerHeader({
     document.addEventListener('pointerdown', handlePointerDown);
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [isNotificationsOpen]);
+
+  useEffect(() => {
+    setPlaceholderIndex(0);
+  }, [rotatingSearchPlaceholders.join('|')]);
+
+  useEffect(() => {
+    if (rotatingSearchPlaceholders.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setPlaceholderIndex((index) => (index + 1) % rotatingSearchPlaceholders.length);
+    }, 10000);
+    return () => window.clearInterval(timer);
+  }, [rotatingSearchPlaceholders.length]);
 
   const toggleNotifications = () => {
     setIsNotificationsOpen((open) => {
@@ -316,7 +340,7 @@ export default function CustomerHeader({
                 id="customer_desktop_search"
                 name="customer_desktop_search"
                 type="text" 
-                placeholder="Search staples, high-quality groceries, organic pulses..." 
+                placeholder={activeSearchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
@@ -408,7 +432,7 @@ export default function CustomerHeader({
                 id="customer_mobile_search"
                 name="customer_mobile_search"
                 type="text" 
-                placeholder="Search premium staples, flours, grains..." 
+                placeholder={activeSearchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}

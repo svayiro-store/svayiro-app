@@ -80,8 +80,13 @@ function CustomerViewLoader() {
   return (
     <div className="flex min-h-[320px] items-center justify-center">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-9 w-9 animate-spin rounded-full border-4 border-indigo-100 border-t-indigo-600" />
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Loading</p>
+        <div className="relative h-12 w-12">
+          <span className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 shadow-[0_0_22px_rgba(253,224,71,0.75)]" />
+          <span className="absolute inset-0 animate-spin rounded-full">
+            <span className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-full bg-blue-500 shadow-[0_0_14px_rgba(59,130,246,0.85)]" />
+          </span>
+        </div>
+        <p className="text-[10px] font-normal lowercase tracking-wide text-indigo-500">loading..</p>
       </div>
     </div>
   );
@@ -1854,6 +1859,26 @@ export default function CustomerApp({
       .map((item) => item.product);
   }, [products, categories, searchQuery]);
 
+  const searchPlaceholderItems = useMemo(() => {
+    const cleanName = (name: string) => name.trim().replace(/\s+/g, ' ');
+    const scoredProducts = products
+      .filter((product) => product.isEnabled)
+      .map((product) => ({
+        name: cleanName(product.name || ''),
+        score: (product.isDailyEssential ? 3 : 0) + (product.isFeatured ? 2 : 0) + (product.stockCount > 0 ? 1 : 0)
+      }))
+      .filter((item) => item.name.length > 1)
+      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+
+    const productNames = scoredProducts.map((item) => item.name);
+    const categoryNames = categories
+      .filter((category) => !category.parentId)
+      .map((category) => cleanName(category.name || ''))
+      .filter((name) => name.length > 1);
+
+    return Array.from(new Set([...productNames, ...categoryNames])).slice(0, 12);
+  }, [products, categories]);
+
   const saveSearchHistory = (term: string) => {
     const cleanTerm = term.trim();
     if (cleanTerm.length < 2) return;
@@ -1932,6 +1957,7 @@ export default function CustomerApp({
         isSearchLoading={isSearchingProducts}
         searchDelayEnabled={searchUseDelay}
         searchSuggestions={searchSuggestions}
+        searchPlaceholderItems={searchPlaceholderItems}
         searchHistory={searchHistory}
         onSubmitSearch={(term) => {
           const cleanTerm = term.trim();

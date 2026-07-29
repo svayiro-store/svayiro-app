@@ -620,8 +620,13 @@ export default function App() {
   const renderRouteLoader = () => (
     <div className="flex min-h-screen min-h-dvh items-center justify-center bg-[#0f172a] text-white">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
-        <p className="text-[11px] font-black uppercase tracking-[0.25em] text-indigo-100">Loading SVAYIRO</p>
+        <div className="relative h-12 w-12">
+          <span className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 shadow-[0_0_22px_rgba(253,224,71,0.75)]" />
+          <span className="absolute inset-0 animate-spin rounded-full">
+            <span className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-full bg-blue-500 shadow-[0_0_14px_rgba(59,130,246,0.85)]" />
+          </span>
+        </div>
+        <p className="text-[11px] font-normal lowercase tracking-wide text-indigo-100">loading..</p>
       </div>
     </div>
   );
