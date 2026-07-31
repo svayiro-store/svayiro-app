@@ -31,6 +31,42 @@ import type { CheckoutBagInfo } from './src/types';
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
+type CacheEntry<T = any> = {
+  expiresAt: number;
+  value: T;
+};
+
+const publicCache = new Map<string, CacheEntry>();
+
+function getPublicCache<T>(key: string): T | null {
+  const entry = publicCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    publicCache.delete(key);
+    return null;
+  }
+  return entry.value as T;
+}
+
+function setPublicCache<T>(key: string, value: T, ttlMs: number) {
+  publicCache.set(key, { value, expiresAt: Date.now() + ttlMs });
+}
+
+function invalidatePublicCache(prefix?: string) {
+  if (!prefix) {
+    publicCache.clear();
+    return;
+  }
+  for (const key of publicCache.keys()) {
+    if (key.startsWith(prefix)) publicCache.delete(key);
+  }
+}
+
+function sendCacheableJson(res: express.Response, value: any, maxAgeSeconds = 60) {
+  res.set('Cache-Control', `public, max-age=${maxAgeSeconds}, stale-while-revalidate=${maxAgeSeconds}`);
+  return res.json(value);
+}
+
 const ALLOWED_ROLE_CODES = ['admin', 'inventory_manager', 'delivery_partner', 'customer_care', 'customer'] as const;
 const STAFF_ROLE_CODES = ['inventory_manager', 'delivery_partner', 'customer_care'] as const;
 const STAFF_ROLE_PREFIX: Record<string, string> = {
@@ -1202,7 +1238,6 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
     name: product.name || '',
     description: product.description || '',
     sku: product.sku || '',
-    unit: product.unit || '',
     categoryId: product.category_id || product.categoryId || '',
     subcategoryId: product.subcategory_id || product.subcategoryId || undefined,
     categoryIds: Array.from(new Set(categoryIds)),
@@ -1210,6 +1245,9 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
     offerPrice: Number(product.offer_price ?? product.offerPrice ?? 0),
     stockCount: Number(product.stock_count ?? product.stockCount ?? 0),
     weight: Number(product.weight_grams ?? product.weight ?? 0),
+    unit: metadata.unit || product.unit || 'g',
+    packageQuantity: Number(metadata.packageQuantity ?? product.packageQuantity ?? 0),
+    packageLabel: metadata.packageLabel || product.packageLabel || '',
     isEnabled: product.is_enabled !== undefined ? Boolean(product.is_enabled) : product.isEnabled !== undefined ? Boolean(product.isEnabled) : true,
     lowStockAlertThreshold: Number(product.low_stock_threshold ?? product.lowStockAlertThreshold ?? 5),
     purchasePrice: Number(metadata.purchasePrice ?? product.purchasePrice ?? 0),
@@ -1220,6 +1258,39 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
     images,
     createdAt: product.created_at || product.createdAt,
     updatedAt: product.updated_at || product.updatedAt
+  };
+}
+
+function normalizeProductSummary(product: any) {
+  const normalized = normalizeProduct(product, product.first_image_url ? [{ url: product.first_image_url }] : []);
+  if (!normalized) return null;
+  return {
+    id: normalized.id,
+    categoryId: normalized.categoryId,
+    categoryIds: normalized.categoryIds,
+    subcategoryId: normalized.subcategoryId,
+    sku: normalized.sku,
+    name: normalized.name,
+    slug: normalized.slug || '',
+    description: normalized.description,
+    basePrice: normalized.basePrice,
+    offerPrice: normalized.offerPrice,
+    stockCount: normalized.stockCount,
+    weight: normalized.weight,
+    unit: normalized.unit,
+    packageQuantity: normalized.packageQuantity,
+    packageLabel: normalized.packageLabel,
+    isEnabled: normalized.isEnabled,
+    lowStockAlertThreshold: normalized.lowStockAlertThreshold,
+    metadata: normalized.metadata || {},
+    images: normalized.images?.slice(0, 1) || [],
+    ratingAverage: normalized.ratingAverage,
+    ratingCount: normalized.ratingCount,
+    createdAt: normalized.createdAt,
+    updatedAt: normalized.updatedAt,
+    purchasePrice: normalized.purchasePrice,
+    isDailyEssential: normalized.isDailyEssential,
+    isFeatured: normalized.isFeatured
   };
 }
 
@@ -2635,9 +2706,13 @@ app.put('/api/auth/save-later', authMiddleware, attachUserMiddleware, async (req
 
 app.get('/api/shop-profile', async (req, res) => {
   try {
+    const cacheKey = 'shop-profile';
+    const cached = getPublicCache(cacheKey);
+    if (cached) return sendCacheableJson(res, cached, 90);
     const s = await pgQuery('SELECT * FROM shop_profile ORDER BY created_at DESC LIMIT 1');
-    if (s.rowCount === 0) return res.json(normalizeShopProfile(DEFAULT_SHOP_PROFILE));
-    return res.json(normalizeShopProfile(s.rows[0]));
+    const profile = s.rowCount === 0 ? normalizeShopProfile(DEFAULT_SHOP_PROFILE) : normalizeShopProfile(s.rows[0]);
+    setPublicCache(cacheKey, profile, 90_000);
+    return sendCacheableJson(res, profile, 90);
   } catch (err) {
     console.error('GET /api/shop-profile error', err);
     return res.status(500).json({ error: 'Failed to fetch shop profile' });
@@ -2730,6 +2805,7 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
           socialLinksJson || '[]'
         ]
       );
+      invalidatePublicCache('shop-profile');
       return res.json({ success: true, data: normalizeShopProfile(ins.rows[0]) });
     }
     const id = existing.rows[0].id;
@@ -2793,6 +2869,7 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
         id
       ]
     );
+    invalidatePublicCache('shop-profile');
     return res.json({ success: true, data: normalizeShopProfile(upd.rows[0]) });
   } catch (err) {
     console.error('PUT /api/shop-profile error', err);
@@ -3384,8 +3461,13 @@ app.post('/api/calculate-distance', async (req, res) => {
 // --------------------------------------------------------
 app.get('/api/categories', async (req, res) => {
   try {
+    const cacheKey = 'categories';
+    const cached = getPublicCache(cacheKey);
+    if (cached) return sendCacheableJson(res, cached, 120);
     const { rows } = await pgQuery('SELECT *, parent_id AS "parentId" FROM categories ORDER BY position ASC, created_at DESC');
-    return res.json(rows.map(normalizeCategory));
+    const categories = rows.map(normalizeCategory);
+    setPublicCache(cacheKey, categories, 120_000);
+    return sendCacheableJson(res, categories, 120);
   } catch (err) {
     console.error('GET /api/categories error', err);
     return res.status(500).json({ error: 'Failed to fetch categories' });
@@ -3421,6 +3503,8 @@ app.post('/api/categories', authMiddleware, requirePermission('categories:manage
   if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join('; ') });
   try {
     const ins = await pgQuery('INSERT INTO categories(name, slug, description, image_url, parent_id, is_enabled, position, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,true,$6,$7,now(),now()) RETURNING *', [category.name, category.slug || category.name.toLowerCase().replace(/\s+/g, '-'), category.description || null, category.imageUrl || null, category.parentId || null, category.order || 0, category.metadata || {}]);
+    invalidatePublicCache('categories');
+    invalidatePublicCache('products:');
     return res.json({ success: true, data: normalizeCategory(ins.rows[0]) });
   } catch (err) {
     console.error('POST /api/categories error', err);
@@ -3474,6 +3558,8 @@ app.put('/api/categories/:id', authMiddleware, requirePermission('categories:man
       ]
     );
     if (upd.rowCount === 0) return res.status(404).json({ error: 'Category not found' });
+    invalidatePublicCache('categories');
+    invalidatePublicCache('products:');
     return res.json({ success: true, data: normalizeCategory(upd.rows[0]) });
   } catch (err) {
     console.error('PUT /api/categories/:id error', err);
@@ -3485,6 +3571,8 @@ app.delete('/api/categories/:id', authMiddleware, requirePermission('categories:
   const { id } = req.params;
   try {
     await pgQuery('DELETE FROM categories WHERE id = $1', [id]);
+    invalidatePublicCache('categories');
+    invalidatePublicCache('products:');
     return res.json({ success: true });
   } catch (err) {
     console.error('DELETE /api/categories/:id error', err);
@@ -3509,10 +3597,16 @@ app.get('/api/products', async (req, res) => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const categoryId = typeof req.query.categoryId === 'string' ? req.query.categoryId.trim() : '';
+    const summaryMode = req.query.summary === 'true';
     const rawLimit = Number(req.query.limit);
     const rawOffset = Number(req.query.offset);
     const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 50) : 120;
     const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+    const cacheKey = `products:${req.originalUrl}`;
+    if (summaryMode) {
+      const cached = getPublicCache(cacheKey);
+      if (cached) return sendCacheableJson(res, cached, 30);
+    }
     const params: any[] = [];
     const where = ['p.is_enabled = true'];
 
@@ -3544,17 +3638,57 @@ app.get('/api/products', async (req, res) => {
     const limitParam = `$${params.length}`;
     params.push(offset);
     const offsetParam = `$${params.length}`;
-    const sql = `
-      SELECT p.*, COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
-      FROM products p
-      LEFT JOIN product_categories pc ON pc.product_id = p.id
-      WHERE ${where.join(' AND ')}
-      GROUP BY p.id
-      ORDER BY p.created_at DESC
-      LIMIT ${limitParam} OFFSET ${offsetParam}
-    `;
+    const sql = summaryMode
+      ? `
+        SELECT
+          p.id,
+          p.category_id,
+          p.subcategory_id,
+          p.sku,
+          p.name,
+          p.slug,
+          p.description,
+          p.base_price,
+          p.offer_price,
+          p.stock_count,
+          p.weight_grams,
+          p.is_enabled,
+          p.low_stock_threshold,
+          p.metadata,
+          p.created_at,
+          p.updated_at,
+          first_image.url AS first_image_url,
+          COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+        FROM products p
+        LEFT JOIN product_categories pc ON pc.product_id = p.id
+        LEFT JOIN LATERAL (
+          SELECT url
+          FROM product_images
+          WHERE product_id = p.id
+          ORDER BY position ASC
+          LIMIT 1
+        ) first_image ON true
+        WHERE ${where.join(' AND ')}
+        GROUP BY p.id, first_image.url
+        ORDER BY p.created_at DESC
+        LIMIT ${limitParam} OFFSET ${offsetParam}
+      `
+      : `
+        SELECT p.*, COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+        FROM products p
+        LEFT JOIN product_categories pc ON pc.product_id = p.id
+        WHERE ${where.join(' AND ')}
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+        LIMIT ${limitParam} OFFSET ${offsetParam}
+      `;
     const { rows } = await pgQuery(sql, params);
     if (rows.length === 0) return res.json([]);
+    if (summaryMode) {
+      const products = rows.map((row: any) => normalizeProductSummary(row)).filter(Boolean);
+      setPublicCache(cacheKey, products, 30_000);
+      return sendCacheableJson(res, products, 30);
+    }
     const productIds = rows.map((row: any) => row.id);
     const imgs = await pgQuery('SELECT product_id, url, position FROM product_images WHERE product_id = ANY($1::uuid[]) ORDER BY position ASC', [productIds]);
     const imagesByProduct = new Map<string, any[]>();
@@ -3674,7 +3808,11 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
         ...(productData.metadata || {}),
         isDailyEssential: Boolean(productData.isDailyEssential),
         isFeatured: Boolean(productData.isFeatured),
-        purchasePrice: Number(productData.purchasePrice || 0)
+        purchasePrice: Number(productData.purchasePrice || 0),
+        packageQuantity: Number(productData.packageQuantity || 0),
+        unit: productData.unit || 'g',
+        customUnit: productData.customUnit || '',
+        packageLabel: productData.packageLabel || ''
       };
       const generatedSku = await generateUniqueProductSku(client, productData.name);
       const ins = await client.query('INSERT INTO products(category_id, subcategory_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) RETURNING *', [productData.categoryId, productData.subcategoryId || null, generatedSku, productData.name, productData.slug || (productData.name.toLowerCase().replace(/\s+/g, '-')), productData.description || null, Number(productData.basePrice) || 0, Number(productData.offerPrice) || 0, Number(productData.stockCount) || 0, Number(productData.weight) || 0, productData.isEnabled !== undefined ? productData.isEnabled : true, productData.lowStockAlertThreshold || 5, metadata]);
@@ -3691,6 +3829,7 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
         await client.query('INSERT INTO inventory_logs(product_id, delta, reason, source, reference_id, metadata, created_at) VALUES($1,$2,$3,$4,$5,$6,now())', [prod.id, Number(productData.stockCount), 'initial', 'product_create', null, {}]);
       }
       const imgs = await client.query('SELECT id, url, position FROM product_images WHERE product_id = $1 ORDER BY position ASC', [prod.id]);
+      invalidatePublicCache('products:');
       return normalizeProduct(prod, imgs.rows);
     });
     return res.json({ success: true, data: result });
@@ -3719,6 +3858,10 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
       if (productData.isDailyEssential !== undefined) metadata.isDailyEssential = Boolean(productData.isDailyEssential);
       if (productData.isFeatured !== undefined) metadata.isFeatured = Boolean(productData.isFeatured);
       if (productData.purchasePrice !== undefined) metadata.purchasePrice = Number(productData.purchasePrice || 0);
+      if (productData.packageQuantity !== undefined) metadata.packageQuantity = Number(productData.packageQuantity || 0);
+      if (productData.unit !== undefined) metadata.unit = productData.unit || 'g';
+      if (productData.customUnit !== undefined) metadata.customUnit = productData.customUnit || '';
+      if (productData.packageLabel !== undefined) metadata.packageLabel = productData.packageLabel || '';
       // update product
       const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), subcategory_id = $2, sku = COALESCE($3,sku), name = COALESCE($4,name), slug = COALESCE($5,slug), description = COALESCE($6,description), base_price = COALESCE($7,base_price), offer_price = COALESCE($8,offer_price), stock_count = $9, weight_grams = COALESCE($10,weight_grams), is_enabled = COALESCE($11,is_enabled), low_stock_threshold = COALESCE($12,low_stock_threshold), metadata = COALESCE($13,metadata), updated_at = now() WHERE id = $14 RETURNING *', [productData.categoryId, productData.subcategoryId || null, productData.sku, productData.name, productData.slug, productData.description, productData.basePrice !== undefined ? Number(productData.basePrice) : null, productData.offerPrice !== undefined ? Number(productData.offerPrice) : null, newStock, productData.weight !== undefined ? Number(productData.weight) : null, productData.isEnabled, productData.lowStockAlertThreshold, metadata, id]);
       const prod = upd.rows[0];
@@ -3737,6 +3880,7 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
         await client.query('INSERT INTO inventory_logs(product_id, delta, reason, source, reference_id, metadata, created_at) VALUES($1,$2,$3,$4,$5,$6,now())', [id, diff, 'manual_adjust', 'admin', null, { note: productData.logNote || null }]);
       }
       const imgs = await client.query('SELECT id, url, position FROM product_images WHERE product_id = $1 ORDER BY position ASC', [id]);
+      invalidatePublicCache('products:');
       return normalizeProduct(prod, imgs.rows);
     });
     return res.json({ success: true, data: result });
@@ -3751,6 +3895,7 @@ app.delete('/api/products/:id', authMiddleware, requirePermission('products:mana
   const { id } = req.params;
   try {
     await pgQuery('DELETE FROM products WHERE id = $1', [id]);
+    invalidatePublicCache('products:');
     return res.json({ success: true });
   } catch (err) {
     console.error('DELETE /api/products/:id error', err);
@@ -4170,8 +4315,13 @@ app.get('/api/coupons/validate/:code', async (req, res) => {
 
 app.get('/api/banners', async (req, res) => {
   try {
+    const cacheKey = 'banners';
+    const cached = getPublicCache(cacheKey);
+    if (cached) return sendCacheableJson(res, cached, 90);
     const { rows } = await pgQuery('SELECT * FROM banners WHERE is_enabled = true ORDER BY position ASC');
-    return res.json(rows.map(normalizeBanner));
+    const banners = rows.map(normalizeBanner);
+    setPublicCache(cacheKey, banners, 90_000);
+    return sendCacheableJson(res, banners, 90);
   } catch (err) {
     console.error('GET /api/banners error', err);
     return res.status(500).json({ error: 'Failed to fetch banners' });
@@ -4194,6 +4344,7 @@ app.post('/api/banners', authMiddleware, isAdminMiddleware, async (req, res) => 
       'INSERT INTO banners(title, image_url, link, link_type, position, is_enabled, created_at) VALUES($1,$2,$3,$4,$5,$6,now()) RETURNING *',
       [title || null, imageUrl, normalizedLinkId, normalizedLinkType, position || 0, true]
     );
+    invalidatePublicCache('banners');
     return res.json({ success: true, data: normalizeBanner(ins.rows[0]) });
   } catch (err) {
     console.error('POST /api/banners error', err);
@@ -4205,6 +4356,7 @@ app.delete('/api/banners/:id', authMiddleware, isAdminMiddleware, async (req, re
   const { id } = req.params;
   try {
     await pgQuery('DELETE FROM banners WHERE id = $1', [id]);
+    invalidatePublicCache('banners');
     return res.json({ success: true });
   } catch (err) {
     console.error('DELETE /api/banners/:id error', err);
@@ -4340,8 +4492,12 @@ app.put('/api/reviews/:id/toggle-hide', authMiddleware, requirePermission('revie
 
 app.get('/api/notifications', async (req, res) => {
   try {
+    const cacheKey = 'notifications';
+    const cached = getPublicCache(cacheKey);
+    if (cached) return sendCacheableJson(res, cached, 60);
     const { rows } = await pgQuery("SELECT * FROM notifications WHERE is_active = true AND COALESCE(audience, 'customer') = 'customer' ORDER BY created_at DESC");
-    return res.json(rows);
+    setPublicCache(cacheKey, rows, 60_000);
+    return sendCacheableJson(res, rows, 60);
   } catch (err) {
     console.error('GET /api/notifications error', err);
     return res.status(500).json({ error: 'Failed to fetch notifications' });
@@ -4356,6 +4512,7 @@ app.post('/api/notifications', authMiddleware, isAdminMiddleware, async (req, re
       'INSERT INTO notifications(title, body, type, payload, audience, is_active, created_at) VALUES($1,$2,$3,$4,$5,$6,now()) RETURNING *',
       [title, message, type || 'announcement', { audience: 'customer', publishedBy: 'admin' }, 'customer', true]
     );
+    invalidatePublicCache('notifications');
     return res.json({ success: true, data: ins.rows[0] });
   } catch (err) {
     console.error('POST /api/notifications error', err);
@@ -4370,6 +4527,7 @@ app.put('/api/notifications/:id', authMiddleware, isAdminMiddleware, async (req,
   try {
     const upd = await pgQuery('UPDATE notifications SET title = $1, body = $2, type = $3, updated_at = now() WHERE id = $4 RETURNING *', [title, message, type || null, id]);
     if (upd.rowCount === 0) return res.status(404).json({ error: 'Notification not found' });
+    invalidatePublicCache('notifications');
     return res.json({ success: true, data: upd.rows[0] });
   } catch (err) {
     console.error('PUT /api/notifications/:id error', err);
@@ -4381,6 +4539,7 @@ app.delete('/api/notifications/:id', authMiddleware, isAdminMiddleware, async (r
   const { id } = req.params;
   try {
     await pgQuery('DELETE FROM notifications WHERE id = $1', [id]);
+    invalidatePublicCache('notifications');
     return res.json({ success: true });
   } catch (err) {
     console.error('DELETE /api/notifications/:id error', err);

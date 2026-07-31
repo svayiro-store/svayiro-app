@@ -4,6 +4,7 @@ import {
   ShoppingCart, Star, AlertTriangle, Share2, Gift
 } from 'lucide-react';
 import { Banner, Category, Product, User as UserType, ShopProfile, Coupon } from '../../types';
+import { formatProductMeasure } from '../../utils/productMeasure';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
 const bannerImageFallback = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1400';
@@ -555,7 +556,7 @@ export default function HomeView({
                 <div className="min-w-0 flex-1 space-y-1 pr-9 text-left">
                   <div className="flex items-start justify-between gap-2">
                     <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                      {prod.weight / 1000}kg
+                      {formatProductMeasure(prod)}
                     </span>
                     {prod.stockCount === 0 && (
                       <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-700 dark:bg-rose-950 dark:text-rose-300">
@@ -926,7 +927,7 @@ export default function HomeView({
                               <span className="text-slate-400 line-through text-[9px] sm:text-[10px] font-mono">₹{prod.basePrice}</span>
                             )}
                           </div>
-                          <span className="text-[8px] sm:text-[9px] opacity-70 font-mono">({prod.weight / 1000} kg)</span>
+                          <span className="text-[8px] sm:text-[9px] opacity-70 font-mono">({formatProductMeasure(prod)})</span>
                         </div>
                         {/* Stock and Low Stock notices */}
                         {isLowStock && (

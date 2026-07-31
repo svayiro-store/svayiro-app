@@ -3,6 +3,7 @@ import {
   ShoppingBag, Minus, Plus, Trash2, ArrowRight, MapPin, Loader2, AlertCircle, Building, Check 
 } from 'lucide-react';
 import { CustomerTab, Product, Coupon, CheckoutBagInfo, ShopProfile } from '../../types';
+import { formatProductMeasure } from '../../utils/productMeasure';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
 
@@ -123,7 +124,7 @@ export default function CartView({
                 <img src={product.images?.[0] || productImageFallback} alt={product.name} className="w-20 h-20 rounded-xl object-cover" referrerPolicy="no-referrer" />
                 <div className="flex-1 space-y-1.5 min-w-0 text-left">
                   <h4 className="font-bold text-sm tracking-tight truncate pr-8">{product.name}</h4>
-                  <p className="text-xs opacity-70">Price: ₹{product.offerPrice > 0 ? product.offerPrice : product.basePrice} | Weight: {product.weight / 1000} kg</p>
+                  <p className="text-xs opacity-70">Price: ₹{product.offerPrice > 0 ? product.offerPrice : product.basePrice} | Size: {formatProductMeasure(product)}</p>
                   
                   <div className="flex items-center gap-3 mt-2">
                     <div className="flex items-center gap-1 border border-slate-300 dark:border-slate-700 rounded-full py-0.5 px-2 bg-slate-50 dark:bg-slate-900">

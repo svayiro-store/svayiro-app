@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Heart, X, AlertTriangle, Star, Mi
 import { Product, Category, User as UserType, Review } from '../../types';
 import { ReviewList } from './ReviewList';
 import { commonStyles } from './commonStyles';
+import { formatProductMeasure } from '../../utils/productMeasure';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=900';
 
@@ -286,7 +287,7 @@ export default function ProductDetailView({
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product Package Weight</p>
-                <p className="text-sm font-black text-slate-900 dark:text-white mt-1">{selectedProduct.weight / 1000} Kg</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white mt-1">{formatProductMeasure(selectedProduct)}</p>
               </div>
               <div className="p-4 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Store Product Quality</p>

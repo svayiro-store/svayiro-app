@@ -247,6 +247,9 @@ export function validateProductPayload(body, isUpdate = false) {
   if (body.offerPrice !== undefined && Number(body.offerPrice) > 0 && body.purchasePrice !== undefined && Number(body.offerPrice) < Number(body.purchasePrice)) errors.push('Offer price cannot be below real item cost');
   if (body.stockCount !== undefined && (!Number.isInteger(Number(body.stockCount)) || Number(body.stockCount) < 0)) errors.push('Stock count must be a whole number');
   if (body.weight !== undefined && Number(body.weight) <= 0) errors.push('Weight must be greater than zero');
+  if (body.packageQuantity !== undefined && Number(body.packageQuantity) <= 0) errors.push('Package quantity/size must be greater than zero');
+  if (body.unit !== undefined && !['kg', 'g', 'liter', 'ml', 'piece', 'packet', 'box', 'dozen', 'custom'].includes(String(body.unit))) errors.push('Product unit is invalid');
+  if (body.unit === 'custom' && !trimmedString(body.customUnit, 30)) errors.push('Custom unit label is required');
   if (body.slug !== undefined && body.slug !== '' && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(body.slug)) errors.push('Product slug must be lowercase words separated by hyphens');
   if (body.sku !== undefined && body.sku !== '' && !/^[A-Z0-9_-]{3,40}$/.test(String(body.sku).trim().toUpperCase())) errors.push('Product code/SKU must be 3-40 letters, numbers, hyphens, or underscores');
   return errors;

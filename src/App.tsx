@@ -232,6 +232,9 @@ export default function App() {
       offerPrice: Number(product?.offerPrice ?? product?.offer_price ?? 0),
       stockCount: Number(product?.stockCount ?? product?.stock_count ?? 0),
       weight: Number(product?.weight ?? product?.weight_grams ?? 0),
+      unit: product?.unit || metadata.unit || 'g',
+      packageQuantity: Number(product?.packageQuantity ?? metadata.packageQuantity ?? 0),
+      packageLabel: product?.packageLabel || metadata.packageLabel || '',
       isEnabled: product?.isEnabled !== undefined ? Boolean(product.isEnabled) : product?.is_enabled !== undefined ? Boolean(product.is_enabled) : true,
       lowStockAlertThreshold: Number(product?.lowStockAlertThreshold ?? product?.low_stock_threshold ?? 5),
       isDailyEssential: Boolean(product?.isDailyEssential ?? metadata.isDailyEssential ?? false),
@@ -288,7 +291,7 @@ export default function App() {
       const [shopRes, categoriesRes, productsRes, bannersRes, notificationsRes] = await Promise.all([
         api.getShopProfile(),
         api.getCategories(),
-        resourceMode === 'admin' ? api.getProducts() : api.getProducts({ limit: 10, offset: 0 }),
+        resourceMode === 'admin' ? api.getProducts() : api.getProducts({ limit: 10, offset: 0, summary: true }),
         api.getBanners(),
         api.getNotifications()
       ]);
@@ -324,9 +327,16 @@ export default function App() {
       }
     }
     const offset = categoryId
-      ? products.filter(product => selectedCategoryIds.has(product.categoryId)).length
+        ? products.filter((product) => {
+            const assignedCategoryIds = Array.from(new Set([
+              product.categoryId,
+              product.subcategoryId,
+              ...(product.categoryIds || [])
+            ].filter(Boolean) as string[]));
+            return assignedCategoryIds.some((assignedId) => selectedCategoryIds.has(assignedId));
+          }).length
       : products.length;
-    const nextProducts = await api.searchProducts({ categoryId, limit, offset });
+    const nextProducts = await api.searchProducts({ categoryId, limit, offset, summary: true });
     const normalized = nextProducts.map(normalizeProduct);
     setProducts(prev => {
       const seen = new Set(prev.map(product => product.id));

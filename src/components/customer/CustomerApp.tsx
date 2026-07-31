@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { Suspense, lazy, useState, useEffect, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useMemo, useRef } from 'react';
 import { 
   X, AlertTriangle, Store, Heart, ShoppingBag, FileText, User, 
   MapPin, Clipboard, QrCode 
@@ -282,6 +282,7 @@ export default function CustomerApp({
   
   // Modals & Details states
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const hydratedProductIdsRef = useRef<Set<string>>(new Set());
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [detailQty, setDetailQty] = useState(1);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -359,7 +360,7 @@ export default function CustomerApp({
     const timer = window.setTimeout(async () => {
       setIsSearchingProducts(true);
       try {
-        const result = await api.searchProducts({ search, categoryId: selectedCategory });
+        const result = await api.searchProducts({ search, categoryId: selectedCategory, limit: 50, offset: 0, summary: true });
         if (!cancelled) setServerFilteredProducts(result);
       } catch (err) {
         console.error('Product search failed', err);
@@ -374,6 +375,27 @@ export default function CustomerApp({
       window.clearTimeout(timer);
     };
   }, [searchQuery, selectedCategory, searchUseDelay, searchDelayMs]);
+
+  useEffect(() => {
+    if (!selectedProduct?.id || hydratedProductIdsRef.current.has(selectedProduct.id)) return;
+    let cancelled = false;
+    const productId = selectedProduct.id;
+    hydratedProductIdsRef.current.add(productId);
+    api.getProduct(productId)
+      .then((product) => {
+        if (cancelled) return;
+        const normalized = normalizeProduct(product);
+        setSelectedProduct((current) => current?.id === productId ? { ...current, ...normalized } : current);
+        setProducts((current) => current.map((item) => item.id === productId ? { ...item, ...normalized } : item));
+      })
+      .catch((err) => {
+        hydratedProductIdsRef.current.delete(productId);
+        console.error('Product detail load failed', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProduct?.id]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

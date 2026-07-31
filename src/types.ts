@@ -82,6 +82,9 @@ export interface Product {
   offerPrice: number;
   stockCount: number;
   weight: number; // in grams
+  unit?: string;
+  packageQuantity?: number;
+  packageLabel?: string;
   isEnabled: boolean;
   lowStockAlertThreshold?: number;
   metadata?: Record<string, any>;

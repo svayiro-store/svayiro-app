@@ -336,23 +336,28 @@ export const api = {
     }),
 
   // Products APIs
-  getProducts: (params: { limit?: number; offset?: number } = {}) => {
+  getProducts: (params: { limit?: number; offset?: number; summary?: boolean } = {}) => {
     const query = new URLSearchParams();
     if (params.limit) query.set('limit', String(params.limit));
     if (params.offset) query.set('offset', String(params.offset));
+    if (params.summary) query.set('summary', 'true');
     const suffix = query.toString();
     return apiRequest<Product[]>(`/products${suffix ? `?${suffix}` : ''}`);
   },
 
-  searchProducts: (params: { search?: string; categoryId?: string | null; limit?: number; offset?: number } = {}) => {
+  searchProducts: (params: { search?: string; categoryId?: string | null; limit?: number; offset?: number; summary?: boolean } = {}) => {
     const query = new URLSearchParams();
     if (params.search?.trim()) query.set('search', params.search.trim());
     if (params.categoryId) query.set('categoryId', params.categoryId);
     if (params.limit) query.set('limit', String(params.limit));
     if (params.offset) query.set('offset', String(params.offset));
+    if (params.summary) query.set('summary', 'true');
     const suffix = query.toString();
     return apiRequest<Product[]>(`/products${suffix ? `?${suffix}` : ''}`);
   },
+
+  getProduct: (id: string) =>
+    apiRequest<Product>(`/products/${id}`),
 
   getSearchConfig: () =>
     apiRequest<{ useDelay: boolean; delayMs: number }>('/search-config'),

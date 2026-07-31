@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, Compass, Heart, Minus, Plus, Share2, ShoppingCart, SlidersHorizontal, Star } from 'lucide-react';
 import { Category, Product, User as UserType } from '../../types';
+import { formatProductMeasure } from '../../utils/productMeasure';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
 
@@ -215,7 +216,7 @@ export default function SearchResultsView({
                           <span className="text-slate-400 line-through text-[9px] sm:text-[10px] font-mono">Rs {prod.basePrice}</span>
                         )}
                       </div>
-                      <span className="text-[8px] sm:text-[9px] opacity-70 font-mono">({prod.weight / 1000} kg)</span>
+                      <span className="text-[8px] sm:text-[9px] opacity-70 font-mono">({formatProductMeasure(prod)})</span>
                     </div>
                     {isLowStock && (
                       <div className="flex items-center gap-1 text-[8px] text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-1.5 py-0.5 rounded-md">
