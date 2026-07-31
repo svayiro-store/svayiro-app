@@ -384,9 +384,7 @@ export default function CustomerApp({
     api.getProduct(productId)
       .then((product) => {
         if (cancelled) return;
-        const normalized = normalizeProduct(product);
-        setSelectedProduct((current) => current?.id === productId ? { ...current, ...normalized } : current);
-        setProducts((current) => current.map((item) => item.id === productId ? { ...item, ...normalized } : item));
+        setSelectedProduct((current) => current?.id === productId ? { ...current, ...product } : current);
       })
       .catch((err) => {
         hydratedProductIdsRef.current.delete(productId);

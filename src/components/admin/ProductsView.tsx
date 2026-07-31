@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api';
 import { Product, Category } from '../../types';
-import { Plus, Trash2, Upload, Image as ImageIcon, Link2, ChevronLeft, ChevronRight, ChevronDown, X, Save, Printer, Search } from 'lucide-react';
+import { Plus, Trash2, Upload, Image as ImageIcon, Link2, ChevronLeft, ChevronRight, ChevronDown, X, Save, Printer, Search, Download } from 'lucide-react';
 import { formatDateTimeDDMMYYYY } from '../../utils/date';
 import { compressImageFile } from '../../utils/imageCompression';
 import { PRODUCT_UNIT_OPTIONS, estimatePackingWeightGrams, formatProductMeasure } from '../../utils/productMeasure';
@@ -415,16 +415,21 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
 
   const formatStickerDate = (value: string) => {
     if (!value) return '';
+    const displayParts = value.trim().match(/^(\d{2})[\s/-](\d{2})[\s/-](\d{4})$/);
+    if (displayParts) return `${displayParts[1]} ${displayParts[2]} ${displayParts[3]}`;
     const [year, month, day] = value.split('-');
     return year && month && day ? `${day} ${month} ${year}` : value;
   };
 
-  const printBarcodeLabels = (items: Product[]) => {
-    if (items.length === 0) {
-      alert('Select at least one product label to print.');
-      return;
-    }
-    const labelHtml = items.map((product) => {
+  const formatStickerDateInput = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
+    return `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4)}`;
+  };
+
+  const buildBarcodeLabelHtml = (items: Product[]) => {
+    return items.map((product) => {
       const code = productCode(product);
       const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
       const dateInfo = stickerDateInfo[product.id] || { mfd: '', exp: '', bestBefore: '' };
@@ -448,26 +453,26 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
         </section>
       `;
     }).join('');
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) {
-      alert('Popup blocked. Allow popups to print barcode labels.');
-      return;
-    }
-    printWindow.document.write(`
+  };
+
+  const buildBarcodeLabelDocument = (items: Product[], includePrintScript = false) => {
+    const labelHtml = buildBarcodeLabelHtml(items);
+    return `
       <!doctype html>
       <html>
         <head>
-          <title>SVAYIRO Product Barcode Labels</title>
+          <meta charset="utf-8" />
+          <title>SVAYIRO 50mm x 30mm Product Barcode Labels</title>
           <style>
             * { box-sizing: border-box; }
-            html, body { margin: 0; padding: 0; width: 50mm; background: #fff; font-family: Arial, sans-serif; color: #020617; }
+            html, body { margin: 0; padding: 0; width: 50mm; background: #fff; font-family: Arial, sans-serif; color: #000; }
             .sheet { display: block; width: 50mm; }
             .label { width: 50mm; height: 30mm; padding: 1.8mm 2.2mm; page-break-after: always; break-after: page; overflow: hidden; }
-            .brand { font-size: 8px; font-weight: 900; letter-spacing: .08em; color: #0f1b8f; line-height: 1; }
-            .name { margin-top: .65mm; font-size: 8.5px; line-height: 1.08; font-weight: 800; max-height: 5.4mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-            .meta { margin-top: .25mm; font-size: 7px; color: #475569; line-height: 1; min-height: 1.8mm; font-weight: 700; }
-            .price { display: flex; justify-content: space-between; gap: 1.5mm; margin-top: .55mm; font-size: 7px; line-height: 1; font-weight: 800; color: #047857; }
-            .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .35mm 1.2mm; margin-top: .55mm; font-size: 6.3px; line-height: 1; font-weight: 700; color: #334155; }
+            .brand { border-bottom: .25mm solid #000; padding-bottom: .45mm; font-size: 8px; font-weight: 900; letter-spacing: .04em; color: #000; line-height: 1; }
+            .name { margin-top: .5mm; font-size: 8.5px; line-height: 1.08; font-weight: 400; max-height: 5.4mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+            .meta { margin-top: .25mm; font-size: 7px; color: #000; line-height: 1; min-height: 1.8mm; font-weight: 400; }
+            .price { display: flex; justify-content: space-between; gap: 1.5mm; margin-top: .55mm; font-size: 7.5px; line-height: 1; font-weight: 900; color: #000; }
+            .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .35mm 1.2mm; margin-top: .55mm; font-size: 6.3px; line-height: 1; font-weight: 400; color: #000; }
             .dates span:last-child:nth-child(odd) { grid-column: 1 / -1; }
             .barcode { display: block; width: 100%; height: 9mm; object-fit: contain; margin-top: .55mm; }
             @page { size: 50mm 30mm; margin: 0; }
@@ -475,11 +480,41 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
         </head>
         <body>
           <main class="sheet">${labelHtml}</main>
-          <script>window.onload = () => { window.focus(); window.print(); };</script>
+          ${includePrintScript ? '<script>window.onload = () => { window.focus(); window.print(); };</script>' : ''}
         </body>
       </html>
-    `);
+    `;
+  };
+
+  const printBarcodeLabels = (items: Product[]) => {
+    if (items.length === 0) {
+      alert('Select at least one product label to print.');
+      return;
+    }
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      alert('Popup blocked. Allow popups to print barcode labels.');
+      return;
+    }
+    printWindow.document.write(buildBarcodeLabelDocument(items, true));
     printWindow.document.close();
+  };
+
+  const downloadBarcodeLabelTemplate = (items: Product[]) => {
+    if (items.length === 0) {
+      alert('Select at least one product label to download.');
+      return;
+    }
+    const html = buildBarcodeLabelDocument(items, false);
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `svayiro-50x30mm-barcode-labels-${new Date().toISOString().slice(0, 10)}.html`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   // Get parent categories (for filtering)
@@ -1005,6 +1040,16 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               >
                 <Printer className="h-4 w-4" /> Print All Showing
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const selectedProducts = codeProducts.filter((product) => selectedCodeIds.has(product.id));
+                  downloadBarcodeLabelTemplate(selectedProducts.length > 0 ? selectedProducts : codeProducts);
+                }}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              >
+                <Download className="h-4 w-4" /> Download Template
+              </button>
             </div>
           </div>
         )}
@@ -1138,20 +1183,24 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                       <label className="grid grid-cols-[42px_1fr] items-center gap-2">
                         <span className="font-black text-slate-500">MFD</span>
                         <input
-                          type="date"
+                          type="text"
+                          inputMode="numeric"
                           value={dateInfo.mfd}
-                          onChange={(event) => updateStickerDateInfo(product.id, 'mfd', event.target.value)}
+                          onChange={(event) => updateStickerDateInfo(product.id, 'mfd', formatStickerDateInput(event.target.value))}
                           disabled={!includeMfdOnSticker}
+                          placeholder="dd mm yyyy"
                           className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:disabled:bg-slate-900"
                         />
                       </label>
                       <label className="grid grid-cols-[42px_1fr] items-center gap-2">
                         <span className="font-black text-slate-500">EXP</span>
                         <input
-                          type="date"
+                          type="text"
+                          inputMode="numeric"
                           value={dateInfo.exp}
-                          onChange={(event) => updateStickerDateInfo(product.id, 'exp', event.target.value)}
+                          onChange={(event) => updateStickerDateInfo(product.id, 'exp', formatStickerDateInput(event.target.value))}
                           disabled={!includeExpOnSticker}
+                          placeholder="dd mm yyyy"
                           className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:disabled:bg-slate-900"
                         />
                       </label>
