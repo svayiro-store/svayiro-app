@@ -13,6 +13,8 @@ interface Props {
 }
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const ADMIN_PRODUCT_PAGE_SIZE = 50;
+const ADMIN_VISIBLE_ROW_SIZE = 20;
 const CODE128_PATTERNS = [
   '212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'
 ];
@@ -107,6 +109,11 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
+  const [productOffset, setProductOffset] = useState(0);
+  const [hasMoreProducts, setHasMoreProducts] = useState(true);
+  const [visibleProductRows, setVisibleProductRows] = useState(ADMIN_VISIBLE_ROW_SIZE);
+  const [visibleCodeRows, setVisibleCodeRows] = useState(ADMIN_VISIBLE_ROW_SIZE);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [catalogueView, setCatalogueView] = useState<'products' | 'codes'>('products');
@@ -126,25 +133,42 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [uploadingImages, setUploadingImages] = useState(false);
 
-  const loadProducts = async () => {
-    setLoading(true);
+  const loadProducts = async (options: { reset?: boolean } = { reset: true }) => {
+    const reset = options.reset !== false;
+    const offset = reset ? 0 : productOffset;
+    if (reset) setLoading(true);
+    else setLoadingMoreProducts(true);
     try {
-      const [prodRes, catRes] = await Promise.all([
-        api.getProducts(),
-        api.getAdminCategories()
-      ]);
-      setProducts(prodRes);
+      const productsPromise = api.getProducts({ limit: ADMIN_PRODUCT_PAGE_SIZE, offset });
+      const categoriesPromise = reset || categories.length === 0 ? api.getAdminCategories() : Promise.resolve(categories);
+      const [prodRes, catRes] = await Promise.all([productsPromise, categoriesPromise]);
+      setProducts((current) => {
+        if (reset) return prodRes;
+        const seen = new Set(current.map((product) => product.id));
+        return [...current, ...prodRes.filter((product) => !seen.has(product.id))];
+      });
       setCategories(catRes);
+      setProductOffset(offset + prodRes.length);
+      setHasMoreProducts(prodRes.length === ADMIN_PRODUCT_PAGE_SIZE);
     } catch (err: any) {
       console.error('Failed to load products:', err);
     } finally {
-      setLoading(false);
+      if (reset) setLoading(false);
+      else setLoadingMoreProducts(false);
     }
   };
 
   useEffect(() => {
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    setVisibleProductRows(ADMIN_VISIBLE_ROW_SIZE);
+  }, [productSearch, productCategoryFilter, productSubcategoryFilter]);
+
+  useEffect(() => {
+    setVisibleCodeRows(ADMIN_VISIBLE_ROW_SIZE);
+  }, [codeSearch, codeCategoryFilter]);
 
   useEffect(() => {
     if (!focusedProductId || products.length === 0) return;
@@ -390,6 +414,37 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     }
     return result;
   }, [products, codeSearch, codeCategoryFilter, categories]);
+
+  const visibleFilteredProducts = useMemo(
+    () => filteredProducts.slice(0, visibleProductRows),
+    [filteredProducts, visibleProductRows]
+  );
+
+  const visibleCodeProducts = useMemo(
+    () => codeProducts.slice(0, visibleCodeRows),
+    [codeProducts, visibleCodeRows]
+  );
+
+  const hasMoreRowsInCurrentView = catalogueView === 'codes'
+    ? visibleCodeProducts.length < codeProducts.length
+    : visibleFilteredProducts.length < filteredProducts.length;
+
+  const showMoreRowsInCurrentView = () => {
+    if (catalogueView === 'codes') {
+      setVisibleCodeRows((count) => Math.min(count + ADMIN_VISIBLE_ROW_SIZE, codeProducts.length));
+      return;
+    }
+    setVisibleProductRows((count) => Math.min(count + ADMIN_VISIBLE_ROW_SIZE, filteredProducts.length));
+  };
+
+  const loadMoreProductsForCurrentView = async () => {
+    await loadProducts({ reset: false });
+    if (catalogueView === 'codes') {
+      setVisibleCodeRows((count) => count + ADMIN_VISIBLE_ROW_SIZE);
+      return;
+    }
+    setVisibleProductRows((count) => count + ADMIN_VISIBLE_ROW_SIZE);
+  };
 
   const toggleCodeSelection = (productId: string) => {
     setSelectedCodeIds((prev) => {
@@ -1054,8 +1109,30 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold opacity-70">Showing {catalogueView === 'codes' ? codeProducts.length : filteredProducts.length} of {products.length} products</span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs font-bold opacity-70">
+            Showing {catalogueView === 'codes' ? visibleCodeProducts.length : visibleFilteredProducts.length}
+            {' '}of {catalogueView === 'codes' ? codeProducts.length : filteredProducts.length} matching products
+            {' '}({products.length} loaded)
+          </span>
+          {hasMoreRowsInCurrentView ? (
+            <button
+              type="button"
+              onClick={showMoreRowsInCurrentView}
+              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-700 shadow-sm hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
+            >
+              Show More Rows
+            </button>
+          ) : hasMoreProducts && (
+            <button
+              type="button"
+              onClick={loadMoreProductsForCurrentView}
+              disabled={loadingMoreProducts}
+              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-700 shadow-sm hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
+            >
+              {loadingMoreProducts ? 'Loading...' : 'Load More Products'}
+            </button>
+          )}
           <span className="text-[10px] font-mono opacity-60">{loading ? 'Loading...' : 'Ready'}</span>
         </div>
 
@@ -1073,7 +1150,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 <span>Stock</span>
                 <span>Action</span>
               </div>
-              {filteredProducts.map((product) => {
+              {visibleFilteredProducts.map((product) => {
                 const thumbnail = Array.isArray(product.images) && product.images.length > 0
                   ? (typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as any)?.url)
                   : '';
@@ -1145,7 +1222,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 <span>MFD / EXP / Best Before</span>
                 <span>Action</span>
               </div>
-              {codeProducts.map((product) => {
+              {visibleCodeProducts.map((product) => {
                 const code = productCode(product);
                 const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
                 const dateInfo = stickerDateInfo[product.id] || { mfd: '', exp: '', bestBefore: '' };

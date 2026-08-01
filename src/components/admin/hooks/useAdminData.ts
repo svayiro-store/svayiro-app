@@ -37,7 +37,7 @@ export function useAdminData(roles: string[] = ['admin']) {
 
   const fetchOrdersList = async () => {
     try {
-      const res = await api.adminOrders();
+      const res = await api.adminOrders({ limit: 100, offset: 0 });
       setOrders(res);
     } catch (err) {
       console.error(err);
@@ -46,7 +46,7 @@ export function useAdminData(roles: string[] = ['admin']) {
 
   const fetchAdvanceRequests = async () => {
     try {
-      const res = await api.getAdvanceRequests();
+      const res = await api.getAdvanceRequests({ limit: 100, offset: 0 });
       setAdvRequests(res);
     } catch (err) {
       console.error(err);
@@ -55,7 +55,7 @@ export function useAdminData(roles: string[] = ['admin']) {
 
   const fetchInventoryLogs = async () => {
     try {
-      const res = await api.getInventoryLogs();
+      const res = await api.getInventoryLogs({ limit: 100, offset: 0 });
       setInvLogs(res);
     } catch (err) {
       console.error(err);
@@ -88,11 +88,16 @@ export function useAdminData(roles: string[] = ['admin']) {
     if (canUseReviews) fetchReviews();
     if (canUseInventory) fetchBagsList();
 
+    let pollCount = 0;
     const poll = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      pollCount += 1;
       if (canUseOrders) fetchOrdersList();
-      if (canUseReviews) fetchReviews();
-      if (isOwner) fetchAdvanceRequests();
-    }, 8000);
+      if (pollCount % 2 === 0) {
+        if (canUseReviews) fetchReviews();
+        if (isOwner) fetchAdvanceRequests();
+      }
+    }, 30000);
     return () => clearInterval(poll);
   }, [roles.join('|')]);
 

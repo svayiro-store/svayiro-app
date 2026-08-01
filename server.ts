@@ -5,6 +5,7 @@
 
 import 'dotenv/config';
 import express from 'express';
+import compression from 'compression';
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import net from 'net';
@@ -29,6 +30,7 @@ import {
 import type { CheckoutBagInfo } from './src/types';
 
 const app = express();
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 
 type CacheEntry<T = any> = {
@@ -2708,11 +2710,11 @@ app.get('/api/shop-profile', async (req, res) => {
   try {
     const cacheKey = 'shop-profile';
     const cached = getPublicCache(cacheKey);
-    if (cached) return sendCacheableJson(res, cached, 90);
+    if (cached) return sendCacheableJson(res, cached, 300);
     const s = await pgQuery('SELECT * FROM shop_profile ORDER BY created_at DESC LIMIT 1');
     const profile = s.rowCount === 0 ? normalizeShopProfile(DEFAULT_SHOP_PROFILE) : normalizeShopProfile(s.rows[0]);
-    setPublicCache(cacheKey, profile, 90_000);
-    return sendCacheableJson(res, profile, 90);
+    setPublicCache(cacheKey, profile, 300_000);
+    return sendCacheableJson(res, profile, 300);
   } catch (err) {
     console.error('GET /api/shop-profile error', err);
     return res.status(500).json({ error: 'Failed to fetch shop profile' });
@@ -3463,11 +3465,11 @@ app.get('/api/categories', async (req, res) => {
   try {
     const cacheKey = 'categories';
     const cached = getPublicCache(cacheKey);
-    if (cached) return sendCacheableJson(res, cached, 120);
+    if (cached) return sendCacheableJson(res, cached, 300);
     const { rows } = await pgQuery('SELECT *, parent_id AS "parentId" FROM categories ORDER BY position ASC, created_at DESC');
     const categories = rows.map(normalizeCategory);
-    setPublicCache(cacheKey, categories, 120_000);
-    return sendCacheableJson(res, categories, 120);
+    setPublicCache(cacheKey, categories, 300_000);
+    return sendCacheableJson(res, categories, 300);
   } catch (err) {
     console.error('GET /api/categories error', err);
     return res.status(500).json({ error: 'Failed to fetch categories' });
@@ -3674,7 +3676,24 @@ app.get('/api/products', async (req, res) => {
         LIMIT ${limitParam} OFFSET ${offsetParam}
       `
       : `
-        SELECT p.*, COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+        SELECT
+          p.id,
+          p.category_id,
+          p.subcategory_id,
+          p.sku,
+          p.name,
+          p.slug,
+          p.description,
+          p.base_price,
+          p.offer_price,
+          p.stock_count,
+          p.weight_grams,
+          p.is_enabled,
+          p.low_stock_threshold,
+          p.metadata,
+          p.created_at,
+          p.updated_at,
+          COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
         FROM products p
         LEFT JOIN product_categories pc ON pc.product_id = p.id
         WHERE ${where.join(' AND ')}
@@ -3708,7 +3727,24 @@ app.get('/api/products/:id', async (req, res) => {
   const id = req.params.id;
   try {
     const p = await pgQuery(`
-      SELECT p.*, COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+      SELECT
+        p.id,
+        p.category_id,
+        p.subcategory_id,
+        p.sku,
+        p.name,
+        p.slug,
+        p.description,
+        p.base_price,
+        p.offer_price,
+        p.stock_count,
+        p.weight_grams,
+        p.is_enabled,
+        p.low_stock_threshold,
+        p.metadata,
+        p.created_at,
+        p.updated_at,
+        COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
       FROM products p
       LEFT JOIN product_categories pc ON pc.product_id = p.id
       WHERE p.id = $1
@@ -4317,11 +4353,11 @@ app.get('/api/banners', async (req, res) => {
   try {
     const cacheKey = 'banners';
     const cached = getPublicCache(cacheKey);
-    if (cached) return sendCacheableJson(res, cached, 90);
+    if (cached) return sendCacheableJson(res, cached, 300);
     const { rows } = await pgQuery('SELECT * FROM banners WHERE is_enabled = true ORDER BY position ASC');
     const banners = rows.map(normalizeBanner);
-    setPublicCache(cacheKey, banners, 90_000);
-    return sendCacheableJson(res, banners, 90);
+    setPublicCache(cacheKey, banners, 300_000);
+    return sendCacheableJson(res, banners, 300);
   } catch (err) {
     console.error('GET /api/banners error', err);
     return res.status(500).json({ error: 'Failed to fetch banners' });
@@ -4371,6 +4407,8 @@ app.delete('/api/banners/:id', authMiddleware, isAdminMiddleware, async (req, re
 
 app.get('/api/reviews', async (req, res) => {
   try {
+    const rawLimit = Number(req.query.limit);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 100) : 100;
     const { rows } = await pgQuery(`
       SELECT
         r.*,
@@ -4385,7 +4423,8 @@ app.get('/api/reviews', async (req, res) => {
       LEFT JOIN users u ON u.id = r.user_id
       LEFT JOIN review_replies rr ON rr.review_id = r.id
       ORDER BY r.created_at DESC
-    `);
+      LIMIT $1
+    `, [limit]);
     return res.json(rows);
   } catch (err) {
     console.error('GET /api/reviews error', err);
@@ -4495,7 +4534,7 @@ app.get('/api/notifications', async (req, res) => {
     const cacheKey = 'notifications';
     const cached = getPublicCache(cacheKey);
     if (cached) return sendCacheableJson(res, cached, 60);
-    const { rows } = await pgQuery("SELECT * FROM notifications WHERE is_active = true AND COALESCE(audience, 'customer') = 'customer' ORDER BY created_at DESC");
+    const { rows } = await pgQuery("SELECT * FROM notifications WHERE is_active = true AND COALESCE(audience, 'customer') = 'customer' ORDER BY created_at DESC LIMIT 20");
     setPublicCache(cacheKey, rows, 60_000);
     return sendCacheableJson(res, rows, 60);
   } catch (err) {
@@ -4639,7 +4678,11 @@ app.post('/api/customer-feedback', async (req, res) => {
 
 app.get('/api/advance-requests', async (req, res) => {
   try {
-    const { rows } = await pgQuery('SELECT * FROM advance_requests ORDER BY created_at DESC');
+    const rawLimit = Number(req.query.limit);
+    const rawOffset = Number(req.query.offset);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 100) : 100;
+    const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+    const { rows } = await pgQuery('SELECT * FROM advance_requests ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]);
     return res.json(rows.map(normalizeAdvanceRequest));
   } catch (err) {
     console.error('GET /api/advance-requests error', err);
@@ -4737,6 +4780,10 @@ function computeSmartBags(totalWeightGrams: number, dbBags: any[]): CheckoutBagI
 // Admin orders list
 app.get('/api/admin/orders', authMiddleware, requirePermission('orders:read'), async (req, res) => {
   try {
+    const rawLimit = Number(req.query.limit);
+    const rawOffset = Number(req.query.offset);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 100) : 100;
+    const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
     const deliveryPartnerOnly = hasAnyRole(req, ['delivery_partner']) && !hasPermission(req, 'orders:support_update') && !hasPermission(req, 'inventory:manage');
     const { rows } = deliveryPartnerOnly
       ? await pgQuery(
@@ -4744,9 +4791,11 @@ app.get('/api/admin/orders', authMiddleware, requirePermission('orders:read'), a
          WHERE admin_archived_at IS NULL
            AND delivery_method = 'delivery'
            AND status IN ('packed','out_for_delivery','delivered')
-         ORDER BY created_at DESC`
+         ORDER BY created_at DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
       )
-      : await pgQuery('SELECT * FROM orders WHERE admin_archived_at IS NULL ORDER BY created_at DESC');
+      : await pgQuery('SELECT * FROM orders WHERE admin_archived_at IS NULL ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]);
     return res.json(rows.map(normalizeOrder));
   } catch (err) {
     console.error('GET /api/admin/orders error', err);
@@ -5359,14 +5408,14 @@ app.get('/api/complaints', async (req, res) => {
   const phone = (req.query.phone as string) || '';
   try {
     if (phone) {
-      const { rows } = await pgQuery('SELECT * FROM complaints WHERE customer_phone = $1 ORDER BY created_at DESC', [phone]);
+      const { rows } = await pgQuery('SELECT * FROM complaints WHERE customer_phone = $1 ORDER BY created_at DESC LIMIT 50', [phone]);
       return res.json({ tickets: rows });
     }
     const currentUser = await getOptionalCurrentUser(req);
     if (!currentUser || !hasPermission({ currentUser }, 'complaints:manage')) {
       return res.status(403).json({ error: 'Permission denied', permission: 'complaints:manage' });
     }
-    const { rows } = await pgQuery('SELECT * FROM complaints ORDER BY created_at DESC');
+    const { rows } = await pgQuery('SELECT * FROM complaints ORDER BY created_at DESC LIMIT 100');
     return res.json({ tickets: rows });
   } catch (err) {
     console.error('GET /api/complaints error', err);
@@ -5445,6 +5494,10 @@ app.put('/api/complaints/:id/status', authMiddleware, requirePermission('complai
 app.get('/api/admin/inventory-logs', authMiddleware, requirePermission('inventory:manage'), async (req, res) => {
   const { date, from, to } = req.query;
   try {
+    const rawLimit = Number(req.query.limit);
+    const rawOffset = Number(req.query.offset);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 200) : 100;
+    const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
     const params: any[] = [];
     const where: string[] = [];
     if (date) {
@@ -5459,6 +5512,10 @@ app.get('/api/admin/inventory-logs', authMiddleware, requirePermission('inventor
       params.push(to);
       where.push(`il.created_at < ($${params.length}::date + interval '1 day')`);
     }
+    params.push(limit);
+    const limitParam = `$${params.length}`;
+    params.push(offset);
+    const offsetParam = `$${params.length}`;
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const { rows } = await pgQuery(`
       SELECT
@@ -5473,7 +5530,7 @@ app.get('/api/admin/inventory-logs', authMiddleware, requirePermission('inventor
       LEFT JOIN orders o ON o.id = il.reference_id
       ${whereSql}
       ORDER BY il.created_at DESC
-      LIMIT 500
+      LIMIT ${limitParam} OFFSET ${offsetParam}
     `, params);
     return res.json(rows);
   } catch (err) {

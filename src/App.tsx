@@ -92,6 +92,7 @@ export default function App() {
 
   // Background seen log for live order notification triggers
   const seenNotifIdsRef = useRef<Set<string>>(new Set());
+  const stableResourcesLoadedRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [startupSplashDone, setStartupSplashDone] = useState(false);
@@ -284,14 +285,24 @@ export default function App() {
   }, [adminOtpSent, adminOtpExpiresAt]);
 
   // Fetch central database logs
-  const loadCentralResources = async (modeOverride?: 'customer' | 'admin') => {
+  const loadCentralResources = async (
+    modeOverride?: 'customer' | 'admin',
+    options: { skipStable?: boolean } = {}
+  ) => {
     try {
       setErrorMessage('');
       const resourceMode = modeOverride || currentMode;
+      if (options.skipStable && stableResourcesLoadedRef.current) {
+        const productsRes = await (resourceMode === 'admin'
+          ? api.getProducts({ limit: 50, offset: 0 })
+          : api.getProducts({ limit: 10, offset: 0, summary: true }));
+        setProducts(productsRes.map(normalizeProduct));
+        return;
+      }
       const [shopRes, categoriesRes, productsRes, bannersRes, notificationsRes] = await Promise.all([
         api.getShopProfile(),
         api.getCategories(),
-        resourceMode === 'admin' ? api.getProducts() : api.getProducts({ limit: 10, offset: 0, summary: true }),
+        resourceMode === 'admin' ? api.getProducts({ limit: 50, offset: 0 }) : api.getProducts({ limit: 10, offset: 0, summary: true }),
         api.getBanners(),
         api.getNotifications()
       ]);
@@ -301,6 +312,7 @@ export default function App() {
       setProducts(productsRes.map(normalizeProduct));
       setBanners(bannersRes.map(normalizeBanner));
       setNotifications(notificationsRes);
+      stableResourcesLoadedRef.current = true;
     } catch (err: any) {
       console.error(err);
       setErrorMessage(err.message || 'Error communicating with SVAYIRO backend database services.');
@@ -422,6 +434,7 @@ export default function App() {
       items.map(n => `${n.id}:${n.type}:${n.title}:${n.message}:${n.isActive}:${n.createdAt || n.date || ''}`).join('|');
 
     const handlePoll = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const latestNotifs = await api.getNotifications();
         
@@ -463,8 +476,8 @@ export default function App() {
       }
     };
 
-    // Poll every 6 seconds in background
-    const intervalId = setInterval(handlePoll, 6000);
+    const intervalMs = currentMode === 'admin' ? 30000 : 60000;
+    const intervalId = setInterval(handlePoll, intervalMs);
     return () => clearInterval(intervalId);
   }, [notifications, currentMode]);
 
@@ -477,7 +490,7 @@ export default function App() {
       localStorage.setItem('svayiro_app_mode', mode);
     }
     window.setTimeout(() => {
-      loadCentralResources(mode);
+      loadCentralResources(mode, { skipStable: true });
     }, 0);
   };
 

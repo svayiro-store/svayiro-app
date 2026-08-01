@@ -6,12 +6,35 @@
 import { ShopProfile, Category, Product, Bag, Coupon, Banner, Review, Notification, Order, AdvanceRequest, InventoryLog, User, Address, Role, StaffUser, Invoice, PaymentRecord, RoleCode, AdminAlert } from './types';
 
 const API_BASE = '/api';
+const getCache = new Map<string, { expiresAt: number; data?: unknown; promise?: Promise<unknown> }>();
+
+function cacheKeyFor(url: string) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('svayiro_auth_token') : '';
+  return `${token || 'public'}:${url}`;
+}
+
+function invalidateApiCache(prefix: string) {
+  for (const key of getCache.keys()) {
+    if (key.includes(prefix)) getCache.delete(key);
+  }
+}
 
 /**
  * Helper to fetch and throw on error
  */
-async function apiRequest<T>(url: string, options?: RequestInit): Promise<T> {
+async function apiRequest<T>(url: string, options?: RequestInit, cacheMs = 0): Promise<T> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('svayiro_auth_token') : null;
+  const method = String(options?.method || 'GET').toUpperCase();
+  const canCache = cacheMs > 0 && method === 'GET';
+  const cacheKey = canCache ? cacheKeyFor(url) : '';
+  if (canCache) {
+    const cached = getCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      if (cached.promise) return cached.promise as Promise<T>;
+      return cached.data as T;
+    }
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string> || {})
@@ -21,16 +44,27 @@ async function apiRequest<T>(url: string, options?: RequestInit): Promise<T> {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${url}`, {
+  const requestPromise = fetch(`${API_BASE}${url}`, {
     ...options,
     headers
+  }).then(async (res) => {
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Server request failed');
+    }
+    if (canCache) {
+      getCache.set(cacheKey, { expiresAt: Date.now() + cacheMs, data });
+    }
+    return data as T;
+  }).catch((err) => {
+    if (canCache) getCache.delete(cacheKey);
+    throw err;
   });
-  
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Server request failed');
+
+  if (canCache) {
+    getCache.set(cacheKey, { expiresAt: Date.now() + cacheMs, promise: requestPromise });
   }
-  return data as T;
+  return requestPromise;
 }
 
 function normalizeAdvanceRequest(row: any): AdvanceRequest {
@@ -303,36 +337,54 @@ export const api = {
 
   // Shop Profile APIs
   getShopProfile: () => 
-    apiRequest<ShopProfile>('/shop-profile'),
+    apiRequest<ShopProfile>('/shop-profile', undefined, 5 * 60 * 1000),
     
   updateShopProfile: (details: Partial<ShopProfile>) =>
     apiRequest<{ success: boolean; data: ShopProfile }>('/shop-profile', {
       method: 'PUT',
       body: JSON.stringify(details)
+    }).then((res) => {
+      invalidateApiCache('/shop-profile');
+      return res;
     }),
 
   // Categories APIs
   getCategories: () =>
-    apiRequest<Category[]>('/categories'),
+    apiRequest<Category[]>('/categories', undefined, 5 * 60 * 1000),
     
   getAdminCategories: () =>
-    apiRequest<Category[]>('/admin/categories'),
+    apiRequest<Category[]>('/admin/categories', undefined, 5 * 60 * 1000),
     
   createCategory: (category: Partial<Category>) =>
     apiRequest<{ success: boolean; data: Category }>('/categories', {
       method: 'POST',
       body: JSON.stringify(category)
+    }).then((res) => {
+      invalidateApiCache('/categories');
+      invalidateApiCache('/admin/categories');
+      invalidateApiCache('/products');
+      return res;
     }),
     
   updateCategory: (id: string, category: Partial<Category>) =>
     apiRequest<{ success: boolean; data: Category }>(`/categories/${id}`, {
       method: 'PUT',
       body: JSON.stringify(category)
+    }).then((res) => {
+      invalidateApiCache('/categories');
+      invalidateApiCache('/admin/categories');
+      invalidateApiCache('/products');
+      return res;
     }),
     
   deleteCategory: (id: string) =>
     apiRequest<{ success: boolean; data: boolean }>(`/categories/${id}`, {
       method: 'DELETE'
+    }).then((res) => {
+      invalidateApiCache('/categories');
+      invalidateApiCache('/admin/categories');
+      invalidateApiCache('/products');
+      return res;
     }),
 
   // Products APIs
@@ -342,7 +394,7 @@ export const api = {
     if (params.offset) query.set('offset', String(params.offset));
     if (params.summary) query.set('summary', 'true');
     const suffix = query.toString();
-    return apiRequest<Product[]>(`/products${suffix ? `?${suffix}` : ''}`);
+    return apiRequest<Product[]>(`/products${suffix ? `?${suffix}` : ''}`, undefined, params.summary ? 15_000 : 0);
   },
 
   searchProducts: (params: { search?: string; categoryId?: string | null; limit?: number; offset?: number; summary?: boolean } = {}) => {
@@ -353,7 +405,7 @@ export const api = {
     if (params.offset) query.set('offset', String(params.offset));
     if (params.summary) query.set('summary', 'true');
     const suffix = query.toString();
-    return apiRequest<Product[]>(`/products${suffix ? `?${suffix}` : ''}`);
+    return apiRequest<Product[]>(`/products${suffix ? `?${suffix}` : ''}`, undefined, params.summary ? 15_000 : 0);
   },
 
   getProduct: (id: string) =>
@@ -366,42 +418,60 @@ export const api = {
     apiRequest<{ success: boolean; data: Product }>('/products', {
       method: 'POST',
       body: JSON.stringify(product)
+    }).then((res) => {
+      invalidateApiCache('/products');
+      return res;
     }),
     
   updateProduct: (id: string, product: Partial<Product> & { logNote?: string }) =>
     apiRequest<{ success: boolean; data: Product }>(`/products/${id}`, {
       method: 'PUT',
       body: JSON.stringify(product)
+    }).then((res) => {
+      invalidateApiCache('/products');
+      return res;
     }),
     
   deleteProduct: (id: string) =>
     apiRequest<{ success: boolean; data: boolean }>(`/products/${id}`, {
       method: 'DELETE'
+    }).then((res) => {
+      invalidateApiCache('/products');
+      return res;
     }),
 
   // Bags Configuration APIs
   getBags: () =>
-    apiRequest<Bag[]>('/bags'),
+    apiRequest<Bag[]>('/bags', undefined, 60_000),
     
   updateBags: (bags: Bag[]) =>
     apiRequest<{ success: boolean; data: Bag[] }>('/bags', {
       method: 'PUT',
       body: JSON.stringify({ bags })
+    }).then((res) => {
+      invalidateApiCache('/bags');
+      return res;
     }),
 
   // Coupon / Offes APIs
   getCoupons: () =>
-    apiRequest<any[]>('/coupons').then((rows) => rows.map(normalizeCoupon)),
+    apiRequest<any[]>('/coupons', undefined, 30_000).then((rows) => rows.map(normalizeCoupon)),
     
   createCoupon: (coupon: Partial<Coupon>) =>
     apiRequest<{ success: boolean; data: Coupon }>('/coupons', {
       method: 'POST',
       body: JSON.stringify(coupon)
-    }).then((res) => ({ ...res, data: normalizeCoupon(res.data) })),
+    }).then((res) => {
+      invalidateApiCache('/coupons');
+      return { ...res, data: normalizeCoupon(res.data) };
+    }),
     
   deleteCoupon: (id: string) =>
     apiRequest<{ success: boolean; data: boolean }>(`/coupons/${id}`, {
       method: 'DELETE'
+    }).then((res) => {
+      invalidateApiCache('/coupons');
+      return res;
     }),
     
   validateCoupon: (code: string, orderValue: number) =>
@@ -410,17 +480,23 @@ export const api = {
 
   // Homepage Banners APIs
   getBanners: () =>
-    apiRequest<Banner[]>('/banners'),
+    apiRequest<Banner[]>('/banners', undefined, 5 * 60 * 1000),
     
   createBanner: (banner: Partial<Banner>) =>
     apiRequest<{ success: boolean; data: Banner }>('/banners', {
       method: 'POST',
       body: JSON.stringify(banner)
+    }).then((res) => {
+      invalidateApiCache('/banners');
+      return res;
     }),
     
   deleteBanner: (id: string) =>
     apiRequest<{ success: boolean; data: boolean }>(`/banners/${id}`, {
       method: 'DELETE'
+    }).then((res) => {
+      invalidateApiCache('/banners');
+      return res;
     }),
 
   // Product Reviews APIs
@@ -446,7 +522,7 @@ export const api = {
 
   // Broadcast System Notifications APIs
   getNotifications: () =>
-    apiRequest<any[]>('/notifications').then((rows) => rows.map(normalizeNotification)),
+    apiRequest<any[]>('/notifications', undefined, 30_000).then((rows) => rows.map(normalizeNotification)),
     
   createNotification: (notif: { title: string; message: string; type: 'offer' | 'order' | 'holiday' | 'announcement' }) =>
     apiRequest<{ success: boolean; data: Notification }>('/notifications', {
@@ -491,8 +567,13 @@ export const api = {
     }),
 
   // Advance Future Bookings APIs
-  getAdvanceRequests: () =>
-    apiRequest<any[]>('/advance-requests').then((rows) => rows.map(normalizeAdvanceRequest)),
+  getAdvanceRequests: (params: { limit?: number; offset?: number } = {}) => {
+    const query = new URLSearchParams();
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.offset) query.set('offset', String(params.offset));
+    const suffix = query.toString();
+    return apiRequest<any[]>(`/advance-requests${suffix ? `?${suffix}` : ''}`).then((rows) => rows.map(normalizeAdvanceRequest));
+  },
     
   createAdvanceRequest: (req: { userId?: string; customerName: string; customerPhone: string; productName: string; quantity: number; targetDate: string; note?: string }) =>
     apiRequest<{ success: boolean; data: any }>('/advance-requests', {
@@ -540,11 +621,13 @@ export const api = {
     }),
 
   // Inventory logs & adjustments
-  getInventoryLogs: (filters?: { date?: string; from?: string; to?: string }) => {
+  getInventoryLogs: (filters?: { date?: string; from?: string; to?: string; limit?: number; offset?: number }) => {
     const params = new URLSearchParams();
     if (filters?.date) params.set('date', filters.date);
     if (filters?.from) params.set('from', filters.from);
     if (filters?.to) params.set('to', filters.to);
+    if (filters?.limit) params.set('limit', String(filters.limit));
+    if (filters?.offset) params.set('offset', String(filters.offset));
     const query = params.toString();
     return apiRequest<any[]>(`/admin/inventory-logs${query ? `?${query}` : ''}`).then((rows) => rows.map(normalizeInventoryLog));
   },
@@ -575,8 +658,13 @@ export const api = {
   customerOrders: (phone?: string) =>
     apiRequest<Order[]>(`/orders${phone ? `?phone=${phone}` : ''}`),
     
-  adminOrders: () =>
-    apiRequest<Order[]>('/admin/orders'),
+  adminOrders: (params: { limit?: number; offset?: number } = {}) => {
+    const query = new URLSearchParams();
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.offset) query.set('offset', String(params.offset));
+    const suffix = query.toString();
+    return apiRequest<Order[]>(`/admin/orders${suffix ? `?${suffix}` : ''}`);
+  },
 
   adminInvoiceQueue: (date: 'today' | 'tomorrow' | 'all' = 'today') =>
     apiRequest<Order[]>(`/admin/invoice-queue?date=${date}`),

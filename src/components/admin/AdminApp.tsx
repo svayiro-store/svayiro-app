@@ -179,7 +179,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
 
   const handleFilterInventoryLogs = async (filters?: { date?: string }) => {
     try {
-      const logs = await api.getInventoryLogs(filters);
+      const logs = await api.getInventoryLogs({ ...filters, limit: 100, offset: 0 });
       admin.setInventoryLogs?.(logs);
     } catch (err: any) {
       showToast(err?.message || 'Unable to filter inventory logs', 'error');
