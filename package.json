@@ -13,7 +13,8 @@
     "docker:down": "docker-compose down",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
     "db:init": "node scripts/init-db.mjs",
-    "db:seed-admin": "node scripts/seed-admin.mjs"
+    "db:seed-admin": "node scripts/seed-admin.mjs",
+    "images:migrate-cloudinary": "node scripts/migrate-images-cloudinary.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

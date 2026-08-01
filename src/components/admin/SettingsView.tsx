@@ -24,7 +24,7 @@ import {
 import { Bag, RoleCode, ShopAddress, ShopProfile, StaffUser } from '../../types';
 import { api } from '../../api';
 import GoogleMapPicker from '../customer/GoogleMapPicker';
-import { compressImageFile } from '../../utils/imageCompression';
+import { compressAndUploadImage } from '../../utils/cloudinaryUpload';
 
 interface Props {
   shop: ShopProfile;
@@ -214,7 +214,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
     }
 
     try {
-      const logo = await compressImageFile(file, { maxWidth: 512, maxHeight: 512, quality: 0.82 });
+      const logo = await compressAndUploadImage(file, { folder: 'logo', maxWidth: 512, maxHeight: 512, quality: 0.82 });
       updateDetail('logoUrl', logo);
     } catch {
       showToast('Unable to optimize the selected logo image.', 'error');

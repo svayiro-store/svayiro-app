@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Banner, Category, Product } from '../../types';
 import { api } from '../../api';
 import { Plus, Trash2, Upload, Image as ImageIcon, Link2, X } from 'lucide-react';
-import { compressImageFile, getImageDimensions } from '../../utils/imageCompression';
+import { getImageDimensions } from '../../utils/imageCompression';
+import { compressAndUploadImage } from '../../utils/cloudinaryUpload';
 
 interface Props {
   isDarkMode: boolean;
@@ -108,7 +109,7 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
       return;
     }
     try {
-      const preview = await compressImageFile(file, { maxWidth: 2048, maxHeight: 2048, quality: 0.82 });
+      const preview = await compressAndUploadImage(file, { folder: 'banners', maxWidth: 1600, maxHeight: 900, quality: 0.78 });
       const dimensions = await getImageDimensions(preview);
       if (dimensions.width < MIN_BANNER_WIDTH || dimensions.height < MIN_BANNER_HEIGHT) {
         showToast(`Banner must be at least ${MIN_BANNER_WIDTH} x ${MIN_BANNER_HEIGHT} pixels. Selected image is ${dimensions.width} x ${dimensions.height}.`, 'warning');

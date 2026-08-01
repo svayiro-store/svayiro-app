@@ -230,6 +230,12 @@ function normalizeAdminAlert(row: any): AdminAlert {
 }
 
 export const api = {
+  uploadImage: (payload: { dataUrl: string; folder: 'products' | 'categories' | 'banners' | 'logo' }) =>
+    apiRequest<{ success: boolean; url: string; secureUrl: string; publicId: string; width?: number; height?: number; bytes?: number; format?: string }>('/admin/uploads/image', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+
   // Auth APIs
   sendOtp: (phone: string) => 
     apiRequest<{ success: boolean; message: string; devOtp?: string; expiresInSeconds?: number; resendAfterSeconds?: number }>('/auth/send-otp', {

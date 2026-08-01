@@ -10,7 +10,7 @@ import path from 'path';
 import jwt from 'jsonwebtoken';
 import net from 'net';
 import tls from 'tls';
-import { pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
+import { createHash, pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { query as pgQuery, runTransaction } from './server/db-pg.js';
 import {
@@ -1840,6 +1840,79 @@ function hasAnyRole(req: any, roles: string[]) {
   const currentRoles = getRequestRoles(req);
   return roles.some((role) => currentRoles.includes(role));
 }
+
+const CLOUDINARY_FOLDERS: Record<string, string> = {
+  products: 'svayiro/products',
+  categories: 'svayiro/categories',
+  banners: 'svayiro/banners',
+  logo: 'svayiro/logo'
+};
+
+function canUploadImageForFolder(req: any, folderKey: string) {
+  if (hasPermission(req, '*')) return true;
+  if (folderKey === 'products') return hasPermission(req, 'products:manage');
+  if (folderKey === 'categories') return hasPermission(req, 'categories:manage');
+  return hasAnyRole(req, ['admin']);
+}
+
+function isSupportedDataImage(value: string) {
+  return /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/i.test(value || '');
+}
+
+async function uploadDataImageToCloudinary(dataUrl: string, folderKey: string) {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new HttpError(503, 'Cloudinary is not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
+  }
+  const folder = CLOUDINARY_FOLDERS[folderKey] || CLOUDINARY_FOLDERS.products;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const uniqueFilename = 'true';
+  const signaturePayload = `folder=${folder}&timestamp=${timestamp}&unique_filename=${uniqueFilename}${apiSecret}`;
+  const signature = createHash('sha1').update(signaturePayload).digest('hex');
+  const form = new FormData();
+  form.append('file', dataUrl);
+  form.append('api_key', apiKey);
+  form.append('timestamp', String(timestamp));
+  form.append('folder', folder);
+  form.append('unique_filename', uniqueFilename);
+  form.append('signature', signature);
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: 'POST',
+    body: form as any
+  });
+  const payload = await response.json() as any;
+  if (!response.ok) {
+    throw new HttpError(response.status, payload?.error?.message || 'Cloudinary upload failed.');
+  }
+  return {
+    secureUrl: payload.secure_url,
+    publicId: payload.public_id,
+    width: payload.width,
+    height: payload.height,
+    bytes: payload.bytes,
+    format: payload.format
+  };
+}
+
+app.post('/api/admin/uploads/image', authMiddleware, attachUserMiddleware, async (req: any, res) => {
+  const dataUrl = typeof req.body?.dataUrl === 'string' ? req.body.dataUrl : '';
+  const folderKey = typeof req.body?.folder === 'string' ? req.body.folder : 'products';
+  try {
+    if (!req.currentUser) return res.status(401).json({ error: 'Not authenticated' });
+    if (!CLOUDINARY_FOLDERS[folderKey]) return res.status(400).json({ error: 'Invalid upload folder.' });
+    if (!canUploadImageForFolder(req, folderKey)) return res.status(403).json({ error: 'Permission denied for image upload.' });
+    if (!isSupportedDataImage(dataUrl)) return res.status(400).json({ error: 'Upload must be a compressed JPEG, PNG, or WEBP data image.' });
+    const base64Bytes = Math.ceil((dataUrl.split(',')[1]?.length || 0) * 0.75);
+    if (base64Bytes > 2_500_000) return res.status(400).json({ error: 'Compressed image is too large. Please use a smaller image.' });
+    const upload = await uploadDataImageToCloudinary(dataUrl, folderKey);
+    return res.json({ success: true, ...upload, url: upload.secureUrl });
+  } catch (err: any) {
+    console.error('POST /api/admin/uploads/image error', err);
+    return res.status(err.statusCode || 500).json({ error: err.message || 'Image upload failed.' });
+  }
+});
 
 function normalizeRoleList(input: any, allowedRoles: readonly string[]) {
   const roles = Array.isArray(input) ? input : [input];

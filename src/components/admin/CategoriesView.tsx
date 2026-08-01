@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Category } from '../../types';
 import { api } from '../../api';
 import { Plus, Upload, Image as ImageIcon, Link2, ChevronDown, ChevronRight, ArrowDown, ArrowUp, Save } from 'lucide-react';
-import { compressImageFile } from '../../utils/imageCompression';
+import { compressAndUploadImage } from '../../utils/cloudinaryUpload';
 
 interface Props {
   categories: Category[];
@@ -50,7 +50,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
       return;
     }
     try {
-      const preview = await compressImageFile(file, { maxWidth: 600, maxHeight: 600, quality: 0.78 });
+      const preview = await compressAndUploadImage(file, { folder: 'categories', maxWidth: 600, maxHeight: 600, quality: 0.76 });
       setImageFile(file);
       setImagePreview(preview);
     } catch {

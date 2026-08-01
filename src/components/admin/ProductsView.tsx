@@ -3,7 +3,7 @@ import { api } from '../../api';
 import { Product, Category } from '../../types';
 import { Plus, Trash2, Upload, Image as ImageIcon, Link2, ChevronLeft, ChevronRight, ChevronDown, X, Save, Printer, Search, Download } from 'lucide-react';
 import { formatDateTimeDDMMYYYY } from '../../utils/date';
-import { compressImageFile } from '../../utils/imageCompression';
+import { compressAndUploadImage } from '../../utils/cloudinaryUpload';
 import { PRODUCT_UNIT_OPTIONS, estimatePackingWeightGrams, formatProductMeasure } from '../../utils/productMeasure';
 
 interface Props {
@@ -230,7 +230,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     try {
       const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/') && file.size <= MAX_IMAGE_BYTES);
       const newImages = await Promise.all(
-        imageFiles.map((file) => compressImageFile(file, { maxWidth: 900, maxHeight: 900, quality: 0.78 }))
+        imageFiles.map((file) => compressAndUploadImage(file, { folder: 'products', maxWidth: 900, maxHeight: 900, quality: 0.76 }))
       );
       if (newImages.length > 0) {
         updateForm('images', [...form.images, ...newImages]);
