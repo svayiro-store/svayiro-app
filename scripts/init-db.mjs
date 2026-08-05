@@ -155,6 +155,17 @@ async function run() {
       ON CONFLICT (user_id, product_id) DO NOTHING
     `);
     await client.query(`
+      CREATE TABLE IF NOT EXISTS product_barcodes (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_id uuid NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        barcode_value varchar(100) NOT NULL UNIQUE,
+        barcode_type varchar(30) DEFAULT 'EAN/UPC',
+        is_primary boolean DEFAULT false,
+        created_at timestamptz DEFAULT now()
+      )
+    `);
+    await client.query('CREATE INDEX IF NOT EXISTS idx_product_barcodes_product_id ON product_barcodes(product_id)');
+    await client.query(`
       CREATE TABLE IF NOT EXISTS payment_records (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         order_id uuid REFERENCES orders(id) ON DELETE SET NULL,

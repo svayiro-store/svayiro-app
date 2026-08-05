@@ -56,7 +56,7 @@ interface Props {
   onCloseRegister?: (id: string) => void;
   onFilterInventoryLogs?: (filters?: { date?: string }) => void;
   onCleanupInventoryLogs?: (olderThan: '1w' | '1m' | '2m' | '3m' | '5m') => Promise<number | void> | number | void;
-  onAddToCart?: (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string }) => void;
+  onAddToCart?: (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string; product?: Product }) => void;
   onUpdateQuantity?: (id: string, delta: number) => void;
   onRemoveItem?: (id: string) => void;
   onSubmitSale?: (overrides?: {
@@ -152,6 +152,8 @@ export default function PosView({
   const [catalogAddFlash, setCatalogAddFlash] = useState(false);
   const [lastCompletedOrder, setLastCompletedOrder] = useState<any | null>(null);
   const [lastInvoiceUrl, setLastInvoiceUrl] = useState('');
+  const [barcodeScanValue, setBarcodeScanValue] = useState('');
+  const [barcodeScanning, setBarcodeScanning] = useState(false);
 
   const sessionKey = activeRegisterId || registers[0]?.id || 'register_1';
   const session = sessions[sessionKey] || emptyRegisterSession();
@@ -306,6 +308,33 @@ export default function PosView({
     updateSession({ selectedProductId: '', priceOverride: '' });
     setCatalogAddFlash(true);
     window.setTimeout(() => setCatalogAddFlash(false), 1000);
+  };
+
+  const handleBarcodeScanSubmit = async () => {
+    const barcode = barcodeScanValue.trim().replace(/\s+/g, '').toUpperCase();
+    if (!barcode) return;
+    setBarcodeScanning(true);
+    try {
+      const directSkuMatch = sortedProducts.find((product) => String(product.sku || '').toUpperCase() === barcode);
+      if (directSkuMatch) {
+        onAddToCart?.({ productId: directSkuMatch.id, qty: 1 });
+        setBarcodeScanValue('');
+        setCatalogAddFlash(true);
+        window.setTimeout(() => setCatalogAddFlash(false), 700);
+        return;
+      }
+      const result = await api.lookupProductByBarcode(barcode);
+      if (!result.product?.id) throw new Error('Barcode not linked to any product.');
+      if (Number(result.product.stockCount || 0) <= 0) throw new Error(`${result.product.name} is out of stock.`);
+      onAddToCart?.({ productId: result.product.id, qty: 1, product: result.product });
+      setBarcodeScanValue('');
+      setCatalogAddFlash(true);
+      window.setTimeout(() => setCatalogAddFlash(false), 700);
+    } catch (err: any) {
+      alert(err.message || 'Barcode not linked to any product.');
+    } finally {
+      setBarcodeScanning(false);
+    }
   };
 
   const handleAddCustomItem = () => {
@@ -494,6 +523,36 @@ export default function PosView({
           </div>
 
           <div className="space-y-3.5">
+            <label className="block">
+              <span className="mb-1 block text-xs font-bold text-slate-500">Scan barcode / product code</span>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <input
+                  className={`${inputClass} font-mono text-sm`}
+                  value={barcodeScanValue}
+                  onChange={(event) => setBarcodeScanValue(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleBarcodeScanSubmit();
+                    }
+                  }}
+                  placeholder="Focus here and scan packet barcode"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={handleBarcodeScanSubmit}
+                  disabled={barcodeScanning || !barcodeScanValue.trim()}
+                  className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-black uppercase text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {barcodeScanning ? 'Finding...' : 'Add'}
+                </button>
+              </div>
+              <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                USB/Bluetooth scanners type the barcode here and press Enter automatically.
+              </p>
+            </label>
+
             <label className="block">
               <span className="mb-1 block text-xs font-bold text-slate-500">1. Add catalog product</span>
               <select className={inputClass} value={session.selectedProductId} onChange={(event) => updateSession({ selectedProductId: event.target.value })}>

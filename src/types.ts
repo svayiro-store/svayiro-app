@@ -89,6 +89,7 @@ export interface Product {
   lowStockAlertThreshold?: number;
   metadata?: Record<string, any>;
   images?: string[];
+  externalBarcodes?: string[];
   ratingAverage?: number;
   ratingCount?: number;
   createdAt?: string;

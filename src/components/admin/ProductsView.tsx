@@ -72,6 +72,7 @@ interface ProductForm {
   customUnit: string;
   weight: string;
   images: string[];
+  externalBarcodes: string[];
   isEnabled: boolean;
   isDailyEssential: boolean;
   isFeatured: boolean;
@@ -99,6 +100,7 @@ const emptyForm = (): ProductForm => ({
   customUnit: '',
   weight: '100',
   images: [],
+  externalBarcodes: [],
   isEnabled: true,
   isDailyEssential: false,
   isFeatured: false,
@@ -129,6 +131,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const [includeBestBeforeOnSticker, setIncludeBestBeforeOnSticker] = useState(false);
   const [stickerDateInfo, setStickerDateInfo] = useState<Record<string, StickerDateInfo>>({});
   const [form, setForm] = useState<ProductForm>(emptyForm());
+  const [barcodeInput, setBarcodeInput] = useState('');
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -259,6 +262,26 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     }
   };
 
+  const normalizeBarcodeInput = (value: string) => value.trim().replace(/\s+/g, '').toUpperCase().slice(0, 100);
+
+  const handleAddExternalBarcode = () => {
+    const value = normalizeBarcodeInput(barcodeInput);
+    if (!/^[A-Z0-9-]{4,100}$/.test(value)) {
+      alert('Enter a valid barcode. Use only letters, numbers, or hyphen.');
+      return;
+    }
+    if (form.externalBarcodes.includes(value)) {
+      alert('This barcode is already added for this product.');
+      return;
+    }
+    updateForm('externalBarcodes', [...form.externalBarcodes, value]);
+    setBarcodeInput('');
+  };
+
+  const handleRemoveExternalBarcode = (barcode: string) => {
+    updateForm('externalBarcodes', form.externalBarcodes.filter((value) => value !== barcode));
+  };
+
   const validate = (): string => {
     if (!form.name.trim()) return 'Product name is required.';
     if (form.categoryIds.length === 0) return 'Please select at least one category.';
@@ -297,6 +320,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
         customUnit: form.customUnit.trim(),
         weight: Number(form.weight) || 100,
         images: form.images,
+        externalBarcodes: form.externalBarcodes,
         isEnabled: form.isEnabled,
         isDailyEssential: form.isDailyEssential,
         isFeatured: form.isFeatured,
@@ -311,6 +335,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       }
       setForm(emptyForm());
       setEditingId(null);
+      setBarcodeInput('');
       setCarouselIndex(0);
       setCategoryDropdownOpen(false);
       loadProducts();
@@ -321,11 +346,19 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     }
   };
 
-  const startEdit = (prod: Product) => {
+  const startEdit = async (prod: Product) => {
     const imgs = Array.isArray(prod.images)
       ? prod.images.map(img => typeof img === 'string' ? img : (img as any).url || '')
       : [];
+    let externalBarcodes = Array.isArray(prod.externalBarcodes) ? prod.externalBarcodes : [];
+    try {
+      const barcodeRows = await api.getProductBarcodes(prod.id);
+      externalBarcodes = barcodeRows.map((row) => row.barcodeValue).filter(Boolean);
+    } catch {
+      externalBarcodes = Array.isArray(prod.externalBarcodes) ? prod.externalBarcodes : [];
+    }
     setEditingId(prod.id);
+    setBarcodeInput('');
     setCategoryDropdownOpen(false);
     setForm({
       name: prod.name,
@@ -344,6 +377,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       customUnit: String(prod.metadata?.customUnit || ''),
       weight: String(prod.weight),
       images: imgs,
+      externalBarcodes,
       isEnabled: prod.isEnabled,
       isDailyEssential: prod.isDailyEssential || false,
       isFeatured: prod.isFeatured || false,
@@ -358,6 +392,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const cancelEdit = () => {
     setEditingId(null);
     setForm(emptyForm());
+    setBarcodeInput('');
     setCarouselIndex(0);
     setCategoryDropdownOpen(false);
   };
@@ -517,20 +552,20 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>SVAYIRO 50mm x 30mm Product Barcode Labels</title>
+          <title>SVAYIRO 50mm x 25mm Product Barcode Labels</title>
           <style>
             * { box-sizing: border-box; }
             html, body { margin: 0; padding: 0; width: 50mm; background: #fff; font-family: Arial, sans-serif; color: #000; }
             .sheet { display: block; width: 50mm; }
-            .label { width: 50mm; height: 30mm; padding: 1.8mm 2.2mm; page-break-after: always; break-after: page; overflow: hidden; }
-            .brand { border-bottom: .25mm solid #000; padding-bottom: .45mm; font-size: 8px; font-weight: 900; letter-spacing: .04em; color: #000; line-height: 1; }
-            .name { margin-top: .5mm; font-size: 8.5px; line-height: 1.08; font-weight: 400; max-height: 5.4mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-            .meta { margin-top: .25mm; font-size: 7px; color: #000; line-height: 1; min-height: 1.8mm; font-weight: 400; }
-            .price { display: flex; justify-content: space-between; gap: 1.5mm; margin-top: .55mm; font-size: 7.5px; line-height: 1; font-weight: 900; color: #000; }
-            .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .35mm 1.2mm; margin-top: .55mm; font-size: 6.3px; line-height: 1; font-weight: 400; color: #000; }
+            .label { width: 50mm; height: 25mm; padding: 1.2mm 1.9mm; page-break-after: always; break-after: page; overflow: hidden; }
+            .brand { border-bottom: .25mm solid #000; padding-bottom: .3mm; font-size: 7px; font-weight: 900; letter-spacing: .035em; color: #000; line-height: 1; }
+            .name { margin-top: .35mm; font-size: 7.4px; line-height: 1.05; font-weight: 400; max-height: 4mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+            .meta { margin-top: .15mm; font-size: 6.2px; color: #000; line-height: 1; min-height: 1.5mm; font-weight: 400; }
+            .price { display: flex; justify-content: space-between; gap: 1.2mm; margin-top: .35mm; font-size: 6.9px; line-height: 1; font-weight: 900; color: #000; }
+            .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .2mm 1mm; margin-top: .35mm; font-size: 5.7px; line-height: 1; font-weight: 400; color: #000; }
             .dates span:last-child:nth-child(odd) { grid-column: 1 / -1; }
-            .barcode { display: block; width: 100%; height: 9mm; object-fit: contain; margin-top: .55mm; }
-            @page { size: 50mm 30mm; margin: 0; }
+            .barcode { display: block; width: 100%; height: 7.6mm; object-fit: contain; margin-top: .35mm; }
+            @page { size: 50mm 25mm; margin: 0; }
           </style>
         </head>
         <body>
@@ -565,7 +600,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `svayiro-50x30mm-barcode-labels-${new Date().toISOString().slice(0, 10)}.html`;
+    anchor.download = `svayiro-50x25mm-barcode-labels-${new Date().toISOString().slice(0, 10)}.html`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -648,6 +683,51 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                   Auto-generated after saving
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+              <span className={labelClass}>External Package Barcodes</span>
+              <p className="mb-2 text-[10px] font-semibold text-slate-500">
+                Add branded packet barcodes here. POS scanner will auto-add this product when that barcode is scanned.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <input
+                  className={inputClass}
+                  value={barcodeInput}
+                  onChange={(event) => setBarcodeInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleAddExternalBarcode();
+                    }
+                  }}
+                  placeholder="e.g. 8901234567890"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddExternalBarcode}
+                  className="rounded-lg bg-indigo-700 px-4 py-2 text-xs font-black text-white hover:bg-indigo-600"
+                >
+                  Add Barcode
+                </button>
+              </div>
+              {form.externalBarcodes.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {form.externalBarcodes.map((barcode) => (
+                    <span key={barcode} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-mono font-bold text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+                      {barcode}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExternalBarcode(barcode)}
+                        className="text-rose-600"
+                        title="Remove barcode"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
@@ -1078,7 +1158,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               </div>
             </div>
             <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 lg:max-w-[140px]">
-              Prints compact 50mm x 30mm thermal labels.
+              Prints compact 50mm x 25mm thermal labels.
             </p>
             <div className="flex flex-wrap gap-2">
               <button

@@ -106,7 +106,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
       .catch(() => {});
   };
 
-  const handleAddToOfflineCart = (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string }) => {
+  const handleAddToOfflineCart = (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string; product?: Product }) => {
     const qty = opts.qty || 1;
     if (opts.customItemName && opts.customItemName.trim()) {
       const pid = 'unlisted_' + Date.now();
@@ -114,7 +114,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
       return;
     }
     if (!opts.productId) return;
-    const product = products.find(p => p.id === opts.productId);
+    const product = opts.product || products.find(p => p.id === opts.productId);
     if (!product) return;
     const price = typeof opts.priceOverride === 'number' && !isNaN(opts.priceOverride) ? opts.priceOverride : (product.offerPrice > 0 ? product.offerPrice : product.basePrice);
     const existing = offlineCart.find(i => i.productId === product.id);

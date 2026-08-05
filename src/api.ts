@@ -417,6 +417,23 @@ export const api = {
   getProduct: (id: string) =>
     apiRequest<Product>(`/products/${id}`),
 
+  lookupProductByBarcode: (barcode: string) =>
+    apiRequest<{ success: boolean; product: Product; barcode: string }>(`/products/lookup-by-barcode/${encodeURIComponent(barcode)}`),
+
+  getProductBarcodes: (id: string) =>
+    apiRequest<{ id: string; productId: string; barcodeValue: string; barcodeType: string; isPrimary: boolean; createdAt?: string }[]>(`/products/${id}/barcodes`),
+
+  addProductBarcode: (id: string, barcodeValue: string) =>
+    apiRequest<{ success: boolean; data: { id: string; productId: string; barcodeValue: string; barcodeType: string; isPrimary: boolean } }>(`/products/${id}/barcodes`, {
+      method: 'POST',
+      body: JSON.stringify({ barcodeValue })
+    }),
+
+  deleteProductBarcode: (id: string, barcodeId: string) =>
+    apiRequest<{ success: boolean }>(`/products/${id}/barcodes/${barcodeId}`, {
+      method: 'DELETE'
+    }),
+
   getSearchConfig: () =>
     apiRequest<{ useDelay: boolean; delayMs: number }>('/search-config'),
     

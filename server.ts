@@ -1296,6 +1296,41 @@ function normalizeProductSummary(product: any) {
   };
 }
 
+function normalizeBarcodeValue(value: any) {
+  return String(value || '').trim().replace(/\s+/g, '').toUpperCase().slice(0, 100);
+}
+
+function normalizeExternalBarcodes(input: any) {
+  const rows = Array.isArray(input) ? input : [];
+  const values = rows
+    .map((row) => typeof row === 'string' ? row : row?.barcodeValue || row?.barcode_value || row?.value)
+    .map(normalizeBarcodeValue)
+    .filter((value) => /^[A-Z0-9-]{4,100}$/.test(value));
+  return Array.from(new Set(values));
+}
+
+function normalizeProductBarcode(row: any) {
+  return {
+    id: row.id,
+    productId: row.product_id || row.productId,
+    barcodeValue: row.barcode_value || row.barcodeValue,
+    barcodeType: row.barcode_type || row.barcodeType || 'EAN/UPC',
+    isPrimary: Boolean(row.is_primary ?? row.isPrimary ?? false),
+    createdAt: row.created_at || row.createdAt
+  };
+}
+
+async function syncProductBarcodes(client: any, productId: string, barcodes: any) {
+  const unique = normalizeExternalBarcodes(barcodes);
+  await client.query('DELETE FROM product_barcodes WHERE product_id = $1', [productId]);
+  for (let i = 0; i < unique.length; i++) {
+    await client.query(
+      'INSERT INTO product_barcodes(product_id, barcode_value, barcode_type, is_primary, created_at) VALUES($1,$2,$3,$4,now())',
+      [productId, unique[i], 'EAN/UPC', i === 0]
+    );
+  }
+}
+
 function normalizeCategory(category: any) {
   if (!category) return null;
   return {
@@ -3796,6 +3831,87 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+app.get('/api/products/lookup-by-barcode/:barcode', authMiddleware, requirePermission('pos:use'), async (req, res) => {
+  const barcode = normalizeBarcodeValue(req.params.barcode);
+  if (!barcode) return res.status(400).json({ error: 'Barcode is required' });
+  try {
+    const p = await pgQuery(`
+      SELECT
+        p.id,
+        p.category_id,
+        p.subcategory_id,
+        p.sku,
+        p.name,
+        p.slug,
+        p.description,
+        p.base_price,
+        p.offer_price,
+        p.stock_count,
+        p.weight_grams,
+        p.is_enabled,
+        p.low_stock_threshold,
+        p.metadata,
+        p.created_at,
+        p.updated_at,
+        COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+      FROM products p
+      LEFT JOIN product_categories pc ON pc.product_id = p.id
+      WHERE p.sku = $1
+         OR EXISTS (
+          SELECT 1 FROM product_barcodes pb
+          WHERE pb.product_id = p.id AND pb.barcode_value = $1
+         )
+      GROUP BY p.id
+      LIMIT 1
+    `, [barcode]);
+    if (p.rowCount === 0) return res.status(404).json({ error: 'Barcode not linked to any product.' });
+    const product = normalizeProduct(p.rows[0], []);
+    return res.json({ success: true, product, barcode });
+  } catch (err) {
+    console.error('GET /api/products/lookup-by-barcode/:barcode error', err);
+    return res.status(500).json({ error: 'Failed to lookup barcode' });
+  }
+});
+
+app.get('/api/products/:id/barcodes', authMiddleware, requirePermission('products:manage'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { rows } = await pgQuery('SELECT * FROM product_barcodes WHERE product_id = $1 ORDER BY is_primary DESC, created_at ASC', [id]);
+    return res.json(rows.map(normalizeProductBarcode));
+  } catch (err) {
+    console.error('GET /api/products/:id/barcodes error', err);
+    return res.status(500).json({ error: 'Failed to fetch product barcodes' });
+  }
+});
+
+app.post('/api/products/:id/barcodes', authMiddleware, requirePermission('products:manage'), async (req, res) => {
+  const { id } = req.params;
+  const barcode = normalizeBarcodeValue(req.body?.barcodeValue || req.body?.barcode);
+  if (!/^[A-Z0-9-]{4,100}$/.test(barcode)) return res.status(400).json({ error: 'Enter a valid barcode value.' });
+  try {
+    const result = await pgQuery(
+      'INSERT INTO product_barcodes(product_id, barcode_value, barcode_type, is_primary, created_at) VALUES($1,$2,$3,false,now()) RETURNING *',
+      [id, barcode, req.body?.barcodeType || 'EAN/UPC']
+    );
+    return res.json({ success: true, data: normalizeProductBarcode(result.rows[0]) });
+  } catch (err: any) {
+    console.error('POST /api/products/:id/barcodes error', err);
+    if (err.code === '23505') return res.status(409).json({ error: 'This barcode is already linked to another product.' });
+    return res.status(500).json({ error: 'Failed to save barcode' });
+  }
+});
+
+app.delete('/api/products/:id/barcodes/:barcodeId', authMiddleware, requirePermission('products:manage'), async (req, res) => {
+  const { id, barcodeId } = req.params;
+  try {
+    await pgQuery('DELETE FROM product_barcodes WHERE id = $1 AND product_id = $2', [barcodeId, id]);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /api/products/:id/barcodes/:barcodeId error', err);
+    return res.status(500).json({ error: 'Failed to delete barcode' });
+  }
+});
+
 app.get('/api/products/:id', async (req, res) => {
   const id = req.params.id;
   try {
@@ -3927,6 +4043,7 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
       const ins = await client.query('INSERT INTO products(category_id, subcategory_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) RETURNING *', [productData.categoryId, productData.subcategoryId || null, generatedSku, productData.name, productData.slug || (productData.name.toLowerCase().replace(/\s+/g, '-')), productData.description || null, Number(productData.basePrice) || 0, Number(productData.offerPrice) || 0, Number(productData.stockCount) || 0, Number(productData.weight) || 0, productData.isEnabled !== undefined ? productData.isEnabled : true, productData.lowStockAlertThreshold || 5, metadata]);
       const prod = ins.rows[0];
       await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, productData.categoryId, productData.subcategoryId), productData.categoryId);
+      await syncProductBarcodes(client, prod.id, productData.externalBarcodes || []);
       // insert images
       if (Array.isArray(productData.images) && productData.images.length > 0) {
         for (let i = 0; i < productData.images.length; i++) {
@@ -3975,6 +4092,9 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
       const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), subcategory_id = $2, sku = COALESCE($3,sku), name = COALESCE($4,name), slug = COALESCE($5,slug), description = COALESCE($6,description), base_price = COALESCE($7,base_price), offer_price = COALESCE($8,offer_price), stock_count = $9, weight_grams = COALESCE($10,weight_grams), is_enabled = COALESCE($11,is_enabled), low_stock_threshold = COALESCE($12,low_stock_threshold), metadata = COALESCE($13,metadata), updated_at = now() WHERE id = $14 RETURNING *', [productData.categoryId, productData.subcategoryId || null, productData.sku, productData.name, productData.slug, productData.description, productData.basePrice !== undefined ? Number(productData.basePrice) : null, productData.offerPrice !== undefined ? Number(productData.offerPrice) : null, newStock, productData.weight !== undefined ? Number(productData.weight) : null, productData.isEnabled, productData.lowStockAlertThreshold, metadata, id]);
       const prod = upd.rows[0];
       await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, prod.category_id, prod.subcategory_id), prod.category_id);
+      if (Array.isArray(productData.externalBarcodes)) {
+        await syncProductBarcodes(client, prod.id, productData.externalBarcodes);
+      }
       // handle images replacement
       if (Array.isArray(productData.images)) {
         await client.query('DELETE FROM product_images WHERE product_id = $1', [id]);
@@ -5954,6 +6074,17 @@ async function ensureRuntimeSchemaCompatibility() {
     CROSS JOIN LATERAL unnest(COALESCE(u.wishlist, ARRAY[]::uuid[])) AS wishlist_product_id
     ON CONFLICT (user_id, product_id) DO NOTHING
   `);
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS product_barcodes (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      product_id uuid NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      barcode_value varchar(100) NOT NULL UNIQUE,
+      barcode_type varchar(30) DEFAULT 'EAN/UPC',
+      is_primary boolean DEFAULT false,
+      created_at timestamptz DEFAULT now()
+    )
+  `);
+  await pgQuery('CREATE INDEX IF NOT EXISTS idx_product_barcodes_product_id ON product_barcodes(product_id)');
   await pgQuery(`
     CREATE TABLE IF NOT EXISTS payment_records (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

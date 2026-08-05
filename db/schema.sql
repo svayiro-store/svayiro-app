@@ -147,6 +147,19 @@ CREATE TABLE product_images (
   created_at timestamptz DEFAULT now()
 );
 
+-- External package barcodes printed by other brands.
+-- Keep these separate from SVAYIRO-generated SKU/product codes.
+CREATE TABLE product_barcodes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  barcode_value varchar(100) NOT NULL UNIQUE,
+  barcode_type varchar(30) DEFAULT 'EAN/UPC',
+  is_primary boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_product_barcodes_product_id ON product_barcodes(product_id);
+
 -- Banners
 CREATE TABLE banners (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
