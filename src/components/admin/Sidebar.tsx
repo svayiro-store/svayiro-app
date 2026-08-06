@@ -86,24 +86,7 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
         {isExpanded && <span>Collapse</span>}
       </button>
 
-      {(canOpenCustomerStorefront || onLogout) && (
-        <div className="order-3 mt-2 grid grid-cols-2 gap-2 border-t border-slate-200 pt-2 dark:border-slate-800/80 md:grid-cols-1">
-          {canOpenCustomerStorefront && (
-            <button onClick={openCustomerStorefront} title="Preview Storefront" className={`w-full flex h-11 items-center justify-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50 px-3 text-[10px] font-black uppercase text-indigo-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 ${isExpanded ? '' : 'md:px-0'}`}>
-              <ExternalLink className="h-4 w-4" />
-              <span className={isExpanded ? '' : 'md:hidden'}>Preview Storefront</span>
-            </button>
-          )}
-          {onLogout && (
-            <button onClick={onLogout} title="Logout" className={`w-full flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-3 text-[10px] font-black uppercase text-rose-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 ${isExpanded ? '' : 'md:px-0'}`}>
-              <LogOut className="h-4 w-4" />
-              <span className={isExpanded ? '' : 'md:hidden'}>Logout</span>
-            </button>
-          )}
-        </div>
-      )}
-
-      <nav className="order-2 flex min-h-0 gap-2 overflow-x-auto border-t pb-1 pt-2 text-xs md:max-h-[calc(100vh-168px)] md:flex-none md:flex-col md:overflow-x-hidden md:overflow-y-auto md:border-t-0 md:pt-0">
+      <nav className="flex min-h-0 flex-1 gap-2 overflow-x-auto border-t pb-1 pt-2 text-xs md:flex-col md:overflow-x-hidden md:overflow-y-auto md:border-t-0 md:pt-0">
         {visibleItems.map(item => {
           const Icon = item.icon as any;
           return (
@@ -140,6 +123,23 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
           );
         })}
       </nav>
+
+      {(canOpenCustomerStorefront || onLogout) && (
+        <div className="mt-2 grid shrink-0 grid-cols-2 gap-2 border-t border-slate-200 pt-2 dark:border-slate-800/80 md:mt-auto md:grid-cols-1">
+          {canOpenCustomerStorefront && (
+            <button onClick={openCustomerStorefront} title="Preview Storefront" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50 px-3 text-[10px] font-black uppercase text-indigo-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 ${isExpanded ? '' : 'md:px-0'}`}>
+              <ExternalLink className="h-4 w-4 shrink-0" />
+              <span className={`truncate ${isExpanded ? '' : 'md:hidden'}`}>Preview Storefront</span>
+            </button>
+          )}
+          {onLogout && (
+            <button onClick={onLogout} title="Logout" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-3 text-[10px] font-black uppercase text-rose-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 ${isExpanded ? '' : 'md:px-0'}`}>
+              <LogOut className="h-4 w-4 shrink-0" />
+              <span className={`truncate ${isExpanded ? '' : 'md:hidden'}`}>Logout</span>
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

@@ -17,7 +17,7 @@ import UserManualView from './UserManualView';
 import { useAdminData } from './hooks/useAdminData';
 import { api } from '../../api';
 import { ShopProfile, Category, Product, Banner, Notification, User } from '../../types';
-import { ExternalLink, LogOut, PackageSearch, ShoppingBag, UserCircle } from 'lucide-react';
+import { PackageSearch, ShoppingBag, UserCircle } from 'lucide-react';
 
 type PosCartItem = { productId: string; name: string; quantity: number; price: number; maxStock: number; weightGrams?: number };
 type PosRegister = { id: string; name: string; cart: PosCartItem[] };
@@ -223,17 +223,8 @@ export default function AdminApp({ shop, categories, products, banners, notifica
     .sort((a, b) => a.stockCount - b.stockCount);
   const activeOrdersCount = admin.orders.filter((order) => order.status !== 'delivered' && order.status !== 'cancelled').length;
   const lowStockCount = Number(admin.reports?.lowStockCount ?? lowStockProducts.length);
-  const publicStorefrontUrl = (import.meta.env.VITE_PUBLIC_APP_URL || 'https://svayiro.co.in').replace(/\/$/, '');
   const primaryRole = userRoles.find((role) => roleLabels[role]) || userRoles[0] || 'console';
   const roleLabel = roleLabels[primaryRole] || primaryRole.replace(/_/g, ' ');
-
-  const openStorefrontPreview = () => {
-    if (publicStorefrontUrl && publicStorefrontUrl !== window.location.origin) {
-      window.open(publicStorefrontUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
-    onSwitchMode?.('customer');
-  };
 
   const openProductFromDashboard = (productId: string) => {
     setFocusedProductId(productId);
@@ -285,26 +276,6 @@ export default function AdminApp({ shop, categories, products, banners, notifica
                   <span className="capitalize">{roleLabel}</span>
                 </span>
               </div>
-              {isOwner && (
-                <button
-                  type="button"
-                  onClick={openStorefrontPreview}
-                  className="inline-flex min-w-fit items-center justify-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 shadow-sm transition hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Preview Shopfront
-                </button>
-              )}
-              {onLogout && (
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="inline-flex min-w-fit items-center justify-center gap-2 rounded-full border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 shadow-sm transition hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </button>
-              )}
             </div>
           </div>
         </section>
