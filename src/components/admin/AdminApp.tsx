@@ -17,6 +17,7 @@ import UserManualView from './UserManualView';
 import { useAdminData } from './hooks/useAdminData';
 import { api } from '../../api';
 import { ShopProfile, Category, Product, Banner, Notification, User } from '../../types';
+import { ExternalLink, LogOut, PackageSearch, ShoppingBag, UserCircle } from 'lucide-react';
 
 type PosCartItem = { productId: string; name: string; quantity: number; price: number; maxStock: number; weightGrams?: number };
 type PosRegister = { id: string; name: string; cart: PosCartItem[] };
@@ -36,6 +37,30 @@ interface AdminAppProps {
 }
 
 type AdminMenu = 'dashboard'|'pos'|'products'|'categories'|'orders'|'advances'|'coupons'|'reviews'|'broadcasting'|'banners'|'settings'|'complaints'|'adminAlerts'|'manual';
+
+const menuTitles: Record<AdminMenu, string> = {
+  dashboard: 'Dashboard Control',
+  pos: 'Walk-In Billing POS',
+  products: 'Products Catalogue',
+  categories: 'Manage Categories',
+  orders: 'Invoice & Orders',
+  advances: 'Advance Bookings',
+  coupons: 'Offers & Coupons',
+  reviews: 'Quality Reviews',
+  broadcasting: 'Alert Bulletins',
+  banners: 'Homepage Banners',
+  settings: 'Store Settings',
+  complaints: 'Complaints & Tickets',
+  adminAlerts: 'Admin Alerts',
+  manual: 'Role User Manual'
+};
+
+const roleLabels: Record<string, string> = {
+  admin: 'Owner',
+  inventory_manager: 'Inventory Manager',
+  delivery_partner: 'Delivery Partner',
+  customer_care: 'Customer Care'
+};
 
 const roleMenus: Record<string, AdminMenu[]> = {
   admin: ['dashboard', 'pos', 'products', 'categories', 'orders', 'advances', 'coupons', 'reviews', 'complaints', 'adminAlerts', 'banners', 'broadcasting', 'settings', 'manual'],
@@ -197,6 +222,18 @@ export default function AdminApp({ shop, categories, products, banners, notifica
     .filter((product) => product.stockCount <= (product.lowStockAlertThreshold ?? 10))
     .sort((a, b) => a.stockCount - b.stockCount);
   const activeOrdersCount = admin.orders.filter((order) => order.status !== 'delivered' && order.status !== 'cancelled').length;
+  const lowStockCount = Number(admin.reports?.lowStockCount ?? lowStockProducts.length);
+  const publicStorefrontUrl = (import.meta.env.VITE_PUBLIC_APP_URL || 'https://svayiro.co.in').replace(/\/$/, '');
+  const primaryRole = userRoles.find((role) => roleLabels[role]) || userRoles[0] || 'console';
+  const roleLabel = roleLabels[primaryRole] || primaryRole.replace(/_/g, ' ');
+
+  const openStorefrontPreview = () => {
+    if (publicStorefrontUrl && publicStorefrontUrl !== window.location.origin) {
+      window.open(publicStorefrontUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    onSwitchMode?.('customer');
+  };
 
   const openProductFromDashboard = (productId: string) => {
     setFocusedProductId(productId);
@@ -210,9 +247,69 @@ export default function AdminApp({ shop, categories, products, banners, notifica
   }, [activeMenu, allowedMenus]);
 
   return (
-    <div className={`flex-1 flex flex-col md:flex-row ${isDarkMode ? 'bg-[#0f172a] text-[#f8fafc]' : 'bg-[#fafafa] text-slate-800'}`}>
+    <div className={`flex-1 flex h-screen min-h-0 flex-col overflow-hidden md:flex-row ${isDarkMode ? 'bg-[#0f172a] text-[#f8fafc]' : 'bg-[#f6f8fb] text-slate-800'}`}>
       <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} ordersCount={activeOrdersCount} advancesCount={admin.advRequests.length} reviewsCount={admin.reviews.length} isDarkMode={isDarkMode} roles={userRoles} onSwitchMode={onSwitchMode} onLogout={onLogout} />
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+      <main className="min-h-0 flex-1 overflow-y-auto md:ml-[76px]">
+        <section className={`sticky top-0 z-30 border-b px-4 py-3 backdrop-blur-xl md:px-6 ${isDarkMode ? 'border-slate-800 bg-slate-950/90' : 'border-slate-200 bg-white/92'}`}>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-sm font-black uppercase tracking-[0.16em] text-indigo-800 dark:text-indigo-300">SVAYIRO Console</h1>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${shop.isOpen ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'}`}>
+                  <span className={`h-2 w-2 rounded-full ${shop.isOpen ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  {shop.isOpen ? 'Store Open' : 'Store Closed'}
+                </span>
+              </div>
+              <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {menuTitles[activeMenu]} - Logged in as {activeUser?.name || 'Console User'} - {roleLabel}
+              </p>
+            </div>
+
+            <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
+              <div className={`flex flex-wrap items-center gap-2 rounded-full border px-3 py-2 text-xs font-black ${isDarkMode ? 'border-slate-800 bg-slate-900/70 text-slate-200' : 'border-slate-200 bg-slate-50/80 text-slate-700'}`}>
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <ShoppingBag className="h-3.5 w-3.5 text-indigo-600" />
+                  <span className="text-slate-400">Pending</span>
+                  <span>{activeOrdersCount}</span>
+                </span>
+                <span className="hidden h-4 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <PackageSearch className="h-3.5 w-3.5 text-amber-500" />
+                  <span className="text-slate-400">Low / Out</span>
+                  <span>{lowStockCount}</span>
+                </span>
+                <span className="hidden h-4 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <UserCircle className="h-3.5 w-3.5 text-indigo-600" />
+                  <span className="text-slate-400">Role</span>
+                  <span className="capitalize">{roleLabel}</span>
+                </span>
+              </div>
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={openStorefrontPreview}
+                  className="inline-flex min-w-fit items-center justify-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 shadow-sm transition hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Preview Shopfront
+                </button>
+              )}
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="inline-flex min-w-fit items-center justify-center gap-2 rounded-full border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 shadow-sm transition hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <div className="p-4 md:p-6 xl:p-8">
         {activeMenu === 'dashboard' && <DashboardView reportsLoading={admin.reportsLoading} isDarkMode={isDarkMode} reports={admin.reports} lowStockProducts={lowStockProducts} onOpenLowStockProduct={openProductFromDashboard} />}
         {activeMenu === 'pos' && <PosView isDarkMode={isDarkMode} products={products} offlineCart={offlineCart} registers={registerSummaries} activeRegisterId={activeRegisterId} bags={admin.bags} inventoryLogs={admin.invLogs} canOverridePrice={isOwner} onSelectRegister={setActiveRegisterId} onAddRegister={addPosRegister} onCloseRegister={closePosRegister} onFilterInventoryLogs={handleFilterInventoryLogs} onCleanupInventoryLogs={handleCleanupInventoryLogs} onAddToCart={handleAddToOfflineCart} onUpdateQuantity={updateOfflineCartQuantity} onRemoveItem={removeOfflineCartItem} onSubmitSale={handleOfflineSaleSubmit} onClearCart={() => updateActiveRegisterCart(() => [])} />}
         {activeMenu === 'products' && <ProductsView isDarkMode={isDarkMode} focusedProductId={focusedProductId} onFocusedProductHandled={() => setFocusedProductId(null)} />}
@@ -227,6 +324,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
         {activeMenu === 'complaints' && <ComplaintsView isDarkMode={isDarkMode} showToast={showToast} />}
         {activeMenu === 'adminAlerts' && <AdminAlertsView isDarkMode={isDarkMode} showToast={showToast} />}
         {activeMenu === 'manual' && <UserManualView roles={userRoles} isDarkMode={isDarkMode} />}
+        </div>
       </main>
     </div>
   );

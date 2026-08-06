@@ -196,7 +196,7 @@ function printShopInvoice(order: Order) {
 
           <table>
             <thead>
-              <tr><th>#</th><th>Item</th><th class="right">Qty</th><th class="right">Rate</th><th class="right">Amount</th></tr>
+              <tr><th>#</th><th>Item</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Line Total</th></tr>
             </thead>
             <tbody>${itemsHtml}</tbody>
           </table>

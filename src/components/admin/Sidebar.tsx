@@ -1,5 +1,5 @@
-import React from 'react';
-import { TrendingUp, QrCode, Package, Layers, ShoppingBag, Calendar, Gift, MessageSquare, Bell, BellRing, Image, Settings, LogOut, AlertTriangle, BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { TrendingUp, QrCode, Package, Layers, ShoppingBag, Calendar, Gift, MessageSquare, Bell, BellRing, Image, Settings, LogOut, AlertTriangle, BookOpen, ExternalLink, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface Props {
   activeMenu: string;
@@ -31,7 +31,16 @@ const menuRoles: Record<string, string[]> = {
 };
 
 export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, advancesCount = 0, reviewsCount = 0, isDarkMode, roles = [], onSwitchMode, onLogout }: Props) {
-  const canOpenCustomerStorefront = roles.includes('admin') && Boolean(onSwitchMode);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const canOpenCustomerStorefront = roles.includes('admin');
+  const publicStorefrontUrl = (import.meta.env.VITE_PUBLIC_APP_URL || 'https://svayiro.co.in').replace(/\/$/, '');
+  const openCustomerStorefront = () => {
+    if (publicStorefrontUrl && publicStorefrontUrl !== window.location.origin) {
+      window.open(publicStorefrontUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    onSwitchMode?.('customer');
+  };
   const items = [
     { id: 'dashboard', label: 'Dashboard Control', icon: TrendingUp },
     { id: 'pos', label: 'Walk-In Billing (POS)', icon: QrCode },
@@ -48,41 +57,85 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
     { id: 'settings', label: 'Store Settings', icon: Settings },
     { id: 'manual', label: 'User Manual', icon: BookOpen }
   ];
+  const visibleItems = items.filter((item) => (menuRoles[item.id] || ['admin']).some((role) => roles.includes(role)));
 
   return (
-    <aside className={`w-full md:w-64 md:min-h-screen md:sticky md:top-0 border-b md:border-r shrink-0 transition-colors p-4 flex flex-col ${isDarkMode ? 'border-[#1e293b] bg-[#090d16]' : 'border-slate-200 bg-white'}`}>
-      <div className="flex items-center gap-2 mb-4 md:mb-6">
-        <Settings className="h-6 w-6 text-indigo-500" />
-        <h2 className="font-extrabold text-indigo-700 text-lg font-mono tracking-wider dark:text-indigo-300">SVAYIRO CONSOLE</h2>
+    <aside className={`w-full shrink-0 border-b p-2 transition-all duration-200 sm:p-3 md:fixed md:inset-y-0 md:left-0 md:z-40 md:h-screen md:w-auto md:border-b-0 md:border-r md:overflow-hidden ${isExpanded ? 'md:w-64' : 'md:w-[76px]'} flex flex-col ${isDarkMode ? 'border-[#1e293b] bg-[#090d16]' : 'border-slate-200 bg-white'}`}>
+      <div className={`mb-2 flex items-center gap-3 rounded-2xl border p-2 ${isExpanded ? 'md:justify-start' : 'md:justify-center'} ${isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-slate-50'}`}>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-700 text-white shadow-lg shadow-indigo-900/20">
+          <Settings className="h-5 w-5" />
+        </div>
+        <div className={`min-w-0 ${isExpanded ? 'md:block' : 'md:hidden'}`}>
+          <h2 className="truncate font-extrabold text-indigo-800 text-sm font-mono tracking-wider dark:text-indigo-300">SVAYIRO CONSOLE</h2>
+          <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Operator panel</p>
+        </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+        className={`mb-2 hidden h-10 items-center justify-center gap-2 rounded-2xl border px-3 py-2 text-[10px] font-black uppercase transition md:flex ${
+          isDarkMode
+            ? 'border-slate-800 bg-slate-950 text-slate-300 hover:border-indigo-800'
+            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-200'
+        }`}
+        title={isExpanded ? 'Collapse menu' : 'Expand menu'}
+        aria-label={isExpanded ? 'Collapse admin menu' : 'Expand admin menu'}
+      >
+        {isExpanded ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+        {isExpanded && <span>Collapse</span>}
+      </button>
+
       {(canOpenCustomerStorefront || onLogout) && (
-        <div className="order-2 md:order-3 mb-3 md:mb-0 md:mt-8 pt-3 md:pt-4 border-t border-slate-200 dark:border-slate-800/80 grid grid-cols-2 md:grid-cols-1 gap-2">
+        <div className="order-3 mt-2 grid grid-cols-2 gap-2 border-t border-slate-200 pt-2 dark:border-slate-800/80 md:grid-cols-1">
           {canOpenCustomerStorefront && (
-            <button onClick={() => onSwitchMode('customer')} className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 rounded-lg">
-              <ShoppingBag className="h-4 w-4 text-indigo-500" />
-              <span>Preview Storefront</span>
+            <button onClick={openCustomerStorefront} title="Preview Storefront" className={`w-full flex h-11 items-center justify-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50 px-3 text-[10px] font-black uppercase text-indigo-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 ${isExpanded ? '' : 'md:px-0'}`}>
+              <ExternalLink className="h-4 w-4" />
+              <span className={isExpanded ? '' : 'md:hidden'}>Preview Storefront</span>
             </button>
           )}
           {onLogout && (
-            <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100">
-              <LogOut className="h-4 w-4 text-rose-500" />
-              <span>Logout Admin</span>
+            <button onClick={onLogout} title="Logout" className={`w-full flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-3 text-[10px] font-black uppercase text-rose-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 ${isExpanded ? '' : 'md:px-0'}`}>
+              <LogOut className="h-4 w-4" />
+              <span className={isExpanded ? '' : 'md:hidden'}>Logout</span>
             </button>
           )}
         </div>
       )}
 
-      <nav className="order-3 md:order-2 flex md:flex-col overflow-x-auto md:overflow-y-auto gap-1 border-t md:border-t-0 pt-3 md:pt-0 pb-2 text-xs md:flex-1">
-        {items.filter((item) => (menuRoles[item.id] || ['admin']).some((role) => roles.includes(role))).map(item => {
+      <nav className="order-2 flex min-h-0 gap-2 overflow-x-auto border-t pb-1 pt-2 text-xs md:max-h-[calc(100vh-168px)] md:flex-none md:flex-col md:overflow-x-hidden md:overflow-y-auto md:border-t-0 md:pt-0">
+        {visibleItems.map(item => {
           const Icon = item.icon as any;
           return (
-            <button key={item.id} onClick={() => setActiveMenu(item.id)} className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg select-none text-left whitespace-nowrap transition-all ${activeMenu === item.id ? 'bg-indigo-700 text-white font-bold shadow-md' : 'opacity-75 hover:opacity-100 text-slate-700 dark:text-slate-300'}`}>
+            <button
+              key={item.id}
+              onClick={() => setActiveMenu(item.id)}
+              title={item.label}
+              className={`group relative flex min-w-fit items-center justify-between gap-3 rounded-2xl border px-3 py-2.5 select-none text-left whitespace-nowrap transition-all md:h-12 md:min-w-0 ${isExpanded ? 'md:justify-between' : 'md:w-12 md:justify-center md:px-0'} ${
+              activeMenu === item.id
+                ? 'border-indigo-700 bg-indigo-700 text-white font-black shadow-lg shadow-indigo-900/20'
+                : isDarkMode
+                  ? 'border-slate-800 bg-slate-950 text-slate-300 hover:border-indigo-700 hover:text-white'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-800 hover:shadow-sm'
+            }`}
+            >
+              {activeMenu === item.id && (
+                <span className="absolute -left-1 top-1/2 hidden h-7 w-1 -translate-y-1/2 rounded-r-full bg-emerald-400 md:block" />
+              )}
               <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4 shrink-0 text-slate-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300" />
-                <span>{item.label}</span>
+                <Icon className={`h-5 w-5 shrink-0 ${activeMenu === item.id ? 'text-white' : 'text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300'}`} />
+                <span className={`font-bold ${isExpanded ? '' : 'md:hidden'}`}>{item.label}</span>
               </div>
-              {item.badge ? <span className="text-[9px] px-1.5 py-0.2 rounded font-black font-mono leading-none bg-rose-50 text-rose-500">{item.badge}</span> : null}
+              {!isExpanded && (
+                <span className="pointer-events-none absolute left-[56px] top-1/2 z-50 hidden -translate-y-1/2 rounded-lg bg-slate-950 px-2.5 py-1.5 text-[10px] font-black uppercase text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100 md:block">
+                  {item.label}
+                </span>
+              )}
+              {item.badge ? (
+                <span className={`text-[9px] px-1.5 py-0.2 rounded font-black font-mono leading-none bg-rose-50 text-rose-500 ${isExpanded ? '' : 'md:absolute md:right-1 md:top-1'}`}>
+                  {item.badge}
+                </span>
+              ) : null}
             </button>
           );
         })}

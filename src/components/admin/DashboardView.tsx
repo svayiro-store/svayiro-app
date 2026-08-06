@@ -31,7 +31,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
   const statCards = [
     { label: 'Total Revenue', value: `Rs ${(reports.revenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: DollarSign, color: 'emerald' },
     { label: 'Orders Placed', value: String(reports.totalOrdersPlaced ?? 0), icon: ShoppingBag, color: 'indigo' },
-    { label: 'Low Stock Items', value: String(reports.lowStockCount ?? 0), icon: AlertTriangle, color: 'rose' },
+    { label: 'Low / Out Stock Items', value: String(reports.lowStockCount ?? 0), icon: AlertTriangle, color: 'rose' },
     { label: 'Total Profit', value: `Rs ${(reports.totalProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: TrendingUp, color: 'amber' }
   ];
 

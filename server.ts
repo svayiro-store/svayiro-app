@@ -1101,7 +1101,7 @@ function renderPublicInvoiceHtml(invoice: any, order: any) {
             <div class="box"><div class="label">Customer</div><strong>${escapeHtml(invoice.customer_name || order.customer_name || 'Customer')}</strong><br><span class="muted">Phone: ${escapeHtml(invoice.customer_phone || order.customer_phone || '-')}</span></div>
             <div class="box"><div class="label">Fulfillment</div><strong>${order.delivery_method === 'delivery' ? 'Home Delivery' : 'Store Pickup / POS'}</strong><br><span class="muted">${escapeHtml(order.selected_slot || 'No slot')}<br>${escapeHtml(orderAddressText(invoice.billing_address || order.delivery_address))}</span></div>
           </div>
-          <table><thead><tr><th>#</th><th>Item</th><th class="right">Qty</th><th class="right">Rate</th><th class="right">Amount</th></tr></thead><tbody>${itemRows || '<tr><td colspan="5">No items found</td></tr>'}</tbody></table>
+          <table><thead><tr><th>#</th><th>Item</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Line Total</th></tr></thead><tbody>${itemRows || '<tr><td colspan="5">No items found</td></tr>'}</tbody></table>
           <div class="totals">
             <div class="total-row"><span>Product subtotal</span><strong>${money(invoice.subtotal)}</strong></div>
             <div class="total-row"><span>Delivery charge</span><strong>${money(invoice.delivery_charge)}</strong></div>
@@ -1517,18 +1517,21 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
 
       // Validate stock and compute totals
       let productTotal = 0;
-      const orderItems: Array<{ product_id: string | null; name: string; sku: string | null; quantity: number; unit_price: number; purchase_unit_cost: number; total_price: number; weight_grams: number }> = [];
+      const orderItems: Array<{ product_id: string | null; name: string; sku: string | null; quantity: number; unit_price: number; base_unit_price: number; purchase_unit_cost: number; total_price: number; total_base_price: number; item_discount: number; weight_grams: number }> = [];
       for (const it of payload.items) {
         const p = prodMap.get(it.productId);
         if (!p) throw new Error(`Product ${it.productId} not found`);
         if (p.stock_count < it.quantity) throw new Error(`Insufficient stock for ${p.name}`);
-        const unitPrice = (p.offer_price && Number(p.offer_price) > 0) ? Number(p.offer_price) : Number(p.base_price);
+        const baseUnitPrice = Number(p.base_price || 0);
+        const unitPrice = (p.offer_price && Number(p.offer_price) > 0) ? Number(p.offer_price) : baseUnitPrice;
         const totalPrice = unitPrice * it.quantity;
+        const totalBasePrice = baseUnitPrice * it.quantity;
+        const itemDiscount = Math.max(0, totalBasePrice - totalPrice);
         productTotal += totalPrice;
         const productMetadata = p.metadata && typeof p.metadata === 'object' ? p.metadata : {};
         const purchaseUnitCost = Number(productMetadata.purchasePrice || 0);
         if (purchaseUnitCost <= 0) throw new Error(`Real item cost is missing for ${p.name}. Update product purchase price first.`);
-        orderItems.push({ product_id: p.id, name: p.name, sku: p.sku, quantity: it.quantity, unit_price: unitPrice, purchase_unit_cost: purchaseUnitCost, total_price: totalPrice, weight_grams: Number(p.weight_grams || 0) });
+        orderItems.push({ product_id: p.id, name: p.name, sku: p.sku, quantity: it.quantity, unit_price: unitPrice, base_unit_price: baseUnitPrice, purchase_unit_cost: purchaseUnitCost, total_price: totalPrice, total_base_price: totalBasePrice, item_discount: itemDiscount, weight_grams: Number(p.weight_grams || 0) });
       }
 
       const paymentMethod = payload.paymentMethod || 'cod';
@@ -1576,11 +1579,14 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
           : Number(coupon.discount_value || 0);
         discountAmountValue = Math.min(productTotal, Math.max(0, rawDiscount));
       }
+      const itemDiscountValue = orderItems.reduce((sum, item) => sum + Number(item.item_discount || 0), 0);
+      const baseProductSubtotal = orderItems.reduce((sum, item) => sum + Number(item.total_base_price || item.total_price || 0), 0);
       const totalBeforeLoyalty = Math.max(0, productTotal + deliveryChargeValue + bagChargeValue - discountAmountValue);
       const loyaltyRedemption = await computeLoyaltyRedemption(client, uid, payload.loyaltyRedeemPoints, totalBeforeLoyalty);
       const orderRef = generateId('ord');
-      const totalDiscount = discountAmountValue + loyaltyRedemption.discount;
-      const orderRes = await client.query(`INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, meta, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now(),now()) RETURNING *`, [uid, orderRef, payload.customerName || null, customerPhone, orderStatus, paymentMethod, paymentStatus, paymentRef, deliveryMethodValue, payload.deliveryAddress || null, payload.selectedSlot || null, payload.bagOption || 'need', JSON.stringify(orderItems), productTotal, deliveryChargeValue, bagChargeValue, totalDiscount, Math.max(0, totalBeforeLoyalty - loyaltyRedemption.discount), { couponCode: couponCode || null, couponDiscount: discountAmountValue, loyaltyRedeemPoints: loyaltyRedemption.points, loyaltyDiscount: loyaltyRedemption.discount, deliveryRoute: deliveryRouteMeta }]);
+      const totalDiscount = itemDiscountValue + discountAmountValue + loyaltyRedemption.discount;
+      const finalAmountValue = Math.max(0, baseProductSubtotal + deliveryChargeValue + bagChargeValue - totalDiscount);
+      const orderRes = await client.query(`INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, meta, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now(),now()) RETURNING *`, [uid, orderRef, payload.customerName || null, customerPhone, orderStatus, paymentMethod, paymentStatus, paymentRef, deliveryMethodValue, payload.deliveryAddress || null, payload.selectedSlot || null, payload.bagOption || 'need', JSON.stringify(orderItems), baseProductSubtotal, deliveryChargeValue, bagChargeValue, totalDiscount, finalAmountValue, { couponCode: couponCode || null, itemDiscount: itemDiscountValue, couponDiscount: discountAmountValue, loyaltyRedeemPoints: loyaltyRedemption.points, loyaltyDiscount: loyaltyRedemption.discount, productSellingSubtotal: productTotal, deliveryRoute: deliveryRouteMeta }]);
 
       const orderId = orderRes.rows[0].id;
       const shouldApplyOrderEffectsNow = !(paymentMethod === 'upi' && paymentStatus === 'pending');
@@ -5521,9 +5527,10 @@ app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use')
 
   try {
     const result = await runTransaction(async (client) => {
-      const orderItems: Array<{ product_id: string | null; sku: string | null; name: string; quantity: number; unit_price: number; purchase_unit_cost: number; total_price: number; weight_grams?: number }> = [];
+      const orderItems: Array<{ product_id: string | null; sku: string | null; name: string; quantity: number; unit_price: number; base_unit_price: number; purchase_unit_cost: number; total_price: number; total_base_price: number; item_discount: number; weight_grams?: number }> = [];
       const pendingInventoryLogs: Array<{ productId: string | null; delta: number; reason: string; source: string; metadata: any }> = [];
       let calculatedTotal = 0;
+      let baseProductSubtotal = 0;
       for (const item of saleItems) {
         if (item.isUnlisted || (item.productId && String(item.productId).startsWith('unlisted_'))) {
           if (!isOwner) throw new HttpError(403, 'Only owner can bill unlisted custom items.');
@@ -5531,9 +5538,10 @@ app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use')
           const unlistedPrice = item.price !== undefined ? Number(item.price) : 0;
           const itemSubtotal = unlistedPrice * item.quantity;
           calculatedTotal += itemSubtotal;
+          baseProductSubtotal += itemSubtotal;
           pendingInventoryLogs.push({ productId: null, delta: -item.quantity, reason: 'offline_sale', source: 'offline', metadata: { note: note || 'Unlisted item', name: unlistedName } });
           const unlistedCost = item.purchasePrice !== undefined ? Number(item.purchasePrice || 0) : 0;
-          orderItems.push({ product_id: null, sku: null, name: unlistedName, quantity: item.quantity, unit_price: unlistedPrice, purchase_unit_cost: unlistedCost, total_price: itemSubtotal });
+          orderItems.push({ product_id: null, sku: null, name: unlistedName, quantity: item.quantity, unit_price: unlistedPrice, base_unit_price: unlistedPrice, purchase_unit_cost: unlistedCost, total_price: itemSubtotal, total_base_price: itemSubtotal, item_discount: 0 });
           continue;
         }
         const pRes = await client.query('SELECT * FROM products WHERE id = $1 FOR UPDATE', [item.productId]);
@@ -5541,19 +5549,23 @@ app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use')
         const prod = pRes.rows[0];
         if (Number(prod.stock_count) < Number(item.quantity)) throw new Error(`Insufficient stock for ${prod.name}`);
         await client.query('UPDATE products SET stock_count = stock_count - $1, updated_at = now() WHERE id = $2', [item.quantity, item.productId]);
-        const catalogPrice = Number(prod.offer_price) > 0 ? Number(prod.offer_price) : Number(prod.base_price);
+        const baseUnitPrice = Number(prod.base_price || 0);
+        const catalogPrice = Number(prod.offer_price) > 0 ? Number(prod.offer_price) : baseUnitPrice;
         const requestedPrice = item.price !== undefined ? Number(item.price) : catalogPrice;
         if (!isOwner && Math.abs(requestedPrice - catalogPrice) > 0.001) {
           throw new HttpError(403, `Only owner can override price for ${prod.name}.`);
         }
         const price = isOwner ? requestedPrice : catalogPrice;
         const subtotal = price * item.quantity;
+        const totalBasePrice = baseUnitPrice * item.quantity;
+        const itemDiscount = Math.max(0, totalBasePrice - subtotal);
         calculatedTotal += subtotal;
+        baseProductSubtotal += totalBasePrice;
         pendingInventoryLogs.push({ productId: item.productId, delta: -item.quantity, reason: 'offline_sale', source: 'offline', metadata: { note: note || null } });
         const productMetadata = prod.metadata && typeof prod.metadata === 'object' ? prod.metadata : {};
         const purchaseUnitCost = Number(productMetadata.purchasePrice || 0);
         if (purchaseUnitCost <= 0) throw new Error(`Real item cost is missing for ${prod.name}. Update product purchase price first.`);
-        orderItems.push({ product_id: item.productId, sku: prod.sku || null, name: prod.name, quantity: item.quantity, unit_price: price, purchase_unit_cost: purchaseUnitCost, total_price: subtotal, weight_grams: Number(prod.weight_grams || 0) });
+        orderItems.push({ product_id: item.productId, sku: prod.sku || null, name: prod.name, quantity: item.quantity, unit_price: price, base_unit_price: baseUnitPrice, purchase_unit_cost: purchaseUnitCost, total_price: subtotal, total_base_price: totalBasePrice, item_discount: itemDiscount, weight_grams: Number(prod.weight_grams || 0) });
       }
 
       const bagOption = req.body?.bagOption || 'own';
@@ -5563,8 +5575,9 @@ app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use')
         const totalBagWeightGrams = orderItems.reduce((sum: number, item: any) => sum + Number(item.weight_grams || 0) * Number(item.quantity || 0), 0);
         bagCharge = computeSmartBags(totalBagWeightGrams, bagRows.rows).reduce((sum: number, bag: any) => sum + Number(bag.cost || 0), 0);
       }
+      const itemDiscountValue = orderItems.reduce((sum, item) => sum + Number(item.item_discount || 0), 0);
       const finalAmount = calculatedTotal + bagCharge;
-      const ordRes = await client.query('INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,now(),now()) RETURNING *', [null, generateId('ord'), customerName || 'Guest', normalizedCustomerPhone, 'delivered', paymentMethod === 'upi' ? 'upi' : 'cod', 'paid', upiReference || null, 'pickup', null, 'In-store Direct Purchase', bagOption, JSON.stringify(orderItems), calculatedTotal, 0, bagCharge, 0, finalAmount]);
+      const ordRes = await client.query('INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, meta, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now(),now()) RETURNING *', [null, generateId('ord'), customerName || 'Guest', normalizedCustomerPhone, 'delivered', paymentMethod === 'upi' ? 'upi' : 'cod', 'paid', upiReference || null, 'pickup', null, 'In-store Direct Purchase', bagOption, JSON.stringify(orderItems), baseProductSubtotal, 0, bagCharge, itemDiscountValue, finalAmount, { itemDiscount: itemDiscountValue, productSellingSubtotal: calculatedTotal }]);
       const order = ordRes.rows[0];
       for (const it of orderItems) {
         await client.query('INSERT INTO order_items(order_id, product_id, name, sku, quantity, unit_price, purchase_unit_cost, total_price) VALUES($1,$2,$3,$4,$5,$6,$7,$8)', [order.id, it.product_id, it.name, it.sku || null, it.quantity, it.unit_price, it.purchase_unit_cost, it.total_price]);
@@ -5765,7 +5778,12 @@ app.get('/api/admin/reports', authMiddleware, isAdminMiddleware, async (req, res
     const revenue = Number(revenueRow.rows[0].revenue || 0);
     const ordersCountRow = await pgQuery("SELECT COUNT(*) AS total_orders FROM orders WHERE status != 'cancelled'");
     const totalOrdersPlaced = Number(ordersCountRow.rows[0].total_orders || 0);
-    const lowStockRow = await pgQuery('SELECT COUNT(*)::int AS cnt FROM products WHERE stock_count <= COALESCE(low_stock_threshold,10)');
+    const lowStockRow = await pgQuery(`
+      SELECT COUNT(*)::int AS cnt
+      FROM products
+      WHERE is_enabled IS DISTINCT FROM false
+        AND stock_count <= COALESCE(low_stock_threshold, 10)
+    `);
     const lowStockProductsCount = Number(lowStockRow.rows[0].cnt || 0);
     const topProductsRes = await pgQuery(`
       SELECT oi.product_id, p.name, SUM(oi.quantity) AS quantity, SUM(oi.total_price) AS sales

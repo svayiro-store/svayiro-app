@@ -2,13 +2,17 @@ import React, { useMemo, useState } from 'react';
 import {
   CheckCircle,
   ClipboardList,
+  Copy,
   CreditCard,
   Delete,
+  Keyboard,
+  ListChecks,
   Minus,
   PackageSearch,
   Plus,
   QrCode,
   Receipt,
+  Search,
   ShoppingBag,
   Trash2,
   Printer,
@@ -33,7 +37,7 @@ type RegisterSession = {
   customItemName: string;
   qtyInput: string;
   priceOverride: string;
-  keypadTarget: 'qty' | 'price';
+  keypadTarget: 'qty' | 'price' | 'phone';
   customerName: string;
   customerPhone: string;
   paymentMethod: 'cod' | 'upi';
@@ -73,6 +77,7 @@ interface Props {
 
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
 const panelClass = 'rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900';
+const POS_PRODUCT_PAGE_SIZE = 50;
 
 /** Pre-texted WhatsApp message for POS Walk-In Customer */
 function buildPosWhatsAppMessage(
@@ -154,6 +159,13 @@ export default function PosView({
   const [lastInvoiceUrl, setLastInvoiceUrl] = useState('');
   const [barcodeScanValue, setBarcodeScanValue] = useState('');
   const [barcodeScanning, setBarcodeScanning] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [posProducts, setPosProducts] = useState<Product[]>(products);
+  const [posProductOffset, setPosProductOffset] = useState(products.length);
+  const [posProductsHasMore, setPosProductsHasMore] = useState(products.length >= POS_PRODUCT_PAGE_SIZE);
+  const [posProductsLoading, setPosProductsLoading] = useState(false);
+  const [showCustomPanel, setShowCustomPanel] = useState(false);
+  const [posPage, setPosPage] = useState<'billing' | 'logs'>('billing');
 
   const sessionKey = activeRegisterId || registers[0]?.id || 'register_1';
   const session = sessions[sessionKey] || emptyRegisterSession();
@@ -168,10 +180,59 @@ export default function PosView({
     }));
   };
 
+  React.useEffect(() => {
+    if (productSearch.trim()) return;
+    setPosProducts(products);
+    setPosProductOffset(products.length);
+    setPosProductsHasMore(products.length >= POS_PRODUCT_PAGE_SIZE);
+  }, [productSearch, products]);
+
+  React.useEffect(() => {
+    const term = productSearch.trim();
+    if (term.length < 2) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setPosProductsLoading(true);
+      try {
+        const next = await api.searchProducts({ search: term, limit: POS_PRODUCT_PAGE_SIZE, offset: 0 });
+        if (!cancelled) {
+          setPosProducts(next);
+          setPosProductOffset(next.length);
+          setPosProductsHasMore(next.length === POS_PRODUCT_PAGE_SIZE);
+        }
+      } catch {
+        if (!cancelled) setPosProductsHasMore(false);
+      } finally {
+        if (!cancelled) setPosProductsLoading(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [productSearch]);
+
   const sortedProducts = useMemo(
-    () => [...products].sort((a, b) => a.name.localeCompare(b.name)),
-    [products]
+    () => [...posProducts].sort((a, b) => a.name.localeCompare(b.name)),
+    [posProducts]
   );
+  const quickProducts = useMemo(() => {
+    const term = productSearch.trim().toLowerCase();
+    const matches = term
+      ? sortedProducts.filter((product) => {
+          const haystack = [
+            product.name,
+            product.sku,
+            product.categoryId,
+            product.subcategoryId,
+            product.packageLabel,
+            product.description
+          ].filter(Boolean).join(' ').toLowerCase();
+          return haystack.includes(term);
+        })
+      : sortedProducts;
+    return matches;
+  }, [productSearch, sortedProducts]);
   const normalizedBags = useMemo(() => bags.map((bag: any, index) => ({
     ...bag,
     size: bag.size || bag.size_label || `Bag ${index + 1}`,
@@ -228,8 +289,7 @@ export default function PosView({
   const total = subtotal + bagCost;
   const activeRegister = registers.find((register) => register.id === activeRegisterId) || registers[0];
   const activeRegisterName = activeRegister?.name || 'Customer 1';
-  const selectedProduct = sortedProducts.find((product) => product.id === session.selectedProductId);
-  const activeValue = session.keypadTarget === 'qty' ? session.qtyInput : session.priceOverride;
+  const activeValue = session.keypadTarget === 'qty' ? session.qtyInput : session.keypadTarget === 'phone' ? session.customerPhone : session.priceOverride;
   const recentLogs = inventoryLogs.slice(0, 120);
 
   const cleanupOptions = [
@@ -242,6 +302,12 @@ export default function PosView({
 
   const applyLogDateFilter = (dateValue = logDate) => {
     onFilterInventoryLogs?.(dateValue ? { date: dateValue } : undefined);
+  };
+
+  const clearCompletedSaleActions = () => {
+    if (!lastCompletedOrder && !lastInvoiceUrl) return;
+    setLastCompletedOrder(null);
+    setLastInvoiceUrl('');
   };
 
   const handleCleanupLogs = async (olderThan: '1w' | '1m' | '2m' | '3m' | '5m') => {
@@ -276,10 +342,24 @@ export default function PosView({
 
   const setTargetValue = (next: string) => {
     if (session.keypadTarget === 'qty') updateSession({ qtyInput: next });
+    else if (session.keypadTarget === 'phone') updateSession({ customerPhone: next.replace(/\D/g, '').slice(0, 10) });
     else updateSession({ priceOverride: next });
   };
 
   const handleKey = (key: string) => {
+    if (session.keypadTarget === 'phone') {
+      if (key === 'clear') {
+        updateSession({ customerPhone: '' });
+        return;
+      }
+      if (key === 'back') {
+        updateSession({ customerPhone: session.customerPhone.slice(0, -1) });
+        return;
+      }
+      if (key.startsWith('+') || key === '.') return;
+      updateSession({ customerPhone: `${session.customerPhone}${key}`.replace(/\D/g, '').slice(0, 10) });
+      return;
+    }
     if (key === 'clear') {
       setTargetValue(session.keypadTarget === 'qty' ? '1' : '');
       return;
@@ -300,14 +380,37 @@ export default function PosView({
     setTargetValue(next);
   };
 
-  const handleAddCatalogItem = () => {
-    if (!session.selectedProductId) return;
+  const handleQuickAddProduct = (product: Product) => {
+    if (Number(product.stockCount || 0) <= 0) {
+      alert(`${product.name} is out of stock.`);
+      return;
+    }
     const qty = Math.max(1, Number(session.qtyInput || 1));
-    const override = canOverridePrice && session.priceOverride ? Math.max(0, Number(session.priceOverride)) : undefined;
-    onAddToCart?.({ productId: session.selectedProductId, qty, priceOverride: override });
-    updateSession({ selectedProductId: '', priceOverride: '' });
+    clearCompletedSaleActions();
+    onAddToCart?.({ productId: product.id, qty });
     setCatalogAddFlash(true);
-    window.setTimeout(() => setCatalogAddFlash(false), 1000);
+    window.setTimeout(() => setCatalogAddFlash(false), 650);
+  };
+
+  const handleLoadMorePosProducts = async () => {
+    if (posProductsLoading) return;
+    setPosProductsLoading(true);
+    try {
+      const term = productSearch.trim();
+      const next = term.length >= 2
+        ? await api.searchProducts({ search: term, limit: POS_PRODUCT_PAGE_SIZE, offset: posProductOffset })
+        : await api.getProducts({ limit: POS_PRODUCT_PAGE_SIZE, offset: posProductOffset });
+      setPosProducts((prev) => {
+        const known = new Set(prev.map((product) => product.id));
+        return [...prev, ...next.filter((product) => !known.has(product.id))];
+      });
+      setPosProductOffset((offset) => offset + next.length);
+      setPosProductsHasMore(next.length === POS_PRODUCT_PAGE_SIZE);
+    } catch (err: any) {
+      alert(err?.message || 'Unable to load more POS products.');
+    } finally {
+      setPosProductsLoading(false);
+    }
   };
 
   const handleBarcodeScanSubmit = async () => {
@@ -317,6 +420,7 @@ export default function PosView({
     try {
       const directSkuMatch = sortedProducts.find((product) => String(product.sku || '').toUpperCase() === barcode);
       if (directSkuMatch) {
+        clearCompletedSaleActions();
         onAddToCart?.({ productId: directSkuMatch.id, qty: 1 });
         setBarcodeScanValue('');
         setCatalogAddFlash(true);
@@ -326,6 +430,7 @@ export default function PosView({
       const result = await api.lookupProductByBarcode(barcode);
       if (!result.product?.id) throw new Error('Barcode not linked to any product.');
       if (Number(result.product.stockCount || 0) <= 0) throw new Error(`${result.product.name} is out of stock.`);
+      clearCompletedSaleActions();
       onAddToCart?.({ productId: result.product.id, qty: 1, product: result.product });
       setBarcodeScanValue('');
       setCatalogAddFlash(true);
@@ -343,8 +448,10 @@ export default function PosView({
     if (!name) return;
     const price = Math.max(0, Number(session.priceOverride || 0));
     const qty = Math.max(1, Number(session.qtyInput || 1));
+    clearCompletedSaleActions();
     onAddToCart?.({ customItemName: name, priceOverride: price, qty });
-    updateSession({ customItemName: '' });
+    updateSession({ customItemName: '', priceOverride: '', qtyInput: '1', keypadTarget: 'qty' });
+    setShowCustomPanel(false);
   };
 
   /** Action 1: Print Receipt */
@@ -388,7 +495,7 @@ export default function PosView({
           <h1>SVAYIRO POS Receipt</h1>
           <div class="meta">${formatDateTimeDDMMYYYY(new Date())}</div>
           <div class="meta">Customer: ${session.customerName || 'Walk-In Customer'} | ${session.customerPhone || '-'}</div>
-          <table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>${lines}</tbody></table>
+          <table><thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead><tbody>${lines}</tbody></table>
           ${billBagCost > 0 ? `<div class="total">Bag charge: Rs. ${billBagCost.toFixed(2)}</div>` : ''}
           <div class="total">Grand total: Rs. ${billTotal.toFixed(2)}</div>
           <div class="meta">Payment: ${billPaymentMethod} ${billPaymentRef ? `(${billPaymentRef})` : ''}</div>
@@ -420,7 +527,20 @@ export default function PosView({
     openPosWhatsAppBill(targetPhone, message);
   };
 
-  /** Action 3: Complete Sale Only (Decrements stock, clears session) */
+  const handleCopyInvoiceLink = async () => {
+    if (!lastInvoiceUrl) {
+      alert('Complete the sale first so the public invoice link can be created.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(lastInvoiceUrl);
+      alert('Invoice link copied. Use this if the customer number is not on WhatsApp.');
+    } catch {
+      window.prompt('Copy this invoice link', lastInvoiceUrl);
+    }
+  };
+
+  /** Complete sale, decrement stock, and generate the public invoice link. */
   const handleSubmit = async () => {
     if (offlineCart.length === 0) {
       alert('Cart is empty');
@@ -454,7 +574,7 @@ export default function PosView({
       } else {
         setLastInvoiceUrl('');
       }
-      alert('Sale completed successfully! Inventory updated.');
+      alert('Sale completed successfully. Invoice generated.');
       updateSession(emptyRegisterSession());
     } catch (err: any) {
       alert(err?.message || 'Unable to complete sale.');
@@ -466,14 +586,44 @@ export default function PosView({
   const keypad = ['1', '2', '3', '+1', '4', '5', '6', '+5', '7', '8', '9', '+10', '.', '0', 'back', 'clear'];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-serif text-2xl font-black">Walk-In Billing (POS Counter)</h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Record walk-in checkout details, decrement stock, print receipt, and send the bill to the customer WhatsApp number when configured.
-        </p>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h2 className="font-serif text-2xl font-black">Walk-In Billing POS</h2>
+          <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+            Scan, search, bill, print receipt, and send WhatsApp bill from one counter screen.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <button
+            type="button"
+            onClick={() => setPosPage('billing')}
+            className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-black uppercase transition ${
+              posPage === 'billing'
+                ? 'bg-indigo-700 text-white'
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900'
+            }`}
+          >
+            <Receipt className="h-4 w-4" />
+            Billing Counter
+          </button>
+          <button
+            type="button"
+            onClick={() => setPosPage('logs')}
+            className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-black uppercase transition ${
+              posPage === 'logs'
+                ? 'bg-indigo-700 text-white'
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900'
+            }`}
+          >
+            <ListChecks className="h-4 w-4" />
+            Inventory Log Book
+          </button>
+        </div>
       </div>
 
+      {posPage === 'billing' ? (
+      <>
       <section className={`${panelClass} p-3 sm:p-4`}>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2 text-[11px] font-black uppercase text-indigo-800 dark:text-indigo-300">
@@ -513,19 +663,21 @@ export default function PosView({
         </div>
       </section>
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(320px,500px)_minmax(0,1fr)]">
-        <section className={`${panelClass} min-w-0 p-3 sm:p-4 xl:p-5`}>
-          <div className="mb-4 flex items-center justify-between border-b border-slate-900 pb-3 dark:border-slate-700">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(280px,0.9fr)_minmax(340px,1fr)_minmax(220px,0.55fr)] 2xl:grid-cols-[minmax(300px,0.85fr)_minmax(380px,1fr)_minmax(240px,0.5fr)]">
+        <section className={`${panelClass} min-w-0 p-3 sm:p-4 xl:max-h-[calc(100vh-244px)] xl:overflow-hidden`}>
+          <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
             <h3 className="flex items-center gap-2 text-xs font-black uppercase text-indigo-800 dark:text-indigo-300">
-              <ShoppingIcon /> Selected Cart: {activeRegisterName}
+              <PackageSearch className="h-4 w-4" /> Product Entry
             </h3>
-            <button type="button" onClick={onClearCart} className="text-[11px] font-bold text-rose-600">Clear Cart</button>
+            <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${catalogAddFlash ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-950 dark:text-slate-400'}`}>
+              {catalogAddFlash ? 'Added' : 'Ready'}
+            </span>
           </div>
 
-          <div className="space-y-3.5">
+          <div className="space-y-3 xl:max-h-[calc(100vh-316px)] xl:overflow-y-auto xl:pr-1">
             <label className="block">
-              <span className="mb-1 block text-xs font-bold text-slate-500">Scan barcode / product code</span>
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">Barcode / product code</span>
+              <div className="grid grid-cols-[1fr_auto] gap-2">
                 <input
                   className={`${inputClass} font-mono text-sm`}
                   value={barcodeScanValue}
@@ -536,121 +688,133 @@ export default function PosView({
                       handleBarcodeScanSubmit();
                     }
                   }}
-                  placeholder="Focus here and scan packet barcode"
+                  placeholder="Scan or type code"
                   autoComplete="off"
                 />
                 <button
                   type="button"
                   onClick={handleBarcodeScanSubmit}
                   disabled={barcodeScanning || !barcodeScanValue.trim()}
-                  className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-black uppercase text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg bg-emerald-700 px-3 text-xs font-black uppercase text-white disabled:opacity-50"
                 >
-                  {barcodeScanning ? 'Finding...' : 'Add'}
+                  {barcodeScanning ? '...' : 'Add'}
                 </button>
               </div>
-              <p className="mt-1 text-[10px] font-semibold text-slate-500">
-                USB/Bluetooth scanners type the barcode here and press Enter automatically.
-              </p>
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-xs font-bold text-slate-500">1. Add catalog product</span>
-              <select className={inputClass} value={session.selectedProductId} onChange={(event) => updateSession({ selectedProductId: event.target.value })}>
-                <option value="">-- Choose item to add --</option>
-                {sortedProducts.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} - Rs. {(product.offerPrice > 0 ? product.offerPrice : product.basePrice).toFixed(2)} - Stock {product.stockCount}
-                  </option>
-                ))}
-              </select>
+              <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">Search item by name / category</span>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  className={`${inputClass} pl-9`}
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  placeholder="e.g. atta, rice, oil"
+                />
+              </div>
             </label>
 
-            {canOverridePrice && (
-              <>
-                <div className="flex items-center gap-3 text-[10px] font-black uppercase text-slate-400">
-                  <span className="h-px flex-1 bg-slate-200" />
-                  Or
-                  <span className="h-px flex-1 bg-slate-200" />
-                </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label>
+                <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">Qty before add</span>
+                <input className={`${inputClass} text-center font-mono`} value={session.qtyInput} onChange={(event) => updateSession({ qtyInput: event.target.value.replace(/[^\d.]/g, ''), keypadTarget: 'qty' })} onFocus={() => updateSession({ keypadTarget: 'qty' })} />
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowCustomPanel((open) => !open)}
+                disabled={!canOverridePrice}
+                className="mt-5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black uppercase text-indigo-800 disabled:opacity-50 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200"
+              >
+                Custom Item
+              </button>
+            </div>
 
+            {showCustomPanel && canOverridePrice && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
                 <label className="block">
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500">Or Type Unlisted Custom Item</span>
-                    <span className="text-[10px] font-black uppercase text-indigo-700">Custom Item</span>
-                  </div>
-                  <input className={inputClass} value={session.customItemName} onChange={(event) => updateSession({ customItemName: event.target.value })} placeholder="e.g. Loose Mustard Oil, Jute Sacks, special milling charge..." />
+                  <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">Product name</span>
+                  <input className={inputClass} value={session.customItemName} onChange={(event) => updateSession({ customItemName: event.target.value })} placeholder="Loose item / packing charge / service charge" />
                 </label>
-              </>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <label>
+                    <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">Qty</span>
+                    <input className={`${inputClass} text-center font-mono`} value={session.qtyInput} onChange={(event) => updateSession({ qtyInput: event.target.value.replace(/[^\d.]/g, ''), keypadTarget: 'qty' })} onFocus={() => updateSession({ keypadTarget: 'qty' })} />
+                  </label>
+                  <label>
+                    <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">Price</span>
+                    <input className={`${inputClass} text-center font-mono`} value={session.priceOverride} onChange={(event) => updateSession({ priceOverride: event.target.value.replace(/[^\d.]/g, ''), keypadTarget: 'price' })} onFocus={() => updateSession({ keypadTarget: 'price' })} placeholder="Rs." />
+                  </label>
+                </div>
+                <button type="button" onClick={handleAddCustomItem} className="mt-3 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-black uppercase text-white disabled:opacity-40" disabled={!session.customItemName.trim()}>
+                  <Plus className="mr-1 inline h-4 w-4" /> Add Custom Item
+                </button>
+              </div>
             )}
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[10px] font-black uppercase text-slate-500">
+                <span>Products</span>
+                <span>{quickProducts.length} shown</span>
+              </div>
+              <div className="grid max-h-[380px] gap-2 overflow-y-auto pr-1">
+                {quickProducts.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500">No matching products.</div>
+                ) : quickProducts.map((product) => {
+                  const price = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
+                  const outOfStock = Number(product.stockCount || 0) <= 0;
+                  return (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => handleQuickAddProduct(product)}
+                      disabled={outOfStock}
+                      className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-indigo-950/30"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-black">{product.name}</span>
+                        <span className="mt-1 block text-[10px] font-semibold text-slate-500">
+                          {product.sku || 'No code'} - Rs. {price.toFixed(2)} - Stock {product.stockCount}
+                        </span>
+                      </span>
+                      <span className={`rounded-lg px-3 py-2 text-xs font-black ${outOfStock ? 'bg-rose-50 text-rose-600' : 'bg-indigo-700 text-white'}`}>
+                        {outOfStock ? 'Out' : '+'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold text-slate-500">
+                  Loaded {posProducts.length} product{posProducts.length === 1 ? '' : 's'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLoadMorePosProducts}
+                  disabled={posProductsLoading || !posProductsHasMore}
+                  className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[10px] font-black uppercase text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200"
+                >
+                  {posProductsLoading ? 'Loading...' : posProductsHasMore ? 'Load More' : 'All Loaded'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${panelClass} min-w-0 p-3 sm:p-4 xl:max-h-[calc(100vh-244px)] xl:overflow-y-auto xl:p-5`}>
+          <div className="mb-4 flex items-center justify-between border-b border-slate-900 pb-3 dark:border-slate-700">
+            <h3 className="flex items-center gap-2 text-xs font-black uppercase text-indigo-800 dark:text-indigo-300">
+              <ShoppingIcon /> Selected Cart: {activeRegisterName}
+            </h3>
+            <button type="button" onClick={onClearCart} className="text-[11px] font-bold text-rose-600">Clear Cart</button>
+          </div>
+
+          <div className="space-y-3.5">
             {!canOverridePrice && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800">
                 Inventory staff can bill catalog items at saved product prices. Custom items and price overrides are owner-only.
               </div>
             )}
-
-            <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
-              <button type="button" onClick={() => updateSession({ keypadTarget: 'qty' })} className={`rounded-md py-2 text-xs font-black ${session.keypadTarget === 'qty' ? 'bg-violet-600 text-white' : 'text-slate-500'}`}>Qty</button>
-              <button type="button" disabled={!canOverridePrice} onClick={() => updateSession({ keypadTarget: 'price' })} className={`rounded-md py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-40 ${session.keypadTarget === 'price' ? 'bg-violet-600 text-white' : 'text-slate-500'}`}>Price Override</button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <label>
-                <span className="mb-1 block text-xs font-bold text-slate-500">Qty</span>
-                <input className={`${inputClass} text-center font-mono text-base`} value={session.qtyInput} onChange={(event) => updateSession({ qtyInput: event.target.value.replace(/[^\d.]/g, '') })} onFocus={() => updateSession({ keypadTarget: 'qty' })} />
-              </label>
-              <label>
-                <span className="mb-1 block text-xs font-bold text-slate-500">Override Price (Rs.)</span>
-                <input className={`${inputClass} text-center font-mono text-base disabled:cursor-not-allowed disabled:opacity-50`} disabled={!canOverridePrice} value={canOverridePrice ? session.priceOverride : ''} onChange={(event) => updateSession({ priceOverride: event.target.value.replace(/[^\d.]/g, '') })} onFocus={() => canOverridePrice && updateSession({ keypadTarget: 'price' })} placeholder={canOverridePrice ? (selectedProduct ? 'Catalog rate' : 'Custom item price') : 'Owner only'} />
-              </label>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={handleAddCatalogItem}
-                className={`rounded-lg px-4 py-3 text-xs font-black uppercase text-white transition-colors duration-200 disabled:opacity-40 ${
-                  catalogAddFlash ? 'bg-emerald-600' : 'bg-indigo-800 hover:bg-indigo-900'
-                }`}
-                disabled={!session.selectedProductId}
-              >
-                <Plus className="mr-1 inline h-4 w-4" /> {catalogAddFlash ? 'Added' : 'Add Catalog'}
-              </button>
-              {canOverridePrice ? (
-                <button type="button" onClick={handleAddCustomItem} className="rounded-lg bg-slate-900 px-4 py-3 text-xs font-black uppercase text-white disabled:opacity-40" disabled={!session.customItemName.trim()}>
-                  <Plus className="mr-1 inline h-4 w-4" /> Add Custom
-                </button>
-              ) : (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs font-black uppercase text-slate-400">Catalog only</div>
-              )}
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-[11px] font-black uppercase text-slate-500">Rapid Cashier Keypad</span>
-                <span className="text-[10px] font-black uppercase text-slate-400">Target: {session.keypadTarget}</span>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {keypad.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => handleKey(key)}
-                    className={`h-10 rounded-md border text-xs font-black shadow-sm ${
-                      key === 'clear'
-                        ? 'border-rose-200 bg-rose-50 text-rose-600'
-                        : key === 'back'
-                          ? 'border-amber-200 bg-amber-50 text-amber-600'
-                          : key.startsWith('+')
-                            ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
-                            : 'border-slate-300 bg-white text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-white'
-                    }`}
-                  >
-                    {key === 'back' ? <Delete className="mx-auto h-3.5 w-3.5" /> : key === 'clear' ? 'C' : key}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             <div className="border-t border-slate-900 pt-3 dark:border-slate-700">
               <div className="mb-2 flex items-center justify-between text-xs font-black uppercase">
@@ -683,7 +847,7 @@ export default function PosView({
                 </label>
                 <label>
                   <span className="mb-1 block text-[10px] font-black uppercase text-violet-700">Mobile Number * Compulsory</span>
-                  <input className={inputClass} value={session.customerPhone} onChange={(event) => updateSession({ customerPhone: event.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="Compulsory 10-digit phone" />
+                  <input className={inputClass} value={session.customerPhone} onChange={(event) => updateSession({ customerPhone: event.target.value.replace(/\D/g, '').slice(0, 10), keypadTarget: 'phone' })} onFocus={() => updateSession({ keypadTarget: 'phone' })} placeholder="Compulsory 10-digit phone" />
                 </label>
               </div>
 
@@ -785,9 +949,7 @@ export default function PosView({
                 <input className={inputClass} value={session.transactionNote} onChange={(event) => updateSession({ transactionNote: event.target.value })} placeholder="Optional cashier note" />
               </label>
 
-              {/* SEPARATED ACTION BUTTONS */}
               <div className="mt-4 space-y-2">
-                {/* Button 1: Complete Sale Only */}
                 <button
                   type="button"
                   onClick={handleSubmit}
@@ -795,35 +957,112 @@ export default function PosView({
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-4 py-3 text-xs font-black uppercase text-white shadow-lg disabled:opacity-60 transition"
                 >
                   <CheckCircle className="h-4 w-4" />
-                  {submitting ? 'Completing Sale...' : 'Complete Sale Only'}
+                  {submitting ? 'Completing Sale...' : 'Complete Sale & Generate Bill'}
                 </button>
 
-                {/* Button 2 & 3 Row: Print Receipt & Send WhatsApp Bill */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={printReceipt}
-                    className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-2.5 text-xs font-black uppercase text-slate-800 dark:text-slate-200 transition"
-                  >
-                    <Printer className="h-4 w-4" />
-                    Print Receipt
-                  </button>
+                {lastCompletedOrder && offlineCart.length === 0 && (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase text-emerald-800 dark:text-emerald-200">Sale completed</p>
+                        <p className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                          Invoice is ready. Print it or send the invoice link to the customer's WhatsApp.
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-white px-2 py-1 text-xs font-black text-emerald-800 dark:bg-slate-950 dark:text-emerald-200">
+                        Rs. {Number(lastCompletedOrder?.finalTotal ?? lastCompletedOrder?.final_amount ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <button
+                        type="button"
+                        onClick={printReceipt}
+                        className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-xs font-black uppercase text-slate-800 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        <Printer className="h-4 w-4" />
+                        Print Receipt
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={handleSendPosWhatsApp}
-                    className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 px-3 py-2.5 text-xs font-black uppercase transition"
-                  >
-                    <Send className="h-4 w-4" />
-                    WhatsApp Bill
-                  </button>
-                </div>
+                      <button
+                        type="button"
+                        onClick={handleSendPosWhatsApp}
+                        disabled={!lastInvoiceUrl}
+                        className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-700 px-3 py-2.5 text-xs font-black uppercase text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-55"
+                      >
+                        <Send className="h-4 w-4" />
+                        WhatsApp Bill
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyInvoiceLink}
+                        disabled={!lastInvoiceUrl}
+                        className="flex items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-xs font-black uppercase text-indigo-900 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-55 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200 dark:hover:bg-indigo-950"
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy Link
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </section>
 
-        <section className={`${panelClass} min-w-0 p-3 sm:p-5 xl:min-h-[680px]`}>
+        <section className={`${panelClass} min-w-0 p-3 sm:p-4 xl:max-h-[calc(100vh-244px)] xl:p-4`}>
+          <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+            <h3 className="flex items-center gap-2 text-xs font-black uppercase text-indigo-800 dark:text-indigo-300">
+              <Keyboard className="h-4 w-4" /> Counter Keypad
+            </h3>
+            <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+              {session.keypadTarget}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => updateSession({ keypadTarget: 'qty' })} className={`rounded-lg px-2 py-2 text-[10px] font-black uppercase ${session.keypadTarget === 'qty' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-950 dark:text-slate-300'}`}>Qty</button>
+              <button type="button" disabled={!canOverridePrice} onClick={() => updateSession({ keypadTarget: 'price' })} className={`rounded-lg px-2 py-2 text-[10px] font-black uppercase disabled:opacity-40 ${session.keypadTarget === 'price' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-950 dark:text-slate-300'}`}>Price</button>
+              <button type="button" onClick={() => updateSession({ keypadTarget: 'phone' })} className={`rounded-lg px-2 py-2 text-[10px] font-black uppercase ${session.keypadTarget === 'phone' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-950 dark:text-slate-300'}`}>Phone</button>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+              <p className="mb-2 truncate rounded-lg bg-white px-3 py-2 text-center font-mono text-sm font-black text-slate-900 dark:bg-slate-900 dark:text-white">
+                {session.keypadTarget === 'qty' ? session.qtyInput : session.keypadTarget === 'phone' ? session.customerPhone || 'phone' : session.priceOverride || 'price'}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {keypad.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleKey(key)}
+                    className={`h-12 rounded-lg border text-sm font-black shadow-sm ${
+                      key === 'clear'
+                        ? 'border-rose-200 bg-rose-50 text-rose-600'
+                        : key === 'back'
+                          ? 'border-amber-200 bg-amber-50 text-amber-600'
+                          : key.startsWith('+')
+                            ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                            : 'border-slate-300 bg-white text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-white'
+                    }`}
+                  >
+                    {key === 'back' ? <Delete className="mx-auto h-4 w-4" /> : key === 'clear' ? 'C' : key}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold leading-relaxed text-slate-500 dark:border-slate-800 dark:bg-slate-950">
+              Focus Qty, Price, or Phone to control this keypad. Product names use normal keyboard input.
+            </p>
+          </div>
+        </section>
+
+      </div>
+      </>
+      ) : (
+        <section className={`${panelClass} min-w-0 p-3 sm:p-5`}>
           <div className="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -949,7 +1188,7 @@ export default function PosView({
             )}
           </div>
         </section>
-      </div>
+      )}
     </div>
   );
 }
