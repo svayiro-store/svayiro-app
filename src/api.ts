@@ -403,6 +403,17 @@ export const api = {
     return apiRequest<Product[]>(`/products${suffix ? `?${suffix}` : ''}`, undefined, params.summary ? 15_000 : 0);
   },
 
+  getProductPage: (params: { search?: string; categoryId?: string | null; limit?: number; offset?: number; summary?: boolean } = {}) => {
+    const query = new URLSearchParams();
+    if (params.search?.trim()) query.set('search', params.search.trim());
+    if (params.categoryId) query.set('categoryId', params.categoryId);
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.offset) query.set('offset', String(params.offset));
+    if (params.summary) query.set('summary', 'true');
+    query.set('includeTotal', 'true');
+    return apiRequest<{ items: Product[]; total: number; limit: number; offset: number }>(`/products?${query.toString()}`, undefined, params.summary ? 15_000 : 0);
+  },
+
   searchProducts: (params: { search?: string; categoryId?: string | null; limit?: number; offset?: number; summary?: boolean } = {}) => {
     const query = new URLSearchParams();
     if (params.search?.trim()) query.set('search', params.search.trim());

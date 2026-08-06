@@ -3714,6 +3714,7 @@ app.get('/api/products', async (req, res) => {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const categoryId = typeof req.query.categoryId === 'string' ? req.query.categoryId.trim() : '';
     const summaryMode = req.query.summary === 'true';
+    const includeTotal = req.query.includeTotal === 'true';
     const rawLimit = Number(req.query.limit);
     const rawOffset = Number(req.query.offset);
     const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 50) : 120;
@@ -3750,6 +3751,7 @@ app.get('/api/products', async (req, res) => {
       where.push(`(lower(coalesce(p.name, '')) LIKE ${param} OR lower(coalesce(p.description, '')) LIKE ${param} OR lower(coalesce(p.sku, '')) LIKE ${param})`);
     }
 
+    const countParams = [...params];
     params.push(limit);
     const limitParam = `$${params.length}`;
     params.push(offset);
@@ -3816,11 +3818,20 @@ app.get('/api/products', async (req, res) => {
         LIMIT ${limitParam} OFFSET ${offsetParam}
       `;
     const { rows } = await pgQuery(sql, params);
-    if (rows.length === 0) return res.json([]);
+    let total = 0;
+    if (includeTotal) {
+      const totalRes = await pgQuery(`SELECT COUNT(*)::int AS total FROM products p WHERE ${where.join(' AND ')}`, countParams);
+      total = Number(totalRes.rows[0]?.total || 0);
+    }
+    if (rows.length === 0) {
+      const emptyPayload = includeTotal ? { items: [], total, limit, offset } : [];
+      return res.json(emptyPayload);
+    }
     if (summaryMode) {
       const products = rows.map((row: any) => normalizeProductSummary(row)).filter(Boolean);
-      setPublicCache(cacheKey, products, 30_000);
-      return sendCacheableJson(res, products, 30);
+      const payload = includeTotal ? { items: products, total, limit, offset } : products;
+      setPublicCache(cacheKey, payload, 30_000);
+      return sendCacheableJson(res, payload, 30);
     }
     const productIds = rows.map((row: any) => row.id);
     const imgs = await pgQuery('SELECT product_id, url, position FROM product_images WHERE product_id = ANY($1::uuid[]) ORDER BY position ASC', [productIds]);
@@ -3830,7 +3841,8 @@ app.get('/api/products', async (req, res) => {
       list.push(image);
       imagesByProduct.set(image.product_id, list);
     }
-    return res.json(rows.map((row: any) => normalizeProduct(row, imagesByProduct.get(row.id) || [])));
+    const products = rows.map((row: any) => normalizeProduct(row, imagesByProduct.get(row.id) || []));
+    return res.json(includeTotal ? { items: products, total, limit, offset } : products);
   } catch (err) {
     console.error('GET /api/products error', err);
     return res.status(500).json({ error: 'DB error' });

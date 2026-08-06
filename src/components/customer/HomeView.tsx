@@ -8,6 +8,7 @@ import { formatProductMeasure } from '../../utils/productMeasure';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
 const bannerImageFallback = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1400';
+const PRODUCT_PAGE_SIZE = 20;
 
 const birthdayStars = [
   { left: '10%', top: '18%', x: '-80px', y: '-95px', color: 'text-amber-300', size: 'h-6 w-6', delay: '0ms' },
@@ -54,7 +55,8 @@ interface HomeViewProps {
   setSelectedCategory: (catId: string | null) => void;
   products: Product[];
   filteredProducts: Product[];
-  onLoadMoreProducts?: (params?: { categoryId?: string | null; limit?: number }) => Promise<number>;
+  productPage?: { page: number; pageSize: number; total: number; categoryId: string | null; isLoading: boolean };
+  onChangeProductPage?: (params?: { categoryId?: string | null; page?: number; pageSize?: number }) => Promise<number>;
   cart: { productId: string; quantity: number }[];
   updateCartQty: (pId: string, qty: number) => void;
   addToCart: (pId: string) => void;
@@ -85,7 +87,8 @@ export default function HomeView({
   setSelectedCategory,
   products,
   filteredProducts,
-  onLoadMoreProducts,
+  productPage,
+  onChangeProductPage,
   cart,
   updateCartQty,
   addToCart,
@@ -101,9 +104,6 @@ export default function HomeView({
   const [birthdayCouponOpen, setBirthdayCouponOpen] = useState(false);
   const [birthdayRedeemMessage, setBirthdayRedeemMessage] = useState('');
   const [birthdayCouponApplied, setBirthdayCouponApplied] = useState(false);
-  const [visibleProductCount, setVisibleProductCount] = useState(10);
-  const [isLoadingMoreProducts, setIsLoadingMoreProducts] = useState(false);
-  const [exhaustedProductKeys, setExhaustedProductKeys] = useState<Record<string, boolean>>({});
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
 
   const holidayBroadcastMessage = (shop?.holidayMessage || '').trim();
@@ -162,7 +162,6 @@ export default function HomeView({
   const userTouchedBannerRailRef = useRef(false);
   const bannerScrollFrameRef = useRef<number | null>(null);
   const bannerScrollEndTimerRef = useRef<number | null>(null);
-  const productLoadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (userTouchedBannerRailRef.current) return;
@@ -184,52 +183,19 @@ export default function HomeView({
     };
   }, []);
 
-  useEffect(() => {
-    setVisibleProductCount(10);
-    setIsLoadingMoreProducts(false);
-  }, [selectedCategory, filteredProducts.length]);
-
-  const visibleProducts = filteredProducts.slice(0, visibleProductCount);
-  const productPageKey = selectedCategory || 'all';
-  const hasMoreProducts = visibleProductCount < filteredProducts.length || (Boolean(onLoadMoreProducts) && !exhaustedProductKeys[productPageKey]);
-
-  const loadMoreProducts = async () => {
-    if (!hasMoreProducts || isLoadingMoreProducts) return;
-    setIsLoadingMoreProducts(true);
-    if (visibleProductCount < filteredProducts.length) {
-      window.setTimeout(() => {
-        setVisibleProductCount((count) => Math.min(count + 10, filteredProducts.length));
-        setIsLoadingMoreProducts(false);
-      }, 750);
-      return;
-    }
-    try {
-      const fetchedCount = onLoadMoreProducts
-        ? await onLoadMoreProducts({ categoryId: selectedCategory, limit: 10 })
-        : 0;
-      if (fetchedCount < 10) {
-        setExhaustedProductKeys((prev) => ({ ...prev, [productPageKey]: true }));
-      }
-      setVisibleProductCount((count) => count + Math.max(0, fetchedCount));
-    } finally {
-      setIsLoadingMoreProducts(false);
-    }
+  const visibleProducts = filteredProducts;
+  const currentPage = Math.max(1, Number(productPage?.page || 1));
+  const pageSize = Number(productPage?.pageSize || PRODUCT_PAGE_SIZE);
+  const totalProducts = Math.max(0, Number(productPage?.total || filteredProducts.length));
+  const totalPages = Math.max(1, Math.ceil(totalProducts / pageSize));
+  const pageStart = totalProducts === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+  const pageEnd = Math.min(totalProducts, currentPage * pageSize);
+  const isProductPageLoading = Boolean(productPage?.isLoading);
+  const goToProductPage = (page: number) => {
+    if (!onChangeProductPage || isProductPageLoading) return;
+    const nextPage = Math.min(Math.max(1, page), totalPages);
+    onChangeProductPage({ categoryId: selectedCategory, page: nextPage, pageSize }).catch(() => {});
   };
-
-  useEffect(() => {
-    const sentinel = productLoadMoreRef.current;
-    if (!sentinel || !hasMoreProducts || isLoadingMoreProducts) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          loadMoreProducts();
-        }
-      },
-      { root: null, rootMargin: '420px 0px', threshold: 0.01 }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasMoreProducts, isLoadingMoreProducts, visibleProductCount, filteredProducts.length, selectedCategory, exhaustedProductKeys[productPageKey]]);
 
   const syncBannerIndexFromScroll = () => {
     const rail = bannerRailRef.current;
@@ -822,10 +788,24 @@ export default function HomeView({
           <h3 className="font-serif text-lg md:text-xl font-bold tracking-tight text-left">
             {selectedCategory ? `${categories.find(c => c.id === selectedCategory)?.name}` : 'Products Catalog'}
           </h3>
-          <span className="text-xs opacity-75 font-mono">Showing {visibleProducts.length}/{filteredProducts.length}</span>
+          <span className="text-xs opacity-75 font-mono">
+            {totalProducts > 0 ? `Page ${currentPage} of ${totalPages} - ${pageStart}-${pageEnd} of ${totalProducts}` : 'No products'}
+          </span>
         </div>
 
-        {filteredProducts.length === 0 ? (
+        {filteredProducts.length === 0 && isProductPageLoading ? (
+          <div className={`p-10 text-center rounded-2xl border ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-slate-50'}`}>
+            <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-indigo-100 bg-white px-4 py-2 text-xs font-normal lowercase text-indigo-700 shadow-sm dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300">
+              <span className="relative h-7 w-7">
+                <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 shadow-[0_0_14px_rgba(253,224,71,0.70)]" />
+                <span className="absolute inset-0 animate-spin rounded-full">
+                  <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.80)]" />
+                </span>
+              </span>
+              loading..
+            </div>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className={`p-12 text-center rounded-2xl border ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-slate-50'}`}>
             <Compass className="h-12 w-12 text-slate-400 mx-auto mb-2" />
             <p className="text-sm font-bold opacity-75">No matching premium items found</p>
@@ -971,21 +951,44 @@ export default function HomeView({
                 );
               })}
             </div>
-            {hasMoreProducts && (
-              <div ref={productLoadMoreRef} className="mt-5 flex min-h-16 items-center justify-center">
-                {isLoadingMoreProducts && (
-                  <div className="flex items-center gap-3 rounded-full border border-indigo-100 bg-white px-4 py-2 text-xs font-normal lowercase text-indigo-700 shadow-sm dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300">
-                    <span className="relative h-7 w-7">
-                      <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 shadow-[0_0_14px_rgba(253,224,71,0.70)]" />
-                      <span className="absolute inset-0 animate-spin rounded-full">
-                        <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.80)]" />
-                      </span>
+            <div className="mt-5 flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-xs shadow-sm sm:flex-row dark:border-slate-800 dark:bg-slate-950">
+              <span className="font-mono font-semibold text-slate-500 dark:text-slate-400">
+                {totalProducts > 0 ? `Page ${currentPage} of ${totalPages}` : 'No product pages'}
+              </span>
+              {isProductPageLoading ? (
+                <div className="flex items-center gap-3 rounded-full border border-indigo-100 bg-white px-4 py-2 text-xs font-normal lowercase text-indigo-700 shadow-sm dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300">
+                  <span className="relative h-7 w-7">
+                    <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 shadow-[0_0_14px_rgba(253,224,71,0.70)]" />
+                    <span className="absolute inset-0 animate-spin rounded-full">
+                      <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.80)]" />
                     </span>
-                    loading..
-                  </div>
-                )}
-              </div>
-            )}
+                  </span>
+                  loading..
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => goToProductPage(currentPage - 1)}
+                    disabled={currentPage <= 1 || !onChangeProductPage}
+                    className="rounded-full border border-slate-200 px-4 py-2 font-black uppercase text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:text-slate-300"
+                  >
+                    Previous
+                  </button>
+                  <span className="rounded-full bg-indigo-50 px-3 py-2 font-black text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                    {currentPage}/{totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => goToProductPage(currentPage + 1)}
+                    disabled={currentPage >= totalPages || !onChangeProductPage}
+                    className="rounded-full border border-slate-200 px-4 py-2 font-black uppercase text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:text-slate-300"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

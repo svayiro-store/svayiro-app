@@ -35,12 +35,14 @@ interface CustomerAppProps {
   shop: ShopProfile;
   categories: Category[];
   products: Product[];
+  homeProducts?: Product[];
+  homeProductPage?: { page: number; pageSize: number; total: number; categoryId: string | null; isLoading: boolean };
   banners: Banner[];
   notifications: Notification[];
   activeUser: UserType | null;
   onLoginSuccess: (user: UserType) => void;
   onRefreshData: () => void;
-  onLoadMoreProducts?: (params?: { categoryId?: string | null; limit?: number }) => Promise<number>;
+  onChangeHomeProductPage?: (params?: { categoryId?: string | null; page?: number; pageSize?: number }) => Promise<number>;
   isDarkMode: boolean;
   showToast: (message: string, type: 'success' | 'info' | 'warning' | 'error') => void;
   onSwitchMode?: (mode: 'customer' | 'admin') => void;
@@ -205,12 +207,14 @@ export default function CustomerApp({
   shop,
   categories,
   products,
+  homeProducts,
+  homeProductPage,
   banners,
   notifications,
   activeUser: rawActiveUser,
   onLoginSuccess,
   onRefreshData,
-  onLoadMoreProducts,
+  onChangeHomeProductPage,
   isDarkMode,
   showToast,
   onSwitchMode,
@@ -327,6 +331,7 @@ export default function CustomerApp({
 
   // Cart operations (Stored in local state + persisted to cloud back for logged users)
   const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
+  const homePageLoadKeyRef = useRef('all');
 
   useEffect(() => {
     let mounted = true;
@@ -348,7 +353,7 @@ export default function CustomerApp({
 
   useEffect(() => {
     const search = searchQuery.trim();
-    const shouldQueryBackend = Boolean(search || selectedCategory);
+    const shouldQueryBackend = Boolean(search);
     if (!shouldQueryBackend) {
       setServerFilteredProducts(null);
       setIsSearchingProducts(false);
@@ -360,7 +365,7 @@ export default function CustomerApp({
     const timer = window.setTimeout(async () => {
       setIsSearchingProducts(true);
       try {
-        const result = await api.searchProducts({ search, categoryId: selectedCategory, limit: 50, offset: 0, summary: true });
+        const result = await api.searchProducts({ search, limit: 20, offset: 0, summary: true });
         if (!cancelled) setServerFilteredProducts(result);
       } catch (err) {
         console.error('Product search failed', err);
@@ -374,7 +379,18 @@ export default function CustomerApp({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [searchQuery, selectedCategory, searchUseDelay, searchDelayMs]);
+  }, [searchQuery, searchUseDelay, searchDelayMs]);
+
+  useEffect(() => {
+    if (!onChangeHomeProductPage) return;
+    const key = selectedCategory || 'all';
+    if (homePageLoadKeyRef.current === key) return;
+    homePageLoadKeyRef.current = key;
+    onChangeHomeProductPage({ categoryId: selectedCategory, page: 1, pageSize: homeProductPage?.pageSize || 20 })
+      .catch((err) => {
+        console.error('Product page load failed', err);
+      });
+  }, [selectedCategory, onChangeHomeProductPage, homeProductPage?.pageSize]);
 
   useEffect(() => {
     if (!selectedProduct?.id || hydratedProductIdsRef.current.has(selectedProduct.id)) return;
@@ -2077,8 +2093,9 @@ export default function CustomerApp({
                 selectedCategory={selectedCategory}
                 setSelectedCategory={setSelectedCategory}
                 products={products}
-                filteredProducts={filteredProducts}
-                onLoadMoreProducts={onLoadMoreProducts}
+                filteredProducts={homeProducts || filteredProducts}
+                productPage={homeProductPage}
+                onChangeProductPage={onChangeHomeProductPage}
                 cart={cart}
                 updateCartQty={updateCartQty}
                 addToCart={addToCart}
