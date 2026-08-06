@@ -1877,6 +1877,22 @@ function requirePermission(permission: string) {
   };
 }
 
+async function attachOptionalUserFromBearer(req: any) {
+  const auth = req.headers.authorization || '';
+  const match = auth.match(/^Bearer\s+(.*)$/i);
+  if (!match) return null;
+  try {
+    const payload = jwt.verify(match[1], JWT_SECRET) as any;
+    const ures = await pgQuery('SELECT * FROM users WHERE id = $1', [payload.id]);
+    if (ures.rowCount === 0) return null;
+    req.user = payload;
+    req.currentUser = ures.rows[0];
+    return ures.rows[0];
+  } catch {
+    return null;
+  }
+}
+
 function hasAnyRole(req: any, roles: string[]) {
   const currentRoles = getRequestRoles(req);
   return roles.some((role) => currentRoles.includes(role));
@@ -3715,6 +3731,15 @@ app.get('/api/products', async (req, res) => {
     const categoryId = typeof req.query.categoryId === 'string' ? req.query.categoryId.trim() : '';
     const summaryMode = req.query.summary === 'true';
     const includeTotal = req.query.includeTotal === 'true';
+    const wantsDisabledProducts = req.query.includeDisabled === 'true';
+    let includeDisabledProducts = false;
+    if (wantsDisabledProducts) {
+      await attachOptionalUserFromBearer(req);
+      if (!(req as any).currentUser || !hasPermission(req, 'products:manage')) {
+        return res.status(403).json({ error: 'Permission denied', permission: 'products:manage' });
+      }
+      includeDisabledProducts = true;
+    }
     const rawLimit = Number(req.query.limit);
     const rawOffset = Number(req.query.offset);
     const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 50) : 120;
@@ -3725,7 +3750,7 @@ app.get('/api/products', async (req, res) => {
       if (cached) return sendCacheableJson(res, cached, 30);
     }
     const params: any[] = [];
-    const where = ['p.is_enabled = true'];
+    const where = includeDisabledProducts ? ['TRUE'] : ['p.is_enabled = true'];
 
     if (categoryId) {
       params.push(categoryId);

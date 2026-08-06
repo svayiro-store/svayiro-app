@@ -120,6 +120,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const [editingId, setEditingId] = useState<string | null>(null);
   const [catalogueView, setCatalogueView] = useState<'products' | 'codes'>('products');
   const [productSearch, setProductSearch] = useState('');
+  const [productStatusFilter, setProductStatusFilter] = useState<'active' | 'disabled' | 'featured' | 'daily' | 'lowStock' | 'outOfStock'>('active');
   const [productCategoryFilter, setProductCategoryFilter] = useState('');
   const [productSubcategoryFilter, setProductSubcategoryFilter] = useState('');
   const [codeSearch, setCodeSearch] = useState('');
@@ -142,7 +143,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     if (reset) setLoading(true);
     else setLoadingMoreProducts(true);
     try {
-      const productsPromise = api.getProducts({ limit: ADMIN_PRODUCT_PAGE_SIZE, offset });
+      const productsPromise = api.getProducts({ limit: ADMIN_PRODUCT_PAGE_SIZE, offset, includeDisabled: true });
       const categoriesPromise = reset || categories.length === 0 ? api.getAdminCategories() : Promise.resolve(categories);
       const [prodRes, catRes] = await Promise.all([productsPromise, categoriesPromise]);
       setProducts((current) => {
@@ -167,7 +168,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
 
   useEffect(() => {
     setVisibleProductRows(ADMIN_VISIBLE_ROW_SIZE);
-  }, [productSearch, productCategoryFilter, productSubcategoryFilter]);
+  }, [productSearch, productStatusFilter, productCategoryFilter, productSubcategoryFilter]);
 
   useEffect(() => {
     setVisibleCodeRows(ADMIN_VISIBLE_ROW_SIZE);
@@ -418,6 +419,23 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   // Filter logic
   const filteredProducts = useMemo(() => {
     let result = products;
+    if (productStatusFilter === 'disabled') {
+      result = result.filter((p) => !p.isEnabled);
+    } else {
+      result = result.filter((p) => p.isEnabled);
+      if (productStatusFilter === 'featured') {
+        result = result.filter((p) => Boolean(p.isFeatured || p.metadata?.isFeatured));
+      }
+      if (productStatusFilter === 'daily') {
+        result = result.filter((p) => Boolean(p.isDailyEssential || p.metadata?.isDailyEssential));
+      }
+      if (productStatusFilter === 'lowStock') {
+        result = result.filter((p) => Number(p.stockCount || 0) > 0 && Number(p.stockCount || 0) <= Number(p.lowStockAlertThreshold || 5));
+      }
+      if (productStatusFilter === 'outOfStock') {
+        result = result.filter((p) => Number(p.stockCount || 0) === 0);
+      }
+    }
     if (productSearch) {
       const query = productSearch.toLowerCase();
       result = result.filter(p =>
@@ -432,7 +450,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       result = result.filter(p => productMatchesCategory(p, productSubcategoryFilter));
     }
     return result;
-  }, [products, productSearch, productCategoryFilter, productSubcategoryFilter, categories]);
+  }, [products, productSearch, productStatusFilter, productCategoryFilter, productSubcategoryFilter, categories]);
 
   const codeProducts = useMemo(() => {
     let result = products;
@@ -988,7 +1006,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       <div className="space-y-4">
         {catalogueView === 'products' && (
           <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-end lg:justify-between">
-            <div className="grid flex-1 gap-3 md:grid-cols-[1fr_220px_220px]">
+            <div className="grid flex-1 gap-3 md:grid-cols-[1fr_190px_220px_220px]">
               <label>
                 <span className={labelClass}>Search listed products</span>
                 <div className="relative">
@@ -1000,6 +1018,21 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                     placeholder="Search by product name or category..."
                   />
                 </div>
+              </label>
+              <label>
+                <span className={labelClass}>Product View</span>
+                <select
+                  className={inputClass}
+                  value={productStatusFilter}
+                  onChange={(event) => setProductStatusFilter(event.target.value as typeof productStatusFilter)}
+                >
+                  <option value="active">Active products</option>
+                  <option value="disabled">Disabled products</option>
+                  <option value="featured">Featured products</option>
+                  <option value="daily">Daily Quick-Pick</option>
+                  <option value="lowStock">Low stock</option>
+                  <option value="outOfStock">Out of stock</option>
+                </select>
               </label>
               <label>
                 <span className={labelClass}>Parent Category</span>
@@ -1036,6 +1069,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               type="button"
               onClick={() => {
                 setProductSearch('');
+                setProductStatusFilter('active');
                 setProductCategoryFilter('');
                 setProductSubcategoryFilter('');
               }}
@@ -1391,6 +1425,3 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     </div>
   );
 }
-
-
-

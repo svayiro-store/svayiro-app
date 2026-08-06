@@ -528,6 +528,7 @@ export default function CustomerApp({
   const [upiReference, setUpiReference] = useState('');
   const [upiPaymentId, setUpiPaymentId] = useState<string | null>(null);
   const [upiPaymentUrl, setUpiPaymentUrl] = useState('');
+  const [pendingUpiOrderPayload, setPendingUpiOrderPayload] = useState<Parameters<typeof api.placeOrder>[0] | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [lastPlacedOrder, setLastPlacedOrder] = useState<Order | null>(null);
@@ -1569,6 +1570,8 @@ export default function CustomerApp({
     if (paymentMethod === 'upi') {
       setUpiReference(''); // Start empty so customer is forced to type real transaction ID/UTR
       setUpiPaymentStep('redirecting');
+      setUpiPaymentId(null);
+      setUpiPaymentUrl(generatedUpiUrl);
 
       try {
         const upiPayload = {
@@ -1588,22 +1591,14 @@ export default function CustomerApp({
           loyaltyRedeemPoints: totals.loyaltyRedeemPoints,
           items: cart.map(i => ({ productId: i.productId, quantity: i.quantity })),
           paymentMethod: 'upi' as const,
-          paymentStatus: 'pending' as const,
+          paymentStatus: 'submitted' as const,
           upiReference: null
         };
 
-        const orderRes = await api.placeOrder(upiPayload);
-        if (!orderRes.success || !orderRes.order) {
-          throw new Error('Failed to create UPI order');
-        }
-
-        setLastPlacedOrder(orderRes.order);
-        const paymentCreate = await api.createUpiPayment(orderRes.order.id, orderRes.order.finalAmount);
-        setUpiPaymentId(paymentCreate.payment.id);
-        setUpiPaymentUrl(paymentCreate.upiUrl);
+        setPendingUpiOrderPayload(upiPayload);
 
         try {
-          window.location.href = paymentCreate.upiUrl;
+          window.location.href = generatedUpiUrl;
         } catch (e) {
           console.warn('Iframe redirection limit fallback', e);
         }
@@ -1612,6 +1607,7 @@ export default function CustomerApp({
         setCheckoutError(errMsg);
         showToast(errMsg, 'error');
         setUpiPaymentStep('idle');
+        setPendingUpiOrderPayload(null);
         return;
       }
 
@@ -1670,23 +1666,28 @@ export default function CustomerApp({
   };
 
   const handleFinalizeUpiOrder = async (refVal?: string) => {
-    setUpiPaymentStep('success');
     const finalRef = (refVal || upiReference || '').trim();
     
     try {
-      if (!upiPaymentId) {
-        throw new Error('No pending UPI payment session found. Please start checkout again.');
+      if (!pendingUpiOrderPayload) {
+        setUpiPaymentStep('idle');
+        throw new Error('No pending UPI checkout found. Please start checkout again.');
       }
       if (!/^[A-Za-z0-9-]{8,30}$/.test(finalRef)) {
         throw new Error('Enter the real UPI transaction reference before submitting payment.');
       }
 
-      const confirmRes = await api.confirmUpiPayment(upiPaymentId, finalRef);
-      if (!confirmRes.success) {
-        throw new Error('Failed to confirm UPI payment.');
+      setIsPlacingOrder(true);
+      const orderRes = await api.placeOrder({
+        ...pendingUpiOrderPayload,
+        paymentStatus: 'submitted',
+        upiReference: finalRef
+      });
+      if (!orderRes.success || !orderRes.order) {
+        throw new Error('Failed to place UPI order.');
       }
 
-      setLastPlacedOrder((prev) => prev ? { ...prev, paymentDetails: { method: 'upi', status: 'pending', upiReference: finalRef }, status: 'pending' } : prev);
+      setLastPlacedOrder(orderRes.order);
       clearCart(true);
       setAppliedCoupon(null);
       setCouponSuccessMessage('');
@@ -1694,6 +1695,7 @@ export default function CustomerApp({
       setUpiReference('');
       setUpiPaymentId(null);
       setUpiPaymentUrl('');
+      setPendingUpiOrderPayload(null);
 
       setTimeout(() => {
         setUpiPaymentStep('success');
@@ -1708,10 +1710,14 @@ export default function CustomerApp({
         }, 1200);
       }, 200);
     } catch (err: any) {
-      setUpiPaymentStep('idle');
+      if (pendingUpiOrderPayload) {
+        setUpiPaymentStep('waiting');
+      }
       const errMsg = err.message || 'Fatal error processing UPI order finalize.';
       setCheckoutError(errMsg);
       showToast(errMsg, 'error');
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
@@ -1726,41 +1732,17 @@ export default function CustomerApp({
       throw new Error('Your shopping bag is empty.');
     }
 
-    const activeAddress = deliveryMethod === 'delivery' && activeUser.savedAddresses && activeUser.savedAddresses.length > 0
-      ? activeUser.savedAddresses[selectedAddressIndex]
-      : null;
+    await handleFinalizeUpiOrder(utr);
+    setIsQrScannerOpen(false);
+  };
 
-    if (!upiPaymentId) {
-      throw new Error('No pending UPI payment session exists. Please start checkout again.');
-    }
-
-    const confirmRes = await api.confirmUpiPayment(upiPaymentId, utr);
-    if (!confirmRes.success) {
-      throw new Error('Direct UPI payment confirmation failed.');
-    }
-
-    if (lastPlacedOrder) {
-      setLastPlacedOrder({
-        ...lastPlacedOrder,
-        paymentDetails: { ...lastPlacedOrder.paymentDetails, method: 'upi', status: 'paid', upiReference: utr },
-        status: 'accepted'
-      });
-    }
-
-    clearCart(true);
-    setAppliedCoupon(null);
-    setCouponSuccessMessage('');
-    setCouponCode('');
-    setUpiReference('');
+  const handleCancelUpiPayment = () => {
+    setPendingUpiOrderPayload(null);
     setUpiPaymentId(null);
     setUpiPaymentUrl('');
-    setIsCheckoutOpen(false);
-    setIsQrScannerOpen(false);
-    setActiveTab('orders');
-    fetchUserOrders();
-    fetchLoyaltySummary();
-    onRefreshData();
-    showToast('UPI reference submitted. Your order is registered for owner verification.', 'success');
+    setUpiReference('');
+    setUpiPaymentStep('idle');
+    showToast('UPI payment cancelled. Your order was not placed.', 'info');
   };
 
   // Manual confirmation wait pattern - no automatic timer finalize to avoid fake completions
@@ -2396,6 +2378,7 @@ export default function CustomerApp({
         setUpiPaymentStep={setUpiPaymentStep}
         upiCountdown={upiCountdown}
         handleFinalizeUpiOrder={handleFinalizeUpiOrder}
+        onCancelUpiPayment={handleCancelUpiPayment}
         suggestedCoupons={suggestedCoupons}
         onUseCoupon={handleUseCoupon}
       />

@@ -92,6 +92,7 @@ interface CheckoutModalProps {
   setUpiPaymentStep?: (step: 'idle' | 'redirecting' | 'waiting' | 'success') => void;
   upiCountdown?: number;
   handleFinalizeUpiOrder?: (refVal?: string) => Promise<void>;
+  onCancelUpiPayment?: () => void;
   suggestedCoupons?: Coupon[];
   onUseCoupon?: (code: string) => void;
 }
@@ -142,6 +143,7 @@ export default function CheckoutModal({
   setUpiPaymentStep,
   upiCountdown = 5,
   handleFinalizeUpiOrder,
+  onCancelUpiPayment,
   suggestedCoupons = [],
   onUseCoupon,
 }: CheckoutModalProps) {
@@ -260,6 +262,15 @@ export default function CheckoutModal({
                   Open any UPI app like GPay, PhonePe, Paytm, or BHIM, and scan this code to pay.
                 </p>
 
+                <div className="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-left dark:border-amber-900/60 dark:bg-amber-950/30">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    Important after payment
+                  </p>
+                  <p className="mt-1 text-[10px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Copy the UTR / transaction reference from your UPI app payment success screen or transaction history, then paste it below. The shop will verify only the correct UTR before accepting the order.
+                  </p>
+                </div>
+
                 {/* Direct UPI Redirection / Fallback button */}
                 <div className="w-full border-t border-slate-100 dark:border-slate-800 pt-3 flex flex-col gap-1.5 items-center">
                   <a 
@@ -306,7 +317,7 @@ export default function CheckoutModal({
                     required
                   />
                   <span className="text-[9px] opacity-75 block text-slate-500 dark:text-slate-400 leading-normal font-sans text-center">
-                    (Check your payment app transaction details history for the 12-digit UTR/Ref ID)
+                    Copy this from your UPI app after payment succeeds. Orders with wrong or missing UTR will not be accepted by the shop.
                   </span>
                 </div>
               </div>
@@ -327,13 +338,17 @@ export default function CheckoutModal({
                       handleFinalizeUpiOrder(upiReference);
                     }
                   }}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-emerald-600/15 uppercase tracking-wider transition-all"
+                  disabled={isPlacingOrder}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-emerald-600/15 uppercase tracking-wider transition-all"
                 >
                   ✓ Submit Order & Verify Payment
                 </button>
                 <button 
                   type="button"
-                  onClick={() => setUpiPaymentStep && setUpiPaymentStep('idle')}
+                  onClick={() => {
+                    onCancelUpiPayment?.();
+                    setUpiPaymentStep && setUpiPaymentStep('idle');
+                  }}
                   className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xs font-bold py-1.5 transition-all"
                 >
                   Cancel & Return to Cart
