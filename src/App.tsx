@@ -8,8 +8,12 @@ import { api } from './api';
 import { ShopProfile, Category, Product, Banner, Notification, User } from './types';
 import { ShoppingBag, Settings, RefreshCw, AlertCircle, CheckCircle, AlertTriangle, XCircle, Info, X, Eye, EyeOff } from 'lucide-react';
 import PublicPrintBill from './components/PublicPrintBill';
-const CustomerApp = lazy(() => import('./components/customer/CustomerApp'));
-const AdminApp = lazy(() => import('./components/admin'));
+
+type AppTarget = 'all' | 'customer' | 'admin';
+const BUILD_TARGET = (__SVAYIRO_APP_TARGET__ === 'customer' || __SVAYIRO_APP_TARGET__ === 'admin' ? __SVAYIRO_APP_TARGET__ : 'all') as AppTarget;
+const CustomerApp = __SVAYIRO_APP_TARGET__ === 'admin' ? null : lazy(() => import('./components/customer/CustomerApp'));
+const AdminApp = __SVAYIRO_APP_TARGET__ === 'customer' ? null : lazy(() => import('./components/admin'));
+
 export interface ToastMessage {
   id: string;
   message: string;
@@ -17,12 +21,18 @@ export interface ToastMessage {
 }
 // 🟢 1. App function declaration MUST come FIRST
 export default function App() {
+  const lockedMode: 'customer' | 'admin' | null = BUILD_TARGET === 'customer' || BUILD_TARGET === 'admin' ? BUILD_TARGET : null;
+  const publicStorefrontUrl = String(import.meta.env.VITE_PUBLIC_APP_URL || 'https://svayiro.co.in').replace(/\/$/, '');
+  const adminConsoleUrl = String(import.meta.env.VITE_ADMIN_APP_URL || 'https://console.svayiro.co.in').replace(/\/$/, '');
   const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   if (params?.has('invoice') || (typeof window !== 'undefined' && window.location.pathname.startsWith('/invoice/'))) {
     return <PublicPrintBill websiteUrl="https://svayiro.co.in" />;
   }
   // 🟢 3. React hooks MUST be inside App()
   const [currentMode, setCurrentMode] = useState<'customer' | 'admin'>(() => {
+    if (BUILD_TARGET === 'customer' || BUILD_TARGET === 'admin') {
+      return BUILD_TARGET;
+    }
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlMode = params.get('mode');
@@ -297,7 +307,7 @@ export default function App() {
   ) => {
     try {
       setErrorMessage('');
-      const resourceMode = modeOverride || currentMode;
+      const resourceMode = modeOverride || lockedMode || currentMode;
       if (options.skipStable && stableResourcesLoadedRef.current) {
         const productsPage = resourceMode === 'admin'
           ? null
@@ -397,7 +407,7 @@ export default function App() {
           const res = await api.getCurrentUser();
           const restoredUser = normalizeUser(res.user);
           setActiveUser(restoredUser);
-          if (isConsoleUser(restoredUser)) {
+          if (isConsoleUser(restoredUser) && lockedMode !== 'customer') {
             localStorage.setItem('svayiro_app_mode', 'admin');
             setCurrentMode('admin');
             loadCentralResources('admin');
@@ -414,7 +424,7 @@ export default function App() {
           localStorage.setItem('svayiro_auth_token', res.token);
           localStorage.setItem('svayiro_refresh_token', res.refreshToken);
           setActiveUser(restoredUser);
-          if (isConsoleUser(restoredUser)) {
+          if (isConsoleUser(restoredUser) && lockedMode !== 'customer') {
             localStorage.setItem('svayiro_app_mode', 'admin');
             setCurrentMode('admin');
             loadCentralResources('admin');
@@ -495,6 +505,14 @@ export default function App() {
   }, [notifications, currentMode]);
 
   const handleModeSwitch = (mode: 'customer' | 'admin') => {
+    if (lockedMode === 'admin' && mode === 'customer') {
+      window.open(publicStorefrontUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (lockedMode === 'customer' && mode === 'admin') {
+      window.location.href = adminConsoleUrl;
+      return;
+    }
     if (mode === 'customer' && isWorkerStaffUser(activeUser)) {
       handleLogout();
     }
@@ -775,7 +793,7 @@ export default function App() {
       
       {/* Render selected app configuration modes */}
       <Suspense fallback={renderRouteLoader()}>
-        {currentMode === 'customer' && shop ? (
+        {currentMode === 'customer' && shop && CustomerApp ? (
           <CustomerApp 
             shop={shop}
             categories={categories}
@@ -796,10 +814,10 @@ export default function App() {
             onChangeHomeProductPage={loadCustomerProductPage}
             isDarkMode={isDarkMode}
             showToast={showToast}
-            onSwitchMode={isWorkerStaffUser(activeUser) ? undefined : handleModeSwitch}
+            onSwitchMode={!lockedMode && !isWorkerStaffUser(activeUser) ? handleModeSwitch : undefined}
             onLogout={handleLogout}
           />
-        ) : shop && isConsoleUser(activeUser) ? (
+        ) : shop && isConsoleUser(activeUser) && AdminApp ? (
           <AdminApp 
             shop={shop}
             categories={categories}

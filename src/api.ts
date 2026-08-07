@@ -5,7 +5,11 @@
 
 import { ShopProfile, Category, Product, Bag, Coupon, Banner, Review, Notification, Order, AdvanceRequest, InventoryLog, User, Address, Role, StaffUser, Invoice, PaymentRecord, RoleCode, AdminAlert } from './types';
 
-const API_BASE = '/api';
+const rawApiUrl = String(import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '').trim();
+const normalizedApiUrl = rawApiUrl.replace(/\/$/, '');
+const API_BASE = normalizedApiUrl
+  ? normalizedApiUrl.endsWith('/api') ? normalizedApiUrl : `${normalizedApiUrl}/api`
+  : '/api';
 const getCache = new Map<string, { expiresAt: number; data?: unknown; promise?: Promise<unknown> }>();
 
 function cacheKeyFor(url: string) {

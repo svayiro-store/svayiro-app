@@ -6,7 +6,8 @@ import { defineConfig } from 'vite';
 export default defineConfig(() => ({
   plugins: [react(), tailwindcss()],
   define: {
-    'process.env.GOOGLE_MAPS_PLATFORM_KEY': JSON.stringify(process.env.GOOGLE_MAPS_PLATFORM_KEY || '')
+    'process.env.GOOGLE_MAPS_PLATFORM_KEY': JSON.stringify(process.env.GOOGLE_MAPS_PLATFORM_KEY || ''),
+    __SVAYIRO_APP_TARGET__: JSON.stringify(process.env.VITE_APP_TARGET || 'all')
   },
   resolve: {
     alias: {

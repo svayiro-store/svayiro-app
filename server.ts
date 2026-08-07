@@ -31,6 +31,37 @@ import type { CheckoutBagInfo } from './src/types';
 
 const app = express();
 app.use(compression());
+
+function configuredCorsOrigins() {
+  const defaults = [
+    process.env.APP_PUBLIC_URL,
+    process.env.PUBLIC_APP_URL,
+    process.env.VITE_PUBLIC_APP_URL,
+    process.env.VITE_ADMIN_APP_URL,
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173'
+  ];
+  const explicit = String(process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  return new Set([...defaults, ...explicit].filter(Boolean).map((origin) => String(origin).replace(/\/$/, '')));
+}
+
+app.use((req, res, next) => {
+  const origin = typeof req.headers.origin === 'string' ? req.headers.origin.replace(/\/$/, '') : '';
+  const allowedOrigins = configuredCorsOrigins();
+  if (origin && (allowedOrigins.has(origin) || (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost:\d+$/.test(origin)))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  return next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 
 type CacheEntry<T = any> = {
@@ -6327,11 +6358,20 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    console.log("Starting server in PRODUCTION with express static directories...");
-    app.use(express.static('dist'));
-    app.get('*', (req, res) => {
-      res.sendFile(path.resolve('dist', 'index.html'));
-    });
+    const shouldServeFrontend = process.env.SERVE_FRONTEND !== 'false';
+    const staticDir = process.env.STATIC_DIR || 'dist';
+    if (shouldServeFrontend) {
+      console.log(`Starting server in PRODUCTION with express static directory: ${staticDir}`);
+      app.use(express.static(staticDir));
+      app.get('*', (req, res) => {
+        res.sendFile(path.resolve(staticDir, 'index.html'));
+      });
+    } else {
+      console.log("Starting server in PRODUCTION API-only mode...");
+      app.get('/', (req, res) => {
+        res.json({ status: 'SVAYIRO API running' });
+      });
+    }
   }
 
   // Use configured container port or fallback to 3000

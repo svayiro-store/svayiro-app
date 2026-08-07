@@ -8,3 +8,5 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare const __SVAYIRO_APP_TARGET__: 'all' | 'customer' | 'admin' | string;
