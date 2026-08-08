@@ -5,14 +5,15 @@
 
 import React, { Suspense, lazy, useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  X, AlertTriangle, Store, Heart, ShoppingBag, FileText, User, 
-  MapPin, Clipboard, QrCode 
+  X, AlertTriangle, Store, ShoppingBag, FileText, User, 
+  MapPin, Clipboard, QrCode, LayoutGrid
 } from 'lucide-react';
 import { api } from '../../api';
 import { 
   ShopProfile, Category, Product, Banner, Notification, Order, Address, Coupon, User as UserType, CheckoutBagInfo, Bag, CustomerTab, Review
 } from '../../types';
 import { isValidDDMMYYYY, parseDDMMYYYYToISO } from '../../utils/date';
+import { formatLooseQuantity, isLooseProduct, loosePriceFactor, looseStockUnit } from '../../utils/productMeasure';
 
 import CustomerHeader from './CustomerHeader';
 import CustomerFooter from './CustomerFooter';
@@ -771,10 +772,11 @@ export default function CustomerApp({
     
     // Check stock limit
     const existing = cart.find(item => item.productId === productId);
-    const totalNewQty = (existing?.quantity || 0) + qty;
+    const quantityStep = isLooseProduct(prod) ? Math.max(1, Math.round(qty)) : Math.max(1, Math.floor(qty));
+    const totalNewQty = (existing?.quantity || 0) + quantityStep;
     if (totalNewQty > prod.stockCount) {
       if (!silent) {
-        showToast(`Buy Now! Only ${prod.stockCount} left in stock.`, 'warning');
+        showToast(`Buy Now! Only ${prod.stockCount} ${isLooseProduct(prod) ? looseStockUnit(prod) : 'left'} in stock.`, 'warning');
       }
       return;
     }
@@ -785,7 +787,7 @@ export default function CustomerApp({
         item.productId === productId ? { ...item, quantity: totalNewQty } : item
       );
     } else {
-      nextCart.push({ productId, quantity: qty });
+      nextCart.push({ productId, quantity: quantityStep });
     }
     updateCartState(nextCart);
     if (!silent) {
@@ -804,13 +806,15 @@ export default function CustomerApp({
       return;
     }
 
-    if (quantity > prod.stockCount) {
-      showToast(`No More stock limit (${prod.stockCount} units).`, 'warning');
+    const nextQuantity = isLooseProduct(prod) ? Math.max(0, Math.round(quantity)) : Math.max(0, Math.floor(quantity));
+
+    if (nextQuantity > prod.stockCount) {
+      showToast(`No More stock limit (${prod.stockCount} ${isLooseProduct(prod) ? looseStockUnit(prod) : 'units'}).`, 'warning');
       return;
     }
 
     const nextCart = cart.map(item => 
-      item.productId === productId ? { ...item, quantity } : item
+      item.productId === productId ? { ...item, quantity: nextQuantity } : item
     );
     updateCartState(nextCart);
   };
@@ -1367,8 +1371,15 @@ export default function CustomerApp({
       const prod = products.find(p => p.id === cartItem.productId);
       if (prod) {
         const activePrice = prod.offerPrice > 0 ? prod.offerPrice : prod.basePrice;
-        productTotal += activePrice * cartItem.quantity;
-        totalWeightGrams += prod.weight * cartItem.quantity;
+        const loose = isLooseProduct(prod);
+        const priceQty = loose ? loosePriceFactor(prod, cartItem.quantity) : cartItem.quantity;
+        productTotal += activePrice * priceQty;
+        if (loose) {
+          const stockUnit = looseStockUnit(prod);
+          totalWeightGrams += stockUnit === 'g' ? cartItem.quantity : stockUnit === 'ml' ? Math.round(cartItem.quantity * 0.95) : prod.weight * cartItem.quantity;
+        } else {
+          totalWeightGrams += prod.weight * cartItem.quantity;
+        }
         itemsList.push({ product: prod, quantity: cartItem.quantity });
       }
     }
@@ -1461,6 +1472,20 @@ export default function CustomerApp({
       deliveryDistanceKm
     };
   }, [cart, products, bags, bagOption, deliveryMethod, appliedCoupon, shop, activeUser, loyaltyAccount, loyaltyRedeemPoints, selectedAddressIndex, googleMapsDistanceKm]);
+
+  const buildOrderItemsPayload = () => cart.map((item) => {
+    const product = products.find((prod) => prod.id === item.productId);
+    if (product && isLooseProduct(product)) {
+      return {
+        productId: item.productId,
+        quantity: 1,
+        stockQuantity: item.quantity,
+        displayQuantityLabel: formatLooseQuantity(product, item.quantity),
+        isLooseLabel: true
+      };
+    }
+    return { productId: item.productId, quantity: item.quantity };
+  });
 
   const loyaltySummary = useMemo(() => {
     if (loyaltyAccount) return loyaltyAccount;
@@ -1589,7 +1614,7 @@ export default function CustomerApp({
           discountAmount: totals.discount,
           finalAmount: totals.finalTotal,
           loyaltyRedeemPoints: totals.loyaltyRedeemPoints,
-          items: cart.map(i => ({ productId: i.productId, quantity: i.quantity })),
+          items: buildOrderItemsPayload(),
           paymentMethod: 'upi' as const,
           paymentStatus: 'submitted' as const,
           upiReference: null
@@ -1636,7 +1661,7 @@ export default function CustomerApp({
         discountAmount: totals.discount,
         finalAmount: totals.finalTotal,
         loyaltyRedeemPoints: totals.loyaltyRedeemPoints,
-        items: cart.map(i => ({ productId: i.productId, quantity: i.quantity })),
+        items: buildOrderItemsPayload(),
         paymentMethod,
         upiReference: null
       };
@@ -2003,6 +2028,9 @@ export default function CustomerApp({
         searchDelayEnabled={searchUseDelay}
         searchSuggestions={searchSuggestions}
         searchPlaceholderItems={searchPlaceholderItems}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
         searchHistory={searchHistory}
         onSubmitSearch={(term) => {
           const cleanTerm = term.trim();
@@ -2032,7 +2060,7 @@ export default function CustomerApp({
       />
       <div
         aria-hidden="true"
-        className={`${activeTab === 'home' || activeTab === 'search' ? 'h-[118px]' : 'h-[72px]'} shrink-0 md:h-[126px]`}
+        className={`${activeTab === 'home' || activeTab === 'search' ? 'h-[178px] md:h-[188px]' : 'h-[72px] md:h-[126px]'} shrink-0`}
       />
 
       {/* Main Container */}
@@ -2114,10 +2142,18 @@ export default function CustomerApp({
         {activeTab === 'categories' && (
           <CategoriesView 
             categories={categories}
+            products={products}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
             setActiveTab={setProtectedActiveTab}
+            cart={cart}
+            updateCartQty={updateCartQty}
+            addToCart={addToCart}
+            setSelectedProduct={setSelectedProduct}
+            toggleWishlist={toggleWishlist}
+            activeUser={activeUser}
             isDarkMode={isDarkMode}
+            onShareProduct={handleShareProduct}
           />
         )}
 
@@ -2251,14 +2287,11 @@ export default function CustomerApp({
           </button>
           
           <button 
-            onClick={() => setProtectedActiveTab('wishlist')}
-            className={`flex flex-col items-center gap-1 p-2 transition-colors relative ${activeTab === 'wishlist' ? 'text-indigo-600' : 'text-slate-400'}`}
+            onClick={() => setProtectedActiveTab('categories')}
+            className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'categories' ? 'text-indigo-600' : 'text-slate-400'}`}
           >
-            <Heart className="h-5 w-5" />
-            {activeUser && activeUser.wishlist.length > 0 && (
-              <span className="absolute top-1 right-2 bg-rose-600 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center">{activeUser.wishlist.length}</span>
-            )}
-            <span className="text-[10px] font-semibold">Wishlist</span>
+            <LayoutGrid className="h-5 w-5" />
+            <span className="text-[10px] font-semibold">Categories</span>
           </button>
 
           <button 
@@ -2267,7 +2300,7 @@ export default function CustomerApp({
           >
             <ShoppingBag className="h-5 w-5" />
             {cart.length > 0 && (
-              <span className="absolute top-1 right-1 bg-indigo-600 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-pulse">{cart.length}</span>
+              <span className="absolute top-1 right-1 bg-indigo-600 text-white text-[8px] font-semibold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">{cart.length}</span>
             )}
             <span className="text-[10px] font-semibold">Bag</span>
           </button>

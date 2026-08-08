@@ -4,7 +4,7 @@ import {
   ShoppingCart, Star, AlertTriangle, Share2, Gift
 } from 'lucide-react';
 import { Banner, Category, Product, User as UserType, ShopProfile, Coupon } from '../../types';
-import { formatProductMeasure } from '../../utils/productMeasure';
+import { cartQuantityLabel, formatProductMeasure, isLooseProduct, looseQuantityOptions } from '../../utils/productMeasure';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
 const bannerImageFallback = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1400';
@@ -59,7 +59,7 @@ interface HomeViewProps {
   onChangeProductPage?: (params?: { categoryId?: string | null; page?: number; pageSize?: number }) => Promise<number>;
   cart: { productId: string; quantity: number }[];
   updateCartQty: (pId: string, qty: number) => void;
-  addToCart: (pId: string) => void;
+  addToCart: (pId: string, qty?: number) => void;
   setSelectedProduct: (prod: Product) => void;
   toggleWishlist: (pId: string) => void;
   activeUser: UserType | null;
@@ -105,6 +105,7 @@ export default function HomeView({
   const [birthdayRedeemMessage, setBirthdayRedeemMessage] = useState('');
   const [birthdayCouponApplied, setBirthdayCouponApplied] = useState(false);
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [selectedLooseQtyByProduct, setSelectedLooseQtyByProduct] = useState<Record<string, number>>({});
 
   const holidayBroadcastMessage = (shop?.holidayMessage || '').trim();
   const closedBroadcastText = shop?.isHolidayMode && holidayBroadcastMessage
@@ -116,8 +117,6 @@ export default function HomeView({
   const birthdayMinOrder = Number(birthdayCoupon?.minOrderValue || 0);
   const showBirthdayBubble = Boolean(activeUser && isBirthdayToday);
 
-  // Only top-level categories show as circles here; subcategories expand inline below
-  const topLevelCategories = categories.filter(cat => !cat.parentId);
   const selectedCategoryDetails = selectedCategory ? categories.find(cat => cat.id === selectedCategory) : null;
   const selectedParentCategory = selectedCategoryDetails
     ? selectedCategoryDetails.parentId
@@ -125,6 +124,46 @@ export default function HomeView({
       : selectedCategoryDetails
     : null;
   const activeSectionId = expandedCategoryId || selectedParentCategory?.id || null;
+  const selectedLooseQty = (prod: Product) => selectedLooseQtyByProduct[prod.id] || looseQuantityOptions(prod)[0]?.value || 1;
+
+  const productQtyBadge = (prod: Product) => {
+    const measure = formatProductMeasure(prod);
+    const compactMeasure = formatProductMeasure(prod, { compact: true });
+    if (!measure) return null;
+    return (
+      <span className="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[9px] font-semibold tracking-wide text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+        <span className="hidden sm:inline">{measure.toLowerCase()}</span>
+        <span className="sm:hidden">{compactMeasure.toLowerCase()}</span>
+      </span>
+    );
+  };
+
+  const discountedProducts = products
+    .filter((product) => product.isEnabled && !isLooseProduct(product) && product.offerPrice > 0 && product.basePrice > product.offerPrice)
+    .sort((a, b) => ((b.basePrice - b.offerPrice) / Math.max(1, b.basePrice)) - ((a.basePrice - a.offerPrice) / Math.max(1, a.basePrice)));
+  const bestOfferProducts = discountedProducts.slice(0, 6);
+  const featuredProducts = products
+    .filter((product) => product.isEnabled && !isLooseProduct(product) && product.isFeatured)
+    .slice(0, 6);
+  const recommendedProducts = products
+    .filter((product) => product.isEnabled && !isLooseProduct(product) && !featuredProducts.some((item) => item.id === product.id) && !bestOfferProducts.some((item) => item.id === product.id))
+    .slice(0, 6);
+
+  useEffect(() => {
+    if (!selectedCategory) {
+      setExpandedCategoryId(null);
+      return;
+    }
+
+    const selected = categories.find((category) => category.id === selectedCategory);
+    if (selected?.parentId) {
+      setExpandedCategoryId(selected.parentId);
+      return;
+    }
+
+    const hasSubcategories = categories.some((category) => category.parentId === selectedCategory);
+    setExpandedCategoryId(hasSubcategories ? selectedCategory : null);
+  }, [categories, selectedCategory]);
 
   const scrollToProducts = () => {
     window.setTimeout(() => {
@@ -133,28 +172,6 @@ export default function HomeView({
         productsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 80);
-  };
-
-  const scrollToSubcategories = () => {
-    window.setTimeout(() => {
-      const subcategoryEl = document.getElementById('category-subsections-anchor');
-      if (subcategoryEl) {
-        subcategoryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 80);
-  };
-
-  const handleCategoryCircleClick = (cat: Category) => {
-    const hasSubcategories = categories.some(c => c.parentId === cat.id);
-    if (hasSubcategories) {
-      setSelectedCategory(cat.id);
-      setExpandedCategoryId(cat.id);
-      scrollToSubcategories();
-    } else {
-      setSelectedCategory(cat.id);
-      setExpandedCategoryId(null);
-      scrollToProducts();
-    }
   };
 
   const bannerRailRef = useRef<HTMLDivElement | null>(null);
@@ -254,29 +271,99 @@ export default function HomeView({
     }
   };
 
+  const renderShowcaseSection = (title: string, subtitle: string, items: Product[]) => {
+    if (items.length === 0 || selectedCategory) return null;
+
+    return (
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3 text-left">
+          <div>
+            <h3 className="font-serif text-base font-semibold tracking-tight text-slate-950 dark:text-white md:text-lg">{title}</h3>
+          </div>
+          <span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+            {items.length} items
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+          {items.map((prod) => {
+            const hasDiscount = prod.offerPrice > 0 && prod.basePrice > prod.offerPrice;
+            const itemInCart = cart.find(c => c.productId === prod.id);
+            const isWishlisted = activeUser?.wishlist.includes(prod.id);
+            return (
+              <article
+                key={prod.id}
+                className={`group overflow-hidden rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'}`}
+              >
+                <div className="relative aspect-square cursor-pointer bg-white" onClick={() => setSelectedProduct(prod)}>
+                  <img
+                    src={prod.images?.[0] || productImageFallback}
+                    alt={prod.name}
+                    className="h-full w-full object-contain p-1.5 transition duration-300 group-hover:scale-105"
+                    referrerPolicy="no-referrer"
+                  />
+                  {hasDiscount && (
+                    <span className="absolute left-1 top-1 rounded-full bg-emerald-800 px-2 py-0.5 text-[8px] font-semibold text-white shadow-[0_3px_0_rgba(6,95,70,0.45)]">
+                      {Math.round(100 - (prod.offerPrice / prod.basePrice) * 100)}%
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleWishlist(prod.id);
+                    }}
+                    className={`absolute right-1 top-1 rounded-full border p-1 shadow-sm ${isWishlisted ? 'border-rose-200 bg-rose-50 text-rose-500' : 'border-slate-200 bg-white/90 text-slate-500'}`}
+                    aria-label="Toggle wishlist"
+                  >
+                    <Heart className="h-3 w-3" fill={isWishlisted ? 'currentColor' : 'none'} />
+                  </button>
+                </div>
+
+                <div className="space-y-1 p-2 text-left">
+                  <h4
+                    onClick={() => setSelectedProduct(prod)}
+                    className="line-clamp-1 cursor-pointer text-[11px] font-semibold leading-tight text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-300"
+                  >
+                    {prod.name}
+                  </h4>
+                  <div className="min-h-4">{productQtyBadge(prod)}</div>
+                  <div className="flex flex-wrap items-baseline gap-1">
+                    <span className="text-sm font-black text-indigo-700 dark:text-indigo-300">₹{hasDiscount ? prod.offerPrice : prod.basePrice}</span>
+                    {hasDiscount && <span className="text-[9px] font-mono text-slate-400 line-through">₹{prod.basePrice}</span>}
+                  </div>
+                  {itemInCart ? (
+                    <div className="flex items-center justify-between rounded-full border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+                      <button type="button" onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)}>
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="min-w-5 text-center text-[10px] font-semibold">{itemInCart.quantity}</span>
+                      <button type="button" onClick={() => updateCartQty(prod.id, itemInCart.quantity + 1)}>
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={prod.stockCount === 0}
+                      onClick={() => addToCart(prod.id, 1)}
+                      className="flex w-full items-center justify-center gap-1 rounded-full bg-indigo-700 px-2 py-1.5 text-[10px] font-semibold text-white shadow-sm hover:bg-indigo-600 disabled:opacity-40"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    );
+  };
+
   return (
     <div className="space-y-8">
-      {/* Store status and broadcast messages directly above Banner */}
-      {isShopClosed && (
-        <div className={`${shop?.isHolidayMode ? 'bg-amber-500 text-slate-950 border-amber-400/40' : 'bg-rose-600 text-white border-rose-500/30 animate-pulse'} py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow border`}>
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <span className="leading-relaxed">{closedBroadcastText}</span>
-        </div>
-      )}
-
-      {!isShopClosed && shop?.isHolidayMode && holidayBroadcastMessage && (
-        <div className="bg-amber-500 text-slate-950 py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow border border-amber-400/40">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <span className="leading-relaxed">{holidayBroadcastMessage}</span>
-        </div>
-      )}
-
-      {shop?.announcement && !isShopClosed && (
-        <div className="bg-emerald-600 text-white py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow border border-emerald-500/30 animate-fadeIn">
-          <span className="leading-relaxed">{shop.announcement}</span>
-        </div>
-      )}
-
       {showBirthdayBubble && (
         <>
           {birthdayCouponOpen && (
@@ -397,6 +484,84 @@ export default function HomeView({
         </>
       )}
 
+      {activeSectionId && (() => {
+        const parentCat = categories.find(c => c.id === activeSectionId);
+        const subs = categories.filter(c => c.parentId === activeSectionId);
+        if (!parentCat || subs.length === 0) return null;
+
+        return (
+          <div id="category-subsections-anchor" className={`sticky top-[196px] z-20 -mx-4 border-b px-4 py-2 shadow-sm backdrop-blur sm:-mx-6 sm:px-6 md:static md:shadow-none ${isDarkMode ? 'border-slate-800 bg-slate-950/95' : 'border-slate-200 bg-white/95'}`}>
+            <div className="grid grid-cols-4 gap-2 sm:flex sm:gap-2 sm:overflow-x-auto sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(parentCat.id);
+                  setExpandedCategoryId(parentCat.id);
+                  scrollToProducts();
+                }}
+                className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 text-center text-[9px] font-semibold transition sm:min-w-[78px] sm:flex-row sm:rounded-full sm:px-3 sm:py-2 sm:text-[10px] ${selectedCategory === parentCat.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300' : isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-indigo-700 dark:bg-slate-800 dark:text-indigo-300 sm:h-6 sm:w-6">
+                  <Compass className="h-3.5 w-3.5" />
+                </span>
+                <span className="max-w-full truncate leading-tight sm:max-w-[88px]">View All</span>
+              </button>
+
+              {subs.map((sub) => {
+                const isSubSelected = selectedCategory === sub.id;
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(sub.id);
+                      setExpandedCategoryId(parentCat.id);
+                      scrollToProducts();
+                    }}
+                    className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 text-center text-[9px] font-semibold transition sm:min-w-[86px] sm:flex-row sm:rounded-full sm:px-3 sm:py-2 sm:text-[10px] ${isSubSelected ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300' : isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-300 hover:border-indigo-700' : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-200'}`}
+                  >
+                    <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-[8px] font-semibold uppercase text-indigo-700 dark:bg-slate-800 dark:text-indigo-300 sm:h-6 sm:w-6">
+                      {sub.name.substring(0, 2)}
+                      {sub.imageUrl && (
+                        <img
+                          src={sub.imageUrl}
+                          alt={sub.name}
+                          referrerPolicy="no-referrer"
+                          className="absolute inset-0 h-full w-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
+                    </span>
+                    <span className="max-w-full truncate leading-tight sm:max-w-[88px]">{sub.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Store status and broadcast messages below categories */}
+      {isShopClosed && (
+        <div className={`${shop?.isHolidayMode ? 'bg-amber-500 text-slate-950 border-amber-400/40' : 'bg-rose-600 text-white border-rose-500/30 animate-pulse'} py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow border`}>
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="leading-relaxed">{closedBroadcastText}</span>
+        </div>
+      )}
+
+      {!isShopClosed && shop?.isHolidayMode && holidayBroadcastMessage && (
+        <div className="bg-amber-500 text-slate-950 py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow border border-amber-400/40">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="leading-relaxed">{holidayBroadcastMessage}</span>
+        </div>
+      )}
+
+      {shop?.announcement && !isShopClosed && (
+        <div className="bg-emerald-600 text-white py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow border border-emerald-500/30 animate-fadeIn">
+          <span className="leading-relaxed">{shop.announcement}</span>
+        </div>
+      )}
+
       {/* Compact responsive banner rail */}
       {banners.length > 0 && (
         <section className="space-y-2">
@@ -482,15 +647,14 @@ export default function HomeView({
       <div>
         <div className="mb-3 flex items-end justify-between gap-3 text-left">
           <div>
-            <h3 className="font-serif text-base md:text-lg font-black tracking-tight text-emerald-700 dark:text-emerald-300">Daily Quick-Pick</h3>
-            <p className="text-xs opacity-75">Fast-pick staples customers buy repeatedly.</p>
+            <h3 className="font-serif text-base md:text-lg font-semibold tracking-tight text-emerald-700 dark:text-emerald-300">Daily Quick-Pick</h3>
           </div>
-          <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 sm:inline-flex">
+          <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 sm:inline-flex">
             Quick add
           </span>
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {products.filter(p => p.isDailyEssential && p.isEnabled).slice(0, 4).map((prod) => {
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8">
+          {products.filter(p => p.isDailyEssential && p.isEnabled).slice(0, 6).map((prod) => {
             const hasDiscount = prod.offerPrice > 0;
             const itemInCart = cart.find(c => c.productId === prod.id);
             const lowStockThreshold = prod.lowStockAlertThreshold ?? 10;
@@ -499,70 +663,60 @@ export default function HomeView({
               <div
                 key={prod.id}
                 onClick={() => setSelectedProduct(prod)}
-                className={`group cursor-pointer rounded-xl border p-2 shadow-sm transition-all duration-300 relative overflow-hidden flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-md ${
+                className={`group relative flex h-44 cursor-pointer flex-col overflow-hidden rounded-xl border p-1.5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
                   isDarkMode
                     ? 'border-emerald-900/60 bg-slate-950 hover:border-emerald-700'
                     : 'border-emerald-100 bg-white hover:border-emerald-300'
                 }`}
               >
-                <div className="absolute bottom-0 left-0 top-0 w-1 bg-emerald-500" />
-                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-emerald-100/70 bg-emerald-50 shadow-inner dark:border-emerald-950 dark:bg-slate-900">
+                <div className="relative h-20 shrink-0 overflow-hidden rounded-lg border border-emerald-100/70 bg-white shadow-inner dark:border-emerald-950 dark:bg-slate-900">
                   <img
                     src={prod.images?.[0] || productImageFallback}
                     alt={prod.name}
-                    className="w-full h-full object-cover transition-transform duration-350 group-hover:scale-105"
+                    className="h-full w-full object-contain p-1 transition-transform duration-350 group-hover:scale-105"
                     referrerPolicy="no-referrer"
                   />
                   {hasDiscount && (
-                    <span className="absolute left-1 top-1 rounded-full bg-rose-600 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow">
-                      Special
+                    <span className="absolute left-1 top-1 rounded-full bg-emerald-800 px-1.5 py-0.5 text-[7px] font-semibold text-white shadow-[0_3px_0_rgba(6,95,70,0.45)]">
+                      {Math.round(100 - (prod.offerPrice / prod.basePrice) * 100)}%
                     </span>
                   )}
                 </div>
-                <div className="min-w-0 flex-1 space-y-1 pr-9 text-left">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                      {formatProductMeasure(prod)}
-                    </span>
-                    {prod.stockCount === 0 && (
-                      <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                        OUT OF STOCK
-                      </span>
-                    )}
-                  </div>
-                  <h4
-                    className="line-clamp-1 text-xs font-black leading-tight tracking-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-slate-100 dark:group-hover:text-emerald-300"
-                  >
+                <div className="mt-1.5 min-w-0 space-y-0.5 pr-7 text-left">
+                  <h4 className="line-clamp-1 text-[10px] font-semibold leading-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-slate-100 dark:group-hover:text-emerald-300">
                     {prod.name}
                   </h4>
-                  <div className="flex items-baseline gap-1 flex-wrap">
-                    <span className="text-sm font-black text-emerald-700 dark:text-emerald-300">
-                      â‚¹{hasDiscount ? prod.offerPrice : prod.basePrice}
+                  <div className="min-h-4 scale-[0.88] origin-left">
+                    {productQtyBadge(prod)}
+                  </div>
+                  <div className="flex flex-wrap items-baseline gap-1">
+                    <span className="text-xs font-black text-emerald-700 dark:text-emerald-300">
+                      ₹{hasDiscount ? prod.offerPrice : prod.basePrice}
                     </span>
                     {hasDiscount && (
-                      <span className="text-slate-400 dark:text-slate-500 line-through text-[10px] font-mono">
-                        â‚¹{prod.basePrice}
+                      <span className="text-slate-400 dark:text-slate-500 line-through text-[8px] font-mono">
+                        ₹{prod.basePrice}
                       </span>
                     )}
                   </div>
                   {isLowStock && (
-                    <span className="flex items-center gap-1 text-[9px] font-bold text-amber-600 dark:text-amber-500">
-                      âš ï¸ Only {prod.stockCount} left
+                    <span className="flex items-center gap-1 text-[8px] font-semibold text-amber-600 dark:text-amber-500">
+                      <AlertTriangle className="h-2.5 w-2.5" /> Only {prod.stockCount} left
                     </span>
                   )}
                 </div>
-                <div onClick={(e) => e.stopPropagation()} className="absolute bottom-2 right-2 flex shrink-0 flex-col gap-1">
+                <div onClick={(e) => e.stopPropagation()} className="absolute bottom-1.5 right-1.5 flex shrink-0 flex-col gap-1">
                   {itemInCart ? (
-                    <div className="flex items-center gap-1 rounded-full bg-emerald-600 p-0.5 text-white shadow">
+                    <div className="flex items-center gap-0.5 rounded-full bg-emerald-600 p-0.5 text-white shadow">
                       <button
-                        onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)}
+                        onClick={() => updateCartQty(prod.id, itemInCart.quantity - (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))}
                         className="p-0.5 hover:bg-emerald-500 rounded-full"
                       >
                         <Minus className="h-3 w-3" />
                       </button>
-                      <span className="text-[10px] font-black font-mono w-5 text-center">{itemInCart.quantity}</span>
+                      <span className="min-w-5 text-center text-[8px] font-semibold font-mono">{cartQuantityLabel(prod, itemInCart.quantity)}</span>
                       <button
-                        onClick={() => updateCartQty(prod.id, itemInCart.quantity + 1)}
+                        onClick={() => updateCartQty(prod.id, itemInCart.quantity + (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))}
                         className="p-0.5 hover:bg-emerald-500 rounded-full"
                       >
                         <Plus className="h-3 w-3" />
@@ -571,11 +725,11 @@ export default function HomeView({
                   ) : (
                     <button
                       disabled={prod.stockCount === 0}
-                      onClick={() => addToCart(prod.id)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-md transition hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600"
+                      onClick={() => addToCart(prod.id, isLooseProduct(prod) ? selectedLooseQty(prod) : 1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-md transition hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600"
                       title="Quick Add to Bag"
                     >
-                      <Plus className="h-3.5 w-3.5" />
+                      <Plus className="h-3 w-3" />
                     </button>
                   )}
                 </div>
@@ -583,184 +737,6 @@ export default function HomeView({
             );
           })}
         </div>
-      </div>
-
-      {/* Premium Circular Categories Navigation Badges */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <h3 className="font-serif text-[14px] md:text-base font-extrabold tracking-tight uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-            Shop Sections
-          </h3>
-          {selectedCategory && (
-            <button
-              onClick={() => { setSelectedCategory(null); setExpandedCategoryId(null); }}
-              className="text-xs text-rose-500 hover:text-rose-600 font-bold hover:underline"
-            >
-              Clear Filter
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-5 overflow-x-auto pb-4 pt-3 px-3 w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {/* "All Products" circular button */}
-          <div
-            onClick={() => {
-              setSelectedCategory(null);
-              setExpandedCategoryId(null);
-              scrollToProducts();
-            }}
-            className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
-          >
-            <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center border transition-all duration-300 shadow-sm ${
-              !selectedCategory
-                ? 'border-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 ring-4 ring-indigo-500/20 scale-105'
-                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 group-hover:scale-105 group-hover:border-indigo-300'
-            }`}>
-              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-indigo-50 dark:bg-slate-850">
-                <Compass className="h-5 w-5 text-indigo-700 dark:text-indigo-400" />
-              </div>
-            </div>
-            <span className={`text-[10px] md:text-xs font-bold text-center tracking-tight transition-colors duration-300 max-w-[70px] truncate ${!selectedCategory ? 'text-indigo-700 dark:text-indigo-300 font-extrabold' : 'text-slate-600 dark:text-slate-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300'}`}>
-              All Items
-            </span>
-          </div>
-
-          {/* Main list of category circles (top-level only) */}
-          {topLevelCategories.map((cat) => {
-            const isSelected = selectedCategory === cat.id || selectedParentCategory?.id === cat.id;
-            const isExpanded = activeSectionId === cat.id;
-            const hasSubcategories = categories.some(c => c.parentId === cat.id);
-            return (
-              <div
-                key={cat.id}
-                onClick={() => handleCategoryCircleClick(cat)}
-                className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
-              >
-                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden border transition-all duration-300 p-1 shadow-sm relative ${
-                  isSelected || isExpanded
-                    ? 'border-indigo-700 bg-indigo-50 dark:bg-indigo-500/5 ring-4 ring-indigo-500/20 scale-105'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 group-hover:scale-105 group-hover:border-indigo-300'
-                }`}>
-                  <div className="relative w-full h-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase select-none">
-                      {cat.name.substring(0, 2)}
-                    </span>
-                    {cat.imageUrl && (
-                      <img
-                        src={cat.imageUrl}
-                        alt={cat.name}
-                        referrerPolicy="no-referrer"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-350 group-hover:scale-110 z-10"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    )}
-                  </div>
-                  {hasSubcategories && (
-                    <span className={`absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white dark:border-slate-950 text-[8px] font-black text-white shadow transition-transform ${isExpanded ? 'bg-rose-500 rotate-45' : 'bg-indigo-600'}`}>
-                      +
-                    </span>
-                  )}
-                </div>
-                <span className={`text-[10px] md:text-xs font-bold text-center tracking-tight transition-colors duration-300 max-w-[80px] truncate ${isSelected || isExpanded ? 'text-indigo-700 dark:text-indigo-300 font-extrabold' : 'text-slate-600 dark:text-slate-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300'}`}>
-                  {cat.name}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Inline subcategory row - bigger round circles, expands under the tapped main category */}
-        {activeSectionId && (() => {
-          const parentCat = categories.find(c => c.id === activeSectionId);
-          const subs = categories.filter(c => c.parentId === activeSectionId);
-          if (!parentCat || subs.length === 0) return null;
-
-          const ringPalette = [
-            'bg-indigo-50 border-indigo-200 dark:bg-indigo-950/30 dark:border-indigo-900',
-            'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900',
-            'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900',
-            'bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900',
-            'bg-sky-50 border-sky-200 dark:bg-sky-950/30 dark:border-sky-900',
-          ];
-
-          return (
-            <div id="category-subsections-anchor" className={`scroll-mt-24 rounded-xl border p-3 animate-fadeIn ${isDarkMode ? 'border-indigo-900/50 bg-indigo-950/10' : 'border-indigo-100 bg-indigo-50/40'}`}>
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">Section</p>
-                  <h4 className="font-serif text-lg font-black text-slate-950 dark:text-white">{parentCat.name}</h4>
-                  {parentCat.description && <p className="mt-1 line-clamp-2 text-xs text-slate-600 dark:text-slate-300">{parentCat.description}</p>}
-                </div>
-                <span className="shrink-0 rounded-full bg-indigo-700 px-3 py-1 text-[10px] font-black uppercase text-white">
-                  {subs.length} aisles
-                </span>
-              </div>
-              <div className="grid grid-cols-4 gap-2 pb-1 px-1 w-full md:flex md:items-center md:gap-3 md:overflow-x-auto md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:hidden">
-                {/* Shortcut to view everything under the main category */}
-                <div
-                  onClick={() => {
-                    setSelectedCategory(parentCat.id);
-                    setExpandedCategoryId(parentCat.id);
-                    scrollToProducts();
-                  }}
-                  className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
-                >
-                  <div className={`w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center border-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
-                    selectedCategory === parentCat.id
-                      ? 'border-indigo-700 bg-indigo-100 dark:bg-indigo-900/40 ring-4 ring-indigo-500/20'
-                      : 'border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800'
-                  }`}>
-                    <Compass className="h-6 w-6 text-indigo-700 dark:text-indigo-400" />
-                  </div>
-                  <span className="text-[11px] md:text-xs font-bold text-center tracking-tight max-w-[88px] truncate text-indigo-700 dark:text-indigo-300">
-                    View All
-                  </span>
-                </div>
-
-                {subs.map((sub, idx) => {
-                  const isSubSelected = selectedCategory === sub.id;
-                  return (
-                    <div
-                      key={sub.id}
-                      onClick={() => {
-                        setSelectedCategory(sub.id);
-                        setExpandedCategoryId(parentCat.id);
-                        scrollToProducts();
-                      }}
-                      className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
-                    >
-                      <div className={`w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center border-2 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-md ${
-                        isSubSelected
-                          ? 'border-indigo-700 ring-4 ring-indigo-500/20 bg-indigo-100 dark:bg-indigo-900/40'
-                          : ringPalette[idx % ringPalette.length]
-                      }`}>
-                        <div className="relative w-[86%] h-[86%] rounded-lg overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center shadow-inner">
-                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase select-none">
-                            {sub.name.substring(0, 2)}
-                          </span>
-                          {sub.imageUrl && (
-                            <img
-                              src={sub.imageUrl}
-                              alt={sub.name}
-                              referrerPolicy="no-referrer"
-                              className="absolute inset-0 w-full h-full object-cover z-10"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                      <span className={`text-[11px] md:text-xs font-semibold text-center tracking-tight max-w-[88px] truncate ${isSubSelected ? 'text-indigo-700 dark:text-indigo-300 font-extrabold' : 'text-slate-700 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-300'}`}>
-                        {sub.name}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
       </div>
 
       {/* Filtered category active banner */}
@@ -782,10 +758,14 @@ export default function HomeView({
         </div>
       )}
 
+      {renderShowcaseSection('Featured Today', 'Owner-picked products to highlight right now.', featuredProducts)}
+      {renderShowcaseSection('Best Offers', 'Discounted products customers should not miss.', bestOfferProducts)}
+      {renderShowcaseSection('Recommended for You', 'Useful picks based on available storefront products.', recommendedProducts)}
+
       {/* Main Products Grid */}
       <div id="catalog-products-list-anchor" className="scroll-mt-24">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-serif text-lg md:text-xl font-bold tracking-tight text-left">
+          <h3 className="font-serif text-lg md:text-xl font-semibold tracking-tight text-left">
             {selectedCategory ? `${categories.find(c => c.id === selectedCategory)?.name}` : 'Products Catalog'}
           </h3>
           <span className="text-xs opacity-75 font-mono">
@@ -808,12 +788,12 @@ export default function HomeView({
         ) : filteredProducts.length === 0 ? (
           <div className={`p-12 text-center rounded-2xl border ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-slate-50'}`}>
             <Compass className="h-12 w-12 text-slate-400 mx-auto mb-2" />
-            <p className="text-sm font-bold opacity-75">No matching premium items found</p>
+            <p className="text-sm font-semibold opacity-75">No matching premium items found</p>
             <p className="text-xs opacity-60 mt-1">Try resetting the selected criteria or changing your search terms.</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 sm:gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
               {visibleProducts.map((prod) => {
                 const hasDiscount = prod.offerPrice > 0;
                 const itemInCart = cart.find(c => c.productId === prod.id);
@@ -858,13 +838,13 @@ export default function HomeView({
                       </button>
                       {/* Percent discount label */}
                       {hasDiscount && (
-                        <span className="absolute top-1.5 left-1.5 bg-red-600 text-white font-black text-[10px] px-2 py-1 rounded-full uppercase tracking-wider font-mono shadow">
+                        <span className="absolute left-1.5 top-1.5 rounded-full bg-emerald-800 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white shadow-[0_4px_0_rgba(6,95,70,0.45),0_8px_16px_rgba(6,95,70,0.28)] ring-1 ring-emerald-300/50">
                           {Math.round(100 - (prod.offerPrice / prod.basePrice) * 100)}%
                         </span>
                       )}
                       {prod.stockCount === 0 && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-2 sm:p-4">
-                          <span className="bg-red-600 text-white font-extrabold text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded-full uppercase">Out of stock</span>
+                          <span className="bg-red-600 text-white font-semibold text-[10px] sm:text-xs px-2 sm:px-3 py-1 rounded-full uppercase">Out of stock</span>
                         </div>
                       )}
                     </div>
@@ -877,12 +857,12 @@ export default function HomeView({
                           </span>
                           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                             <Star className="h-2.5 w-2.5 text-amber-500 fill-amber-500" />
-                            <span className="text-[9px] sm:text-[10px] font-bold">{prod.ratingAverage || 'New'}</span>
+                            <span className="text-[9px] sm:text-[10px] font-semibold">{prod.ratingAverage || 'New'}</span>
                           </div>
                         </div>
                         <h4
                           onClick={() => setSelectedProduct(prod)}
-                          className="font-bold text-[11px] sm:text-xs leading-snug tracking-tight line-clamp-1 hover:text-indigo-500 cursor-pointer text-left"
+                          className="font-semibold text-[11px] sm:text-xs leading-snug tracking-tight line-clamp-1 hover:text-indigo-500 cursor-pointer text-left"
                         >
                           {prod.name}
                         </h4>
@@ -893,7 +873,7 @@ export default function HomeView({
                             className="block text-left text-[9px] leading-tight opacity-70 hover:text-indigo-500 hover:opacity-100 line-clamp-1"
                           >
                             {prod.description.length > 40 ? `${prod.description.slice(0, 40)}... ` : prod.description}
-                            {prod.description.length > 40 && <span className="font-bold text-indigo-600 dark:text-indigo-400">more...</span>}
+                            {prod.description.length > 40 && <span className="font-semibold text-indigo-600 dark:text-indigo-400">more...</span>}
                           </button>
                         )}
                       </div>
@@ -907,7 +887,7 @@ export default function HomeView({
                               <span className="text-slate-400 line-through text-[9px] sm:text-[10px] font-mono">₹{prod.basePrice}</span>
                             )}
                           </div>
-                          <span className="text-[8px] sm:text-[9px] opacity-70 font-mono">({formatProductMeasure(prod)})</span>
+                          {productQtyBadge(prod)}
                         </div>
                         {/* Stock and Low Stock notices */}
                         {isLowStock && (
@@ -921,28 +901,52 @@ export default function HomeView({
                           {itemInCart ? (
                             <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900 rounded-full px-1.5 sm:px-2.5 py-0.5 text-indigo-600 dark:text-indigo-400">
                               <button
-                                onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)}
+                                onClick={() => updateCartQty(prod.id, itemInCart.quantity - (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))}
                                 className="p-0.5 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-full"
                               >
                                 <Minus className="h-3.5 w-3.5" />
                               </button>
-                              <span className="text-xs font-bold w-5 text-center font-mono">{itemInCart.quantity}</span>
+                              <span className="min-w-10 px-1 text-center text-[10px] sm:text-xs font-semibold font-mono">{cartQuantityLabel(prod, itemInCart.quantity)}</span>
                               <button
-                                onClick={() => updateCartQty(prod.id, itemInCart.quantity + 1)}
+                                onClick={() => updateCartQty(prod.id, itemInCart.quantity + (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))}
                                 className="p-0.5 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-full"
                               >
                                 <Plus className="h-3.5 w-3.5" />
                               </button>
                             </div>
                           ) : (
-                            <button
-                              disabled={prod.stockCount === 0}
-                              onClick={() => addToCart(prod.id)}
-                              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-full text-[12px] font-bold shadow flex items-center justify-center gap-2 disabled:opacity-50 transition"
-                            >
-                              <ShoppingCart className="h-3 w-3" />
-                              <span>Add To Bag</span>
-                            </button>
+                            <>
+                              {isLooseProduct(prod) && (
+                                <div className="mb-1 grid grid-cols-4 gap-1">
+                                  {looseQuantityOptions(prod).map((option) => {
+                                    const isSelected = selectedLooseQty(prod) === option.value;
+                                    return (
+                                      <button
+                                        key={option.value}
+                                        type="button"
+                                        disabled={prod.stockCount === 0}
+                                        onClick={() => setSelectedLooseQtyByProduct((prev) => ({ ...prev, [prod.id]: option.value }))}
+                                        className={`rounded-full border px-1 py-1 text-[9px] font-semibold transition disabled:opacity-40 ${
+                                          isSelected
+                                            ? 'border-indigo-600 bg-indigo-600 text-white shadow'
+                                            : 'border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300'
+                                        }`}
+                                      >
+                                        {option.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              <button
+                                disabled={prod.stockCount === 0}
+                                onClick={() => addToCart(prod.id, isLooseProduct(prod) ? selectedLooseQty(prod) : 1)}
+                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-full text-[12px] font-semibold shadow flex items-center justify-center gap-2 disabled:opacity-50 transition"
+                              >
+                                <ShoppingCart className="h-3 w-3" />
+                                <span>{prod.stockCount === 0 ? 'Out of stock' : isLooseProduct(prod) ? `Add ${cartQuantityLabel(prod, selectedLooseQty(prod))}` : 'Add To Bag'}</span>
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -995,3 +999,4 @@ export default function HomeView({
     </div>
   );
 }
+

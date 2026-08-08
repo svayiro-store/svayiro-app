@@ -250,6 +250,13 @@ export function validateProductPayload(body, isUpdate = false) {
   if (body.packageQuantity !== undefined && Number(body.packageQuantity) <= 0) errors.push('Package quantity/size must be greater than zero');
   if (body.unit !== undefined && !['kg', 'g', 'liter', 'ml', 'piece', 'packet', 'box', 'dozen', 'custom'].includes(String(body.unit))) errors.push('Product unit is invalid');
   if (body.unit === 'custom' && !trimmedString(body.customUnit, 30)) errors.push('Custom unit label is required');
+  if (body.isLooseItem !== undefined && typeof body.isLooseItem !== 'boolean') errors.push('Loose item flag must be true or false');
+  if (body.isLooseItem) {
+    if (body.looseSection !== undefined && !['vegetables', 'fruits', 'grains', 'flours', 'spices', 'dry_fruits', 'dairy', 'other'].includes(String(body.looseSection))) errors.push('Loose item PLU section is invalid');
+    if (body.stockUnit !== undefined && !['g', 'ml', 'piece'].includes(String(body.stockUnit))) errors.push('Loose item stock unit is invalid');
+    if (body.sellingUnit !== undefined && !['kg', 'g', 'liter', 'ml', 'piece'].includes(String(body.sellingUnit))) errors.push('Loose item selling unit is invalid');
+    if (body.pluCode !== undefined && String(body.pluCode).trim() !== '' && !/^\d{2,4}$/.test(String(body.pluCode).trim())) errors.push('PLU code must be 2 to 4 digits');
+  }
   if (body.slug !== undefined && body.slug !== '' && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(body.slug)) errors.push('Product slug must be lowercase words separated by hyphens');
   if (body.sku !== undefined && body.sku !== '' && !/^[A-Z0-9_-]{3,40}$/.test(String(body.sku).trim().toUpperCase())) errors.push('Product code/SKU must be 3-40 letters, numbers, hyphens, or underscores');
   return errors;

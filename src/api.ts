@@ -408,15 +408,28 @@ export const api = {
     return apiRequest<Product[]>(`/products${suffix ? `?${suffix}` : ''}`, undefined, params.summary ? 15_000 : 0);
   },
 
-  getProductPage: (params: { search?: string; categoryId?: string | null; limit?: number; offset?: number; summary?: boolean } = {}) => {
+  getProductPage: (params: { search?: string; categoryId?: string | null; limit?: number; offset?: number; summary?: boolean; sort?: 'featured' | 'offers' | 'recommended' } = {}) => {
     const query = new URLSearchParams();
     if (params.search?.trim()) query.set('search', params.search.trim());
     if (params.categoryId) query.set('categoryId', params.categoryId);
     if (params.limit) query.set('limit', String(params.limit));
     if (params.offset) query.set('offset', String(params.offset));
     if (params.summary) query.set('summary', 'true');
+    if (params.sort) query.set('sort', params.sort);
     query.set('includeTotal', 'true');
     return apiRequest<{ items: Product[]; total: number; limit: number; offset: number }>(`/products?${query.toString()}`, undefined, params.summary ? 15_000 : 0);
+  },
+
+  getRecommendedProducts: (params: { limit?: number; searchTerms?: string[] } = {}) => {
+    const query = new URLSearchParams();
+    if (params.limit) query.set('limit', String(params.limit));
+    const searchTerms = (params.searchTerms || [])
+      .map((term) => term.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    if (searchTerms.length > 0) query.set('searchTerms', searchTerms.join(','));
+    const suffix = query.toString();
+    return apiRequest<{ items: Product[]; limit: number }>(`/products/recommended${suffix ? `?${suffix}` : ''}`, undefined, 15_000);
   },
 
   searchProducts: (params: { search?: string; categoryId?: string | null; limit?: number; offset?: number; summary?: boolean } = {}) => {
@@ -434,7 +447,7 @@ export const api = {
     apiRequest<Product>(`/products/${id}`),
 
   lookupProductByBarcode: (barcode: string) =>
-    apiRequest<{ success: boolean; product: Product; barcode: string }>(`/products/lookup-by-barcode/${encodeURIComponent(barcode)}`),
+    apiRequest<{ success: boolean; product: Product; barcode: string; looseLabel?: any }>(`/products/lookup-by-barcode/${encodeURIComponent(barcode)}`),
 
   getProductBarcodes: (id: string) =>
     apiRequest<{ id: string; productId: string; barcodeValue: string; barcodeType: string; isPrimary: boolean; createdAt?: string }[]>(`/products/${id}/barcodes`),
@@ -680,7 +693,7 @@ export const api = {
     productId?: string;
     quantity?: number;
     note?: string;
-    items?: { productId: string; quantity: number; name?: string; price?: number; isUnlisted?: boolean }[];
+    items?: { productId: string; quantity: number; name?: string; price?: number; isUnlisted?: boolean; stockQuantity?: number; displayQuantityLabel?: string; scannedBarcode?: string; isLooseLabel?: boolean }[];
     customerName?: string;
     customerPhone?: string;
     paymentMethod?: 'cod' | 'upi';
@@ -737,7 +750,7 @@ export const api = {
     discountAmount?: number;
     finalAmount?: number;
     loyaltyRedeemPoints?: number;
-    items: { productId: string; quantity: number }[];
+    items: { productId: string; quantity: number; stockQuantity?: number; displayQuantityLabel?: string; isLooseLabel?: boolean }[];
     paymentMethod: 'cod' | 'upi';
     paymentStatus?: 'pending' | 'paid' | 'failed' | 'submitted';
     upiReference?: string | null;

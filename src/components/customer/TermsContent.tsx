@@ -98,7 +98,7 @@ export default function TermsContent({ shop, compact = false }: TermsContentProp
           <ShieldCheck className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white">Terms & Conditions</h3>
+          <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Terms & Conditions</h3>
           <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
             These terms apply to orders, payments, delivery, pickup, rewards, account use, and support on {shopName}.
           </p>
@@ -108,7 +108,7 @@ export default function TermsContent({ shop, compact = false }: TermsContentProp
       <div className={compact ? 'max-h-[420px] space-y-3 overflow-y-auto pr-1' : 'space-y-3'}>
         {terms.map((term) => (
           <section key={term.title} className={sectionClass}>
-            <h4 className="text-xs font-black text-slate-900 dark:text-slate-100">{term.title}</h4>
+            <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100">{term.title}</h4>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">{term.body}</p>
           </section>
         ))}

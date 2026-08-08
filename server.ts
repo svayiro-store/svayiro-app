@@ -1286,6 +1286,11 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
     purchasePrice: Number(metadata.purchasePrice ?? product.purchasePrice ?? 0),
     isDailyEssential: Boolean(metadata.isDailyEssential ?? product.isDailyEssential ?? false),
     isFeatured: Boolean(metadata.isFeatured ?? product.isFeatured ?? false),
+    isLooseItem: Boolean(metadata.isLooseItem ?? product.isLooseItem ?? false),
+    looseSection: metadata.looseSection || product.looseSection || '',
+    pluCode: metadata.pluCode || product.pluCode || '',
+    stockUnit: metadata.stockUnit || product.stockUnit || 'g',
+    sellingUnit: metadata.sellingUnit || product.sellingUnit || metadata.unit || product.unit || 'kg',
     ratingAverage: Number(metadata.rating_average ?? metadata.ratingAverage ?? product.ratingAverage ?? 0),
     ratingCount: Number(metadata.rating_count ?? metadata.ratingCount ?? product.ratingCount ?? 0),
     images,
@@ -1323,7 +1328,12 @@ function normalizeProductSummary(product: any) {
     updatedAt: normalized.updatedAt,
     purchasePrice: normalized.purchasePrice,
     isDailyEssential: normalized.isDailyEssential,
-    isFeatured: normalized.isFeatured
+    isFeatured: normalized.isFeatured,
+    isLooseItem: normalized.isLooseItem,
+    looseSection: normalized.looseSection,
+    pluCode: normalized.pluCode,
+    stockUnit: normalized.stockUnit,
+    sellingUnit: normalized.sellingUnit
   };
 }
 
@@ -1548,21 +1558,43 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
 
       // Validate stock and compute totals
       let productTotal = 0;
-      const orderItems: Array<{ product_id: string | null; name: string; sku: string | null; quantity: number; unit_price: number; base_unit_price: number; purchase_unit_cost: number; total_price: number; total_base_price: number; item_discount: number; weight_grams: number }> = [];
+      const orderItems: Array<{ product_id: string | null; name: string; sku: string | null; quantity: number; unit_price: number; base_unit_price: number; purchase_unit_cost: number; total_price: number; total_base_price: number; item_discount: number; weight_grams: number; stock_quantity?: number; displayQuantityLabel?: string; isLooseItem?: boolean }> = [];
       for (const it of payload.items) {
         const p = prodMap.get(it.productId);
         if (!p) throw new Error(`Product ${it.productId} not found`);
-        if (p.stock_count < it.quantity) throw new Error(`Insufficient stock for ${p.name}`);
+        const productMetadata = p.metadata && typeof p.metadata === 'object' ? p.metadata : {};
+        const isLooseItem = Boolean(productMetadata.isLooseItem || it.isLooseLabel);
+        const stockQuantity = isLooseItem ? nonNegativeInteger(it.stockQuantity ?? it.quantity, 0) : nonNegativeInteger(it.quantity, 0);
+        const lineQuantity = isLooseItem ? looseQuantityFactor(productMetadata, stockQuantity) : stockQuantity;
+        if (stockQuantity <= 0 || lineQuantity <= 0) throw new Error(`Invalid quantity for ${p.name}`);
+        if (p.stock_count < stockQuantity) throw new Error(`Insufficient stock for ${p.name}`);
         const baseUnitPrice = Number(p.base_price || 0);
         const unitPrice = (p.offer_price && Number(p.offer_price) > 0) ? Number(p.offer_price) : baseUnitPrice;
-        const totalPrice = unitPrice * it.quantity;
-        const totalBasePrice = baseUnitPrice * it.quantity;
+        const totalPrice = unitPrice * lineQuantity;
+        const totalBasePrice = baseUnitPrice * lineQuantity;
         const itemDiscount = Math.max(0, totalBasePrice - totalPrice);
         productTotal += totalPrice;
-        const productMetadata = p.metadata && typeof p.metadata === 'object' ? p.metadata : {};
         const purchaseUnitCost = Number(productMetadata.purchasePrice || 0);
         if (purchaseUnitCost <= 0) throw new Error(`Real item cost is missing for ${p.name}. Update product purchase price first.`);
-        orderItems.push({ product_id: p.id, name: p.name, sku: p.sku, quantity: it.quantity, unit_price: unitPrice, base_unit_price: baseUnitPrice, purchase_unit_cost: purchaseUnitCost, total_price: totalPrice, total_base_price: totalBasePrice, item_discount: itemDiscount, weight_grams: Number(p.weight_grams || 0) });
+        const displayQuantityLabel = isLooseItem ? (it.displayQuantityLabel || looseQuantityLabel(stockQuantity, normalizeLooseStockUnit(productMetadata.stockUnit))) : undefined;
+        orderItems.push({
+          product_id: p.id,
+          name: displayQuantityLabel ? `${p.name} (${displayQuantityLabel})` : p.name,
+          sku: p.sku,
+          quantity: isLooseItem ? stockQuantity : lineQuantity,
+          unit_price: isLooseItem ? (stockQuantity > 0 ? totalPrice / stockQuantity : unitPrice) : unitPrice,
+          base_unit_price: isLooseItem ? (stockQuantity > 0 ? totalBasePrice / stockQuantity : baseUnitPrice) : baseUnitPrice,
+          purchase_unit_cost: purchaseUnitCost,
+          total_price: totalPrice,
+          total_base_price: totalBasePrice,
+          item_discount: itemDiscount,
+          weight_grams: isLooseItem
+            ? (normalizeLooseStockUnit(productMetadata.stockUnit) === 'g' ? stockQuantity : normalizeLooseStockUnit(productMetadata.stockUnit) === 'ml' ? Math.round(stockQuantity * 0.95) : Number(p.weight_grams || 0) * stockQuantity)
+            : Number(p.weight_grams || 0),
+          stock_quantity: stockQuantity,
+          displayQuantityLabel,
+          isLooseItem
+        });
       }
 
       const paymentMethod = payload.paymentMethod || 'cod';
@@ -1638,9 +1670,10 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
         if (shouldApplyOrderEffectsNow) {
           const p = prodMap.get(oi.product_id || '');
           if (!p) throw new Error(`Product ${oi.product_id} not found`);
-          const newStock = Number(p.stock_count) - oi.quantity;
-          await client.query('UPDATE products SET stock_count = $1, updated_at = now() WHERE id = $2', [newStock, oi.product_id]);
-          await client.query('INSERT INTO inventory_logs(product_id, delta, reason, source, reference_id, metadata) VALUES($1,$2,$3,$4,$5,$6)', [oi.product_id, -oi.quantity, 'order-placement', 'order', orderId, { orderId, orderRef }]);
+        const stockDelta = Number(oi.stock_quantity ?? oi.quantity);
+        const newStock = Number(p.stock_count) - stockDelta;
+        await client.query('UPDATE products SET stock_count = $1, updated_at = now() WHERE id = $2', [newStock, oi.product_id]);
+          await client.query('INSERT INTO inventory_logs(product_id, delta, reason, source, reference_id, metadata) VALUES($1,$2,$3,$4,$5,$6)', [oi.product_id, -stockDelta, oi.isLooseItem ? 'loose-online-order' : 'order-placement', 'order', orderId, { orderId, orderRef, displayQuantityLabel: oi.displayQuantityLabel || null }]);
         }
       }
       if (shouldApplyOrderEffectsNow && couponCode) {
@@ -1696,6 +1729,102 @@ async function generateUniqueProductSku(client: any, productName: string) {
     if (exists.rowCount === 0) return sku;
   }
   return `SVY-${prefix}-${Date.now().toString(36).slice(-6).toUpperCase()}`;
+}
+
+const LOOSE_PLU_SECTIONS: Record<string, { label: string; start: number; end: number }> = {
+  vegetables: { label: 'Vegetables', start: 101, end: 199 },
+  fruits: { label: 'Fruits', start: 201, end: 299 },
+  grains: { label: 'Grains', start: 301, end: 399 },
+  flours: { label: 'Flours', start: 401, end: 499 },
+  spices: { label: 'Spices', start: 501, end: 599 },
+  dry_fruits: { label: 'Dry Fruits', start: 601, end: 699 },
+  dairy: { label: 'Dairy', start: 701, end: 799 },
+  other: { label: 'Other Loose Items', start: 801, end: 899 }
+};
+
+function nonNegativeNumber(value: any, fallback = 0) {
+  const next = Number(value);
+  return Number.isFinite(next) ? Math.max(0, next) : fallback;
+}
+
+function nonNegativeInteger(value: any, fallback = 0) {
+  return Math.max(0, Math.floor(nonNegativeNumber(value, fallback)));
+}
+
+function normalizeLooseSection(value: any) {
+  const section = String(value || 'other').trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+  return LOOSE_PLU_SECTIONS[section] ? section : 'other';
+}
+
+function normalizeLooseStockUnit(value: any) {
+  const unit = String(value || 'g').trim().toLowerCase();
+  return ['g', 'ml', 'piece'].includes(unit) ? unit : 'g';
+}
+
+function normalizeLooseSellingUnit(value: any, fallback = 'kg') {
+  const unit = String(value || fallback || 'kg').trim().toLowerCase();
+  return ['kg', 'g', 'liter', 'ml', 'piece'].includes(unit) ? unit : 'kg';
+}
+
+function looseQuantityLabel(baseQuantity: number, stockUnit: string) {
+  if (stockUnit === 'g' && baseQuantity >= 1000) return `${Number((baseQuantity / 1000).toFixed(3))} kg`;
+  if (stockUnit === 'ml' && baseQuantity >= 1000) return `${Number((baseQuantity / 1000).toFixed(3))} liter`;
+  return `${Number(baseQuantity.toFixed(2)).toString().replace(/\.0+$/, '')} ${stockUnit === 'piece' && baseQuantity !== 1 ? 'pieces' : stockUnit}`;
+}
+
+function looseQuantityFactor(metadata: any, baseQuantity: number) {
+  const stockUnit = normalizeLooseStockUnit(metadata?.stockUnit);
+  const sellingUnit = normalizeLooseSellingUnit(metadata?.sellingUnit || metadata?.unit, metadata?.unit || 'kg');
+  const packageQuantity = nonNegativeNumber(metadata?.packageQuantity, 1) || 1;
+  let sellingQuantity = baseQuantity;
+  if (stockUnit === 'g' && sellingUnit === 'kg') sellingQuantity = baseQuantity / 1000;
+  else if (stockUnit === 'ml' && sellingUnit === 'liter') sellingQuantity = baseQuantity / 1000;
+  return sellingQuantity / packageQuantity;
+}
+
+async function assertUniquePluCode(client: any, pluCode: string, excludeProductId?: string) {
+  if (!pluCode) return;
+  const params = [pluCode];
+  let sql = "SELECT id FROM products WHERE metadata->>'pluCode' = $1";
+  if (excludeProductId) {
+    params.push(excludeProductId);
+    sql += ' AND id <> $2';
+  }
+  sql += ' LIMIT 1';
+  const exists = await client.query(sql, params);
+  if (exists.rowCount > 0) throw new HttpError(409, `PLU ${pluCode} is already assigned to another product.`);
+}
+
+async function generateUniquePluCode(client: any, sectionValue: string) {
+  const section = normalizeLooseSection(sectionValue);
+  const range = LOOSE_PLU_SECTIONS[section] || LOOSE_PLU_SECTIONS.other;
+  const usedRes = await client.query(
+    "SELECT metadata->>'pluCode' AS plu_code FROM products WHERE metadata->>'looseSection' = $1",
+    [section]
+  );
+  const used = new Set(usedRes.rows.map((row: any) => String(row.plu_code || '').trim()).filter(Boolean));
+  for (let code = range.start; code <= range.end; code += 1) {
+    if (!used.has(String(code))) return String(code);
+  }
+  throw new HttpError(409, `${range.label} PLU range is full.`);
+}
+
+function parseLooseLabelBarcode(value: any) {
+  const raw = String(value || '').trim().replace(/\s+/g, '').toUpperCase();
+  const parts = raw.split('|');
+  if (parts.length !== 5 || parts[0] !== 'SVL') return null;
+  const [, pluCode, quantityRaw, amountPaiseRaw, dateRaw] = parts;
+  if (!/^\d{2,4}$/.test(pluCode) || !/^\d{8}$/.test(dateRaw)) return null;
+  const baseQuantity = nonNegativeNumber(quantityRaw, 0);
+  const amount = Math.round(nonNegativeNumber(amountPaiseRaw, 0)) / 100;
+  if (baseQuantity <= 0 || amount < 0) return null;
+  return {
+    barcodeValue: raw,
+    pluCode,
+    baseQuantity,
+    amount,
+    packedDate: `${dateRaw.slice(6, 8)}-${dateRaw.slice(4, 6)}-${dateRaw.slice(0, 4)}`
+  };
 }
 
 function generateInvoiceNo(orderRef?: string | null) {
@@ -3760,6 +3889,7 @@ app.get('/api/products', async (req, res) => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const categoryId = typeof req.query.categoryId === 'string' ? req.query.categoryId.trim() : '';
+    const sortMode = typeof req.query.sort === 'string' ? req.query.sort.trim() : '';
     const summaryMode = req.query.summary === 'true';
     const includeTotal = req.query.includeTotal === 'true';
     const wantsDisabledProducts = req.query.includeDisabled === 'true';
@@ -3807,11 +3937,32 @@ app.get('/api/products', async (req, res) => {
       where.push(`(lower(coalesce(p.name, '')) LIKE ${param} OR lower(coalesce(p.description, '')) LIKE ${param} OR lower(coalesce(p.sku, '')) LIKE ${param})`);
     }
 
+    let orderBy = 'p.created_at DESC';
+    if (sortMode === 'featured') {
+      where.push(`COALESCE((p.metadata->>'isFeatured')::boolean, false) = true`);
+      orderBy = 'COALESCE((p.metadata->>\'isDailyEssential\')::boolean, false) DESC, p.updated_at DESC, p.created_at DESC';
+    } else if (sortMode === 'offers') {
+      where.push('p.offer_price > 0 AND p.base_price > p.offer_price');
+      orderBy = '((p.base_price - p.offer_price) / NULLIF(p.base_price, 0)) DESC, p.updated_at DESC';
+    } else if (sortMode === 'recommended') {
+      orderBy = `
+        (
+          COALESCE((p.metadata->>'ratingAverage')::numeric, (p.metadata->>'rating_average')::numeric, 0) * 2
+          + COALESCE((p.metadata->>'ratingCount')::numeric, (p.metadata->>'rating_count')::numeric, 0) * 0.1
+          + CASE WHEN COALESCE((p.metadata->>'isDailyEssential')::boolean, false) THEN 3 ELSE 0 END
+          + CASE WHEN p.offer_price > 0 AND p.base_price > p.offer_price THEN 2 ELSE 0 END
+          + CASE WHEN p.stock_count > 0 THEN 1 ELSE 0 END
+        ) DESC,
+        p.updated_at DESC
+      `;
+    }
+
     const countParams = [...params];
     params.push(limit);
     const limitParam = `$${params.length}`;
     params.push(offset);
     const offsetParam = `$${params.length}`;
+
     const sql = summaryMode
       ? `
         SELECT
@@ -3844,7 +3995,7 @@ app.get('/api/products', async (req, res) => {
         ) first_image ON true
         WHERE ${where.join(' AND ')}
         GROUP BY p.id, first_image.url
-        ORDER BY p.created_at DESC
+        ORDER BY ${orderBy}
         LIMIT ${limitParam} OFFSET ${offsetParam}
       `
       : `
@@ -3870,7 +4021,7 @@ app.get('/api/products', async (req, res) => {
         LEFT JOIN product_categories pc ON pc.product_id = p.id
         WHERE ${where.join(' AND ')}
         GROUP BY p.id
-        ORDER BY p.created_at DESC
+        ORDER BY ${orderBy}
         LIMIT ${limitParam} OFFSET ${offsetParam}
       `;
     const { rows } = await pgQuery(sql, params);
@@ -3905,10 +4056,194 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+app.get('/api/products/recommended', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.currentUser || req.user;
+    if (!user?.id) return res.status(401).json({ error: 'Not authenticated' });
+    const rawLimit = Number(req.query.limit);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 20) : 8;
+    const phoneDigits = String(user.phone || '').replace(/\D/g, '').slice(-10);
+    const searchTerms = typeof req.query.searchTerms === 'string'
+      ? req.query.searchTerms
+        .split(',')
+        .map((term: string) => term.trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, 8)
+      : [];
+    const searchPatterns = searchTerms.map((term: string) => `%${term}%`);
+
+    const { rows } = await pgQuery(`
+      WITH wishlist_product_ids AS (
+        SELECT unnest(COALESCE(u.wishlist, ARRAY[]::uuid[])) AS product_id
+        FROM users u
+        WHERE u.id = $1::uuid
+        UNION
+        SELECT w.product_id
+        FROM wishlists w
+        WHERE w.user_id = $1::uuid
+      ),
+      customer_orders AS (
+        SELECT o.id
+        FROM orders o
+        WHERE o.status <> 'cancelled'
+          AND (
+            o.user_id = $1::uuid
+            OR ($2::text <> '' AND RIGHT(regexp_replace(COALESCE(o.customer_phone, ''), '\\D', '', 'g'), 10) = $2::text)
+          )
+      ),
+      ordered_product_ids AS (
+        SELECT DISTINCT oi.product_id
+        FROM order_items oi
+        INNER JOIN customer_orders co ON co.id = oi.order_id
+        WHERE oi.product_id IS NOT NULL
+      ),
+      ordered_category_ids AS (
+        SELECT DISTINCT pc.category_id
+        FROM ordered_product_ids op
+        INNER JOIN product_categories pc ON pc.product_id = op.product_id
+        UNION
+        SELECT DISTINCT p.category_id
+        FROM ordered_product_ids op
+        INNER JOIN products p ON p.id = op.product_id
+        WHERE p.category_id IS NOT NULL
+      ),
+      wishlist_category_ids AS (
+        SELECT DISTINCT pc.category_id
+        FROM wishlist_product_ids wp
+        INNER JOIN product_categories pc ON pc.product_id = wp.product_id
+        UNION
+        SELECT DISTINCT p.category_id
+        FROM wishlist_product_ids wp
+        INNER JOIN products p ON p.id = wp.product_id
+        WHERE p.category_id IS NOT NULL
+      )
+      SELECT
+        p.id,
+        p.category_id,
+        p.subcategory_id,
+        p.sku,
+        p.name,
+        p.slug,
+        p.description,
+        p.base_price,
+        p.offer_price,
+        p.stock_count,
+        p.weight_grams,
+        p.is_enabled,
+        p.low_stock_threshold,
+        p.metadata,
+        p.created_at,
+        p.updated_at,
+        first_image.url AS first_image_url,
+        COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids,
+        (
+          CASE WHEN EXISTS (SELECT 1 FROM wishlist_product_ids wp WHERE wp.product_id = p.id) THEN 8 ELSE 0 END
+          + CASE WHEN EXISTS (SELECT 1 FROM ordered_product_ids op WHERE op.product_id = p.id) THEN 3 ELSE 0 END
+          + CASE WHEN EXISTS (
+              SELECT 1
+              FROM product_categories pc_match
+              WHERE pc_match.product_id = p.id
+                AND pc_match.category_id IN (SELECT category_id FROM ordered_category_ids)
+            ) OR p.category_id IN (SELECT category_id FROM ordered_category_ids) THEN 5 ELSE 0 END
+          + CASE WHEN EXISTS (
+              SELECT 1
+              FROM product_categories pc_match
+              WHERE pc_match.product_id = p.id
+                AND pc_match.category_id IN (SELECT category_id FROM wishlist_category_ids)
+            ) OR p.category_id IN (SELECT category_id FROM wishlist_category_ids) THEN 4 ELSE 0 END
+          + CASE WHEN EXISTS (
+              SELECT 1
+              FROM unnest($3::text[]) AS term
+              WHERE lower(COALESCE(p.name, '')) LIKE term
+                 OR lower(COALESCE(p.description, '')) LIKE term
+                 OR lower(COALESCE(p.sku, '')) LIKE term
+            ) THEN 4 ELSE 0 END
+          + CASE WHEN p.offer_price > 0 AND p.base_price > p.offer_price THEN 2 ELSE 0 END
+          + COALESCE((p.metadata->>'ratingAverage')::numeric, (p.metadata->>'rating_average')::numeric, 0) * 1.5
+          + LEAST(COALESCE((p.metadata->>'ratingCount')::numeric, (p.metadata->>'rating_count')::numeric, 0), 50) * 0.05
+        ) AS recommendation_score
+      FROM products p
+      LEFT JOIN product_categories pc ON pc.product_id = p.id
+      LEFT JOIN LATERAL (
+        SELECT url
+        FROM product_images
+        WHERE product_id = p.id
+        ORDER BY position ASC
+        LIMIT 1
+      ) first_image ON true
+      WHERE p.is_enabled = true
+        AND p.stock_count > 0
+        AND COALESCE((p.metadata->>'isLooseItem')::boolean, false) = false
+      GROUP BY p.id, first_image.url
+      ORDER BY recommendation_score DESC, p.updated_at DESC, p.created_at DESC
+      LIMIT $4::int
+    `, [user.id, phoneDigits, searchPatterns, limit]);
+
+    res.set('Cache-Control', 'private, max-age=30');
+    return res.json({
+      items: rows.map((row: any) => normalizeProductSummary(row)).filter(Boolean),
+      limit
+    });
+  } catch (err) {
+    console.error('GET /api/products/recommended error', err);
+    return res.status(500).json({ error: 'DB error' });
+  }
+});
+
 app.get('/api/products/lookup-by-barcode/:barcode', authMiddleware, requirePermission('pos:use'), async (req, res) => {
-  const barcode = normalizeBarcodeValue(req.params.barcode);
+  const rawBarcode = String(req.params.barcode || '').trim();
+  const looseLabel = parseLooseLabelBarcode(rawBarcode);
+  const barcode = looseLabel ? looseLabel.barcodeValue : normalizeBarcodeValue(rawBarcode);
   if (!barcode) return res.status(400).json({ error: 'Barcode is required' });
   try {
+    if (looseLabel) {
+      const p = await pgQuery(`
+        SELECT
+          p.id,
+          p.category_id,
+          p.subcategory_id,
+          p.sku,
+          p.name,
+          p.slug,
+          p.description,
+          p.base_price,
+          p.offer_price,
+          p.stock_count,
+          p.weight_grams,
+          p.is_enabled,
+          p.low_stock_threshold,
+          p.metadata,
+          p.created_at,
+          p.updated_at,
+          COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+        FROM products p
+        LEFT JOIN product_categories pc ON pc.product_id = p.id
+        WHERE p.metadata->>'pluCode' = $1
+          AND p.metadata @> '{"isLooseItem": true}'::jsonb
+        GROUP BY p.id
+        LIMIT 1
+      `, [looseLabel.pluCode]);
+      if (p.rowCount === 0) return res.status(404).json({ error: 'Loose label PLU is not linked to any product.' });
+      const row = p.rows[0];
+      if (!row.is_enabled) return res.status(409).json({ error: `${row.name} is disabled.` });
+      if (Number(row.stock_count || 0) < looseLabel.baseQuantity) return res.status(409).json({ error: `Insufficient stock for ${row.name}.` });
+      const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+      const stockUnit = normalizeLooseStockUnit(metadata.stockUnit);
+      const product = normalizeProduct({
+        ...row,
+        metadata: {
+          ...metadata,
+          looseScan: {
+            ...looseLabel,
+            stockQuantity: looseLabel.baseQuantity,
+            quantityLabel: looseQuantityLabel(looseLabel.baseQuantity, stockUnit),
+            stockUnit
+          }
+        }
+      }, []);
+      return res.json({ success: true, product, barcode, looseLabel: product?.metadata?.looseScan });
+    }
+
     const p = await pgQuery(`
       SELECT
         p.id,
@@ -4103,18 +4438,38 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
   if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join('; ') });
   try {
     const result = await runTransaction(async (client) => {
+      const isLooseItem = Boolean(productData.isLooseItem);
+      const looseSection = normalizeLooseSection(productData.looseSection);
+      const stockUnit = normalizeLooseStockUnit(productData.stockUnit);
+      const sellingUnit = normalizeLooseSellingUnit(productData.sellingUnit || productData.unit, productData.unit || 'kg');
+      const manualPlu = String(productData.pluCode || '').trim();
+      if (manualPlu && !/^\d{2,4}$/.test(manualPlu)) throw new HttpError(400, 'PLU code must be 2 to 4 digits.');
+      const pluCode = isLooseItem ? (manualPlu || await generateUniquePluCode(client, looseSection)) : '';
+      await assertUniquePluCode(client, pluCode);
+      const purchasePrice = nonNegativeNumber(productData.purchasePrice, 0);
+      const basePrice = nonNegativeNumber(productData.basePrice, 0);
+      const offerPrice = nonNegativeNumber(productData.offerPrice, 0);
+      const stockCount = nonNegativeInteger(productData.stockCount, 0);
+      const packageQuantity = nonNegativeNumber(productData.packageQuantity, 0);
+      const weightGrams = nonNegativeNumber(productData.weight, 0);
+      const lowStockThreshold = nonNegativeInteger(productData.lowStockAlertThreshold, 5);
       const metadata = {
         ...(productData.metadata || {}),
         isDailyEssential: Boolean(productData.isDailyEssential),
         isFeatured: Boolean(productData.isFeatured),
-        purchasePrice: Number(productData.purchasePrice || 0),
-        packageQuantity: Number(productData.packageQuantity || 0),
+        purchasePrice,
+        packageQuantity,
         unit: productData.unit || 'g',
         customUnit: productData.customUnit || '',
-        packageLabel: productData.packageLabel || ''
+        packageLabel: productData.packageLabel || '',
+        isLooseItem,
+        looseSection: isLooseItem ? looseSection : '',
+        pluCode,
+        stockUnit: isLooseItem ? stockUnit : '',
+        sellingUnit: isLooseItem ? sellingUnit : ''
       };
       const generatedSku = await generateUniqueProductSku(client, productData.name);
-      const ins = await client.query('INSERT INTO products(category_id, subcategory_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) RETURNING *', [productData.categoryId, productData.subcategoryId || null, generatedSku, productData.name, productData.slug || (productData.name.toLowerCase().replace(/\s+/g, '-')), productData.description || null, Number(productData.basePrice) || 0, Number(productData.offerPrice) || 0, Number(productData.stockCount) || 0, Number(productData.weight) || 0, productData.isEnabled !== undefined ? productData.isEnabled : true, productData.lowStockAlertThreshold || 5, metadata]);
+      const ins = await client.query('INSERT INTO products(category_id, subcategory_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) RETURNING *', [productData.categoryId, productData.subcategoryId || null, generatedSku, productData.name, productData.slug || (productData.name.toLowerCase().replace(/\s+/g, '-')), productData.description || null, basePrice, offerPrice, stockCount, weightGrams, productData.isEnabled !== undefined ? productData.isEnabled : true, lowStockThreshold, metadata]);
       const prod = ins.rows[0];
       await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, productData.categoryId, productData.subcategoryId), productData.categoryId);
       await syncProductBarcodes(client, prod.id, productData.externalBarcodes || []);
@@ -4125,8 +4480,8 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
         }
       }
       // create inventory log if stock > 0
-      if (Number(productData.stockCount) > 0) {
-        await client.query('INSERT INTO inventory_logs(product_id, delta, reason, source, reference_id, metadata, created_at) VALUES($1,$2,$3,$4,$5,$6,now())', [prod.id, Number(productData.stockCount), 'initial', 'product_create', null, {}]);
+      if (stockCount > 0) {
+        await client.query('INSERT INTO inventory_logs(product_id, delta, reason, source, reference_id, metadata, created_at) VALUES($1,$2,$3,$4,$5,$6,now())', [prod.id, stockCount, 'initial', 'product_create', null, {}]);
       }
       const imgs = await client.query('SELECT id, url, position FROM product_images WHERE product_id = $1 ORDER BY position ASC', [prod.id]);
       invalidatePublicCache('products:');
@@ -4135,6 +4490,7 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
     return res.json({ success: true, data: result });
   } catch (err: any) {
     console.error('POST /api/products error', err);
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message || 'Failed to create product' });
     if (err.code === '23505') return res.status(409).json({ error: 'Product code/SKU already exists. Use a unique product code.' });
     return res.status(500).json({ error: 'Failed to create product' });
   }
@@ -4150,20 +4506,37 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
       const pRes = await client.query('SELECT * FROM products WHERE id = $1 FOR UPDATE', [id]);
       if (pRes.rowCount === 0) throw new Error('Product not found');
       const current = pRes.rows[0];
-      const newStock = productData.stockCount !== undefined ? Number(productData.stockCount) : current.stock_count;
+      const currentMetadata = current.metadata && typeof current.metadata === 'object' ? current.metadata : {};
+      const newStock = productData.stockCount !== undefined ? nonNegativeInteger(productData.stockCount, 0) : nonNegativeInteger(current.stock_count, 0);
       const metadata = {
-        ...(current.metadata || {}),
+        ...currentMetadata,
         ...(productData.metadata || {})
       };
       if (productData.isDailyEssential !== undefined) metadata.isDailyEssential = Boolean(productData.isDailyEssential);
       if (productData.isFeatured !== undefined) metadata.isFeatured = Boolean(productData.isFeatured);
-      if (productData.purchasePrice !== undefined) metadata.purchasePrice = Number(productData.purchasePrice || 0);
-      if (productData.packageQuantity !== undefined) metadata.packageQuantity = Number(productData.packageQuantity || 0);
+      if (productData.purchasePrice !== undefined) metadata.purchasePrice = nonNegativeNumber(productData.purchasePrice, 0);
+      if (productData.packageQuantity !== undefined) metadata.packageQuantity = nonNegativeNumber(productData.packageQuantity, 0);
       if (productData.unit !== undefined) metadata.unit = productData.unit || 'g';
       if (productData.customUnit !== undefined) metadata.customUnit = productData.customUnit || '';
       if (productData.packageLabel !== undefined) metadata.packageLabel = productData.packageLabel || '';
+      if (productData.isLooseItem !== undefined) {
+        metadata.isLooseItem = Boolean(productData.isLooseItem);
+      }
+      if (metadata.isLooseItem) {
+        metadata.looseSection = normalizeLooseSection(productData.looseSection ?? metadata.looseSection);
+        metadata.stockUnit = normalizeLooseStockUnit(productData.stockUnit ?? metadata.stockUnit);
+        metadata.sellingUnit = normalizeLooseSellingUnit(productData.sellingUnit ?? metadata.sellingUnit ?? metadata.unit, metadata.unit || 'kg');
+        const requestedPlu = String(productData.pluCode ?? metadata.pluCode ?? '').trim();
+        if (requestedPlu && !/^\d{2,4}$/.test(requestedPlu)) throw new HttpError(400, 'PLU code must be 2 to 4 digits.');
+        metadata.pluCode = requestedPlu || await generateUniquePluCode(client, metadata.looseSection);
+        await assertUniquePluCode(client, metadata.pluCode, id);
+      } else if (productData.isLooseItem !== undefined) {
+        metadata.looseSection = '';
+        metadata.stockUnit = '';
+        metadata.sellingUnit = '';
+      }
       // update product
-      const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), subcategory_id = $2, sku = COALESCE($3,sku), name = COALESCE($4,name), slug = COALESCE($5,slug), description = COALESCE($6,description), base_price = COALESCE($7,base_price), offer_price = COALESCE($8,offer_price), stock_count = $9, weight_grams = COALESCE($10,weight_grams), is_enabled = COALESCE($11,is_enabled), low_stock_threshold = COALESCE($12,low_stock_threshold), metadata = COALESCE($13,metadata), updated_at = now() WHERE id = $14 RETURNING *', [productData.categoryId, productData.subcategoryId || null, productData.sku, productData.name, productData.slug, productData.description, productData.basePrice !== undefined ? Number(productData.basePrice) : null, productData.offerPrice !== undefined ? Number(productData.offerPrice) : null, newStock, productData.weight !== undefined ? Number(productData.weight) : null, productData.isEnabled, productData.lowStockAlertThreshold, metadata, id]);
+      const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), subcategory_id = $2, sku = COALESCE($3,sku), name = COALESCE($4,name), slug = COALESCE($5,slug), description = COALESCE($6,description), base_price = COALESCE($7,base_price), offer_price = COALESCE($8,offer_price), stock_count = $9, weight_grams = COALESCE($10,weight_grams), is_enabled = COALESCE($11,is_enabled), low_stock_threshold = COALESCE($12,low_stock_threshold), metadata = COALESCE($13,metadata), updated_at = now() WHERE id = $14 RETURNING *', [productData.categoryId, productData.subcategoryId || null, productData.sku, productData.name, productData.slug, productData.description, productData.basePrice !== undefined ? nonNegativeNumber(productData.basePrice, 0) : null, productData.offerPrice !== undefined ? nonNegativeNumber(productData.offerPrice, 0) : null, newStock, productData.weight !== undefined ? nonNegativeNumber(productData.weight, 0) : null, productData.isEnabled, productData.lowStockAlertThreshold !== undefined ? nonNegativeInteger(productData.lowStockAlertThreshold, 0) : null, metadata, id]);
       const prod = upd.rows[0];
       await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, prod.category_id, prod.subcategory_id), prod.category_id);
       if (Array.isArray(productData.externalBarcodes)) {
@@ -4189,6 +4562,7 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
     return res.json({ success: true, data: result });
   } catch (err: any) {
     console.error('PUT /api/products/:id error', err);
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message || 'Failed to update product' });
     if (err.code === '23505') return res.status(409).json({ error: 'Product code/SKU already exists. Use a unique product code.' });
     return res.status(500).json({ error: err.message || 'Failed to update product' });
   }
@@ -5592,55 +5966,95 @@ app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use')
   if (items && Array.isArray(items) && items.length > 0) saleItems = items;
   else if (productId && quantity) saleItems = [{ productId, quantity: Number(quantity) }];
   else return res.status(400).json({ error: 'Please specify items or single product parameter for this offline sale.' });
+  if (saleItems.some((item) => Number(item.quantity ?? 0) <= 0 || Number(item.stockQuantity ?? item.quantity ?? 0) < 0)) {
+    return res.status(400).json({ error: 'Sale item quantity cannot be negative or zero.' });
+  }
 
   try {
     const result = await runTransaction(async (client) => {
-      const orderItems: Array<{ product_id: string | null; sku: string | null; name: string; quantity: number; unit_price: number; base_unit_price: number; purchase_unit_cost: number; total_price: number; total_base_price: number; item_discount: number; weight_grams?: number }> = [];
+      const orderItems: Array<{ product_id: string | null; sku: string | null; name: string; quantity: number; unit_price: number; base_unit_price: number; purchase_unit_cost: number; total_price: number; total_base_price: number; item_discount: number; weight_grams?: number; displayQuantityLabel?: string; stockQuantity?: number; isLooseLabel?: boolean }> = [];
       const pendingInventoryLogs: Array<{ productId: string | null; delta: number; reason: string; source: string; metadata: any }> = [];
       let calculatedTotal = 0;
       let baseProductSubtotal = 0;
       for (const item of saleItems) {
+        const lineQuantity = nonNegativeNumber(item.quantity, 0);
+        const stockQuantity = nonNegativeNumber(item.stockQuantity ?? item.quantity, lineQuantity);
+        if (lineQuantity <= 0 || stockQuantity < 0) throw new Error('Sale item quantity cannot be negative or zero.');
         if (item.isUnlisted || (item.productId && String(item.productId).startsWith('unlisted_'))) {
           if (!isOwner) throw new HttpError(403, 'Only owner can bill unlisted custom items.');
           const unlistedName = item.name || 'Unlisted Product';
-          const unlistedPrice = item.price !== undefined ? Number(item.price) : 0;
-          const itemSubtotal = unlistedPrice * item.quantity;
+          const unlistedPrice = nonNegativeNumber(item.price, 0);
+          const itemSubtotal = unlistedPrice * lineQuantity;
           calculatedTotal += itemSubtotal;
           baseProductSubtotal += itemSubtotal;
-          pendingInventoryLogs.push({ productId: null, delta: -item.quantity, reason: 'offline_sale', source: 'offline', metadata: { note: note || 'Unlisted item', name: unlistedName } });
-          const unlistedCost = item.purchasePrice !== undefined ? Number(item.purchasePrice || 0) : 0;
-          orderItems.push({ product_id: null, sku: null, name: unlistedName, quantity: item.quantity, unit_price: unlistedPrice, base_unit_price: unlistedPrice, purchase_unit_cost: unlistedCost, total_price: itemSubtotal, total_base_price: itemSubtotal, item_discount: 0 });
+          pendingInventoryLogs.push({ productId: null, delta: -lineQuantity, reason: 'offline_sale', source: 'offline', metadata: { note: note || 'Unlisted item', name: unlistedName } });
+          const unlistedCost = item.purchasePrice !== undefined ? nonNegativeNumber(item.purchasePrice, 0) : 0;
+          orderItems.push({ product_id: null, sku: null, name: unlistedName, quantity: lineQuantity, unit_price: unlistedPrice, base_unit_price: unlistedPrice, purchase_unit_cost: unlistedCost, total_price: itemSubtotal, total_base_price: itemSubtotal, item_discount: 0 });
           continue;
         }
         const pRes = await client.query('SELECT * FROM products WHERE id = $1 FOR UPDATE', [item.productId]);
         if (pRes.rowCount === 0) throw new Error(`Product ID ${item.productId} not found`);
         const prod = pRes.rows[0];
-        if (Number(prod.stock_count) < Number(item.quantity)) throw new Error(`Insufficient stock for ${prod.name}`);
-        await client.query('UPDATE products SET stock_count = stock_count - $1, updated_at = now() WHERE id = $2', [item.quantity, item.productId]);
+        if (stockQuantity <= 0) throw new Error(`Invalid stock quantity for ${prod.name}`);
+        const stockUpdate = await client.query(
+          'UPDATE products SET stock_count = stock_count - $1, updated_at = now() WHERE id = $2 AND stock_count >= $1 RETURNING stock_count',
+          [stockQuantity, item.productId]
+        );
+        if (stockUpdate.rowCount === 0) throw new Error(`Insufficient stock for ${prod.name}`);
         const baseUnitPrice = Number(prod.base_price || 0);
         const catalogPrice = Number(prod.offer_price) > 0 ? Number(prod.offer_price) : baseUnitPrice;
-        const requestedPrice = item.price !== undefined ? Number(item.price) : catalogPrice;
+        const requestedPrice = item.price !== undefined ? nonNegativeNumber(item.price, 0) : catalogPrice;
         if (!isOwner && Math.abs(requestedPrice - catalogPrice) > 0.001) {
           throw new HttpError(403, `Only owner can override price for ${prod.name}.`);
         }
         const price = isOwner ? requestedPrice : catalogPrice;
-        const subtotal = price * item.quantity;
-        const totalBasePrice = baseUnitPrice * item.quantity;
+        const productMetadata = prod.metadata && typeof prod.metadata === 'object' ? prod.metadata : {};
+        const isLooseLabel = Boolean(item.isLooseLabel);
+        const looseFactor = isLooseLabel ? looseQuantityFactor(productMetadata, stockQuantity) : 0;
+        const subtotal = price * lineQuantity;
+        const totalBasePrice = isLooseLabel ? baseUnitPrice * looseFactor : baseUnitPrice * lineQuantity;
         const itemDiscount = Math.max(0, totalBasePrice - subtotal);
         calculatedTotal += subtotal;
         baseProductSubtotal += totalBasePrice;
-        pendingInventoryLogs.push({ productId: item.productId, delta: -item.quantity, reason: 'offline_sale', source: 'offline', metadata: { note: note || null } });
-        const productMetadata = prod.metadata && typeof prod.metadata === 'object' ? prod.metadata : {};
+        pendingInventoryLogs.push({
+          productId: item.productId,
+          delta: -stockQuantity,
+          reason: isLooseLabel ? 'loose_label_sale' : 'offline_sale',
+          source: 'offline',
+          metadata: {
+            note: note || null,
+            displayQuantityLabel: item.displayQuantityLabel || null,
+            scannedBarcode: item.scannedBarcode || null
+          }
+        });
         const purchaseUnitCost = Number(productMetadata.purchasePrice || 0);
         if (purchaseUnitCost <= 0) throw new Error(`Real item cost is missing for ${prod.name}. Update product purchase price first.`);
-        orderItems.push({ product_id: item.productId, sku: prod.sku || null, name: prod.name, quantity: item.quantity, unit_price: price, base_unit_price: baseUnitPrice, purchase_unit_cost: purchaseUnitCost, total_price: subtotal, total_base_price: totalBasePrice, item_discount: itemDiscount, weight_grams: Number(prod.weight_grams || 0) });
+        const displayQuantityLabel = item.displayQuantityLabel || (isLooseLabel ? looseQuantityLabel(stockQuantity, normalizeLooseStockUnit(productMetadata.stockUnit)) : undefined);
+        orderItems.push({
+          product_id: item.productId,
+          sku: prod.sku || null,
+          name: displayQuantityLabel ? `${prod.name} (${displayQuantityLabel})` : prod.name,
+          quantity: isLooseLabel ? stockQuantity : lineQuantity,
+          unit_price: isLooseLabel ? (stockQuantity > 0 ? subtotal / stockQuantity : subtotal) : price,
+          base_unit_price: isLooseLabel ? (stockQuantity > 0 ? totalBasePrice / stockQuantity : baseUnitPrice) : baseUnitPrice,
+          purchase_unit_cost: purchaseUnitCost,
+          total_price: subtotal,
+          total_base_price: totalBasePrice,
+          item_discount: itemDiscount,
+          weight_grams: isLooseLabel ? (normalizeLooseStockUnit(productMetadata.stockUnit) === 'g' ? stockQuantity : Number(prod.weight_grams || 0)) : Number(prod.weight_grams || 0),
+          displayQuantityLabel,
+          stockQuantity,
+          isLooseLabel
+        });
       }
 
       const bagOption = req.body?.bagOption || 'own';
       let bagCharge = 0;
       if (bagOption === 'need') {
         const bagRows = await client.query('SELECT * FROM bags WHERE is_enabled = true ORDER BY position ASC');
-        const totalBagWeightGrams = orderItems.reduce((sum: number, item: any) => sum + Number(item.weight_grams || 0) * Number(item.quantity || 0), 0);
+        const totalBagWeightGrams = orderItems.reduce((sum: number, item: any) => (
+          sum + (item.isLooseLabel ? Number(item.weight_grams || 0) : Number(item.weight_grams || 0) * Number(item.quantity || 0))
+        ), 0);
         bagCharge = computeSmartBags(totalBagWeightGrams, bagRows.rows).reduce((sum: number, bag: any) => sum + Number(bag.cost || 0), 0);
       }
       const itemDiscountValue = orderItems.reduce((sum, item) => sum + Number(item.item_discount || 0), 0);
@@ -6306,6 +6720,17 @@ async function ensureRuntimeSchemaCompatibility() {
       END IF;
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_products_stock_nonnegative') THEN
         ALTER TABLE products ADD CONSTRAINT chk_products_stock_nonnegative CHECK (stock_count >= 0);
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_products_weight_nonnegative') THEN
+        ALTER TABLE products ADD CONSTRAINT chk_products_weight_nonnegative CHECK (weight_grams >= 0);
+      END IF;
+      UPDATE order_items SET quantity = 0 WHERE quantity < 0;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_order_items_quantity_nonnegative') THEN
+        ALTER TABLE order_items ADD CONSTRAINT chk_order_items_quantity_nonnegative CHECK (quantity >= 0);
+      END IF;
+      UPDATE advance_requests SET quantity = 0 WHERE quantity < 0;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_advance_requests_quantity_nonnegative') THEN
+        ALTER TABLE advance_requests ADD CONSTRAINT chk_advance_requests_quantity_nonnegative CHECK (quantity >= 0);
       END IF;
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_orders_status') THEN
         ALTER TABLE orders ADD CONSTRAINT chk_orders_status CHECK (status IN ('pending','accepted','packed','out_for_delivery','delivered','cancelled'));

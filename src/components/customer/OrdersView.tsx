@@ -80,7 +80,7 @@ export default function OrdersView({
 
   return (
     <div className="space-y-6">
-      <h2 className="font-serif text-2xl font-black text-left">My Order Book Insights</h2>
+      <h2 className="font-serif text-2xl font-semibold text-left">My Order Book Insights</h2>
       
       {!activeUser ? (
         <div className={`p-12 text-center rounded-2xl border ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-slate-50'}`}>
@@ -145,7 +145,7 @@ export default function OrdersView({
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[10px] px-3 py-1 rounded-full uppercase font-black tracking-widest border shadow-sm ${statusColors[ord.status] || 'bg-slate-100'}`}>
+                    <span className={`text-[10px] px-3 py-1 rounded-full uppercase font-semibold tracking-widest border shadow-sm ${statusColors[ord.status] || 'bg-slate-100'}`}>
                       {isCancelled ? '❌ Cancelled' : ord.status.replace(/_/g, ' ')}
                     </span>
 
@@ -160,7 +160,7 @@ export default function OrdersView({
 
                 {/* Collapsed view item names summary */}
                 <div className="py-1">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Ordered Items</p>
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Ordered Items</p>
                   <div className="space-y-1.5">
                     {ord.items.map((item, idx) => (
                       <div key={idx} className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center justify-between">
@@ -190,7 +190,7 @@ export default function OrdersView({
                         event.stopPropagation();
                         handleReorder(ord);
                       }}
-                      className="rounded-full bg-indigo-600 px-3 py-1.5 text-[10px] font-black uppercase text-white shadow hover:bg-indigo-500"
+                      className="rounded-full bg-indigo-600 px-3 py-1.5 text-[10px] font-semibold uppercase text-white shadow hover:bg-indigo-500"
                     >
                       Reorder
                     </button>
@@ -277,7 +277,7 @@ export default function OrdersView({
 
                     {/* Purchased Item Grid with Images */}
                     <div className="space-y-3">
-                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Detailed Item Breakdown</p>
+                      <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Detailed Item Breakdown</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {ord.items.map((item, idx) => {
                           const matchingProd = products.find(p => p.id === item.productId);
@@ -305,11 +305,11 @@ export default function OrdersView({
                                   {item.productName}
                                 </h4>
                                 <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                                  <span className="font-black text-indigo-600 dark:text-indigo-400 text-xs">
+                                  <span className="font-semibold text-indigo-600 dark:text-indigo-400 text-xs">
                                     ₹{item.price}
                                   </span>
                                   <span>×</span>
-                                  <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded font-black text-slate-700 dark:text-slate-300">
+                                  <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded font-semibold text-slate-700 dark:text-slate-300">
                                     {item.quantity} Qty
                                   </span>
                                   {item.weightGrams ? (
@@ -345,7 +345,7 @@ export default function OrdersView({
                       
                       <div className="space-y-1 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 pb-3 md:pb-0 md:px-4">
                         <p className="text-[10px] font-bold uppercase opacity-60 tracking-wider">Financial summary</p>
-                        <p className="font-black text-lg text-indigo-700 dark:text-indigo-300 mt-0.5">₹{ord.finalTotal}</p>
+                        <p className="font-bold text-lg text-indigo-700 dark:text-indigo-300 mt-0.5">₹{ord.finalTotal}</p>
                         <div className="text-[11px] opacity-75 font-mono mt-1 flex items-center gap-1.5">
                           <span className="bg-slate-200 dark:bg-slate-800 px-1.5 py-0.2 rounded text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300">
                             {ord.paymentDetails?.method || ord.paymentMethod || 'COD'}

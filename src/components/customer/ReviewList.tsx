@@ -28,13 +28,13 @@ export function ReviewList({ pId, reviews, isDark }: ReviewListProps) {
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-xs font-black text-slate-900 dark:text-white">{r.customerName || 'Verified Customer'}</p>
+              <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{r.customerName || 'Verified Customer'}</p>
               <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400">
                 Verified review {r.date || r.createdAt ? `- ${formatDateDDMMYYYY(r.date || r.createdAt)}` : ''}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-amber-600 dark:bg-amber-950/30">
-              <span className="text-[10px] font-black">{r.rating}/5</span>
+              <span className="text-[10px] font-semibold">{r.rating}/5</span>
               <div className="flex leading-none">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className={`h-2.5 w-2.5 ${r.rating > i ? 'fill-amber-500 text-amber-500' : 'text-slate-300'}`} />
@@ -49,7 +49,7 @@ export function ReviewList({ pId, reviews, isDark }: ReviewListProps) {
           )}
           {r.reply && (
             <div className="bg-indigo-50/60 dark:bg-indigo-950/20 border-l-2 border-indigo-500 p-2 rounded-r mt-2 font-sans">
-              <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 block">Owner reply:</span>
+              <span className="text-[9px] font-semibold text-indigo-600 dark:text-indigo-400 block">Owner reply:</span>
               <p className="text-[11px] opacity-80 mt-0.5">{r.reply}</p>
             </div>
           )}

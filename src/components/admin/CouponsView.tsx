@@ -10,7 +10,7 @@ interface Props {
 }
 
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
-const labelClass = 'mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500';
+const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
 const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900';
 
 function normalizeCouponRow(row: any): Coupon {
@@ -139,7 +139,7 @@ export default function CouponsView({ isDarkMode, showToast }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-serif text-2xl font-black">Offers & Coupons</h2>
+          <h2 className="font-serif text-2xl font-semibold">Offers & Coupons</h2>
           <p className="text-xs opacity-70">Create and manage discount codes for your customers.</p>
         </div>
         <button onClick={() => setShowForm(!showForm)} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white flex items-center gap-1.5">
@@ -149,7 +149,7 @@ export default function CouponsView({ isDarkMode, showToast }: Props) {
 
       {showForm && (
         <div className={sectionClass}>
-          <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
+          <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
             <Gift className="h-4 w-4" /> Create New Coupon
           </h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -184,7 +184,7 @@ export default function CouponsView({ isDarkMode, showToast }: Props) {
               Welcome coupons do not expire from global usage. Every customer account can redeem this coupon code once.
             </p>
           )}
-          <button disabled={saving} onClick={handleCreate} className="mt-4 rounded-lg bg-emerald-600 px-6 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-60">{saving ? 'Saving...' : 'Create Coupon'}</button>
+          <button disabled={saving} onClick={handleCreate} className="mt-4 rounded-lg bg-emerald-600 px-6 py-2.5 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-60">{saving ? 'Saving...' : 'Create Coupon'}</button>
         </div>
       )}
 
@@ -203,17 +203,17 @@ export default function CouponsView({ isDarkMode, showToast }: Props) {
               <div key={coupon.id} className={`rounded-xl border p-4 shadow-sm ${expired ? 'opacity-60' : ''} ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-black tracking-wider">{coupon.code}</span>
+                    <span className="font-mono text-sm font-semibold tracking-wider">{coupon.code}</span>
                     <button onClick={() => handleCopy(coupon.code, coupon.id)} className="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
                       {copiedId === coupon.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                   {expired && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Expired</span>}
                 </div>
-                <div className="text-lg font-black text-indigo-600">
+                <div className="text-lg font-semibold text-indigo-600">
                   {coupon.discountType === 'percentage' ? `${coupon.discountValue}% OFF` : `₹${coupon.discountValue} OFF`}
                 </div>
-                <span className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-black uppercase text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                <span className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-semibold uppercase text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
                   {String(coupon.metadata?.couponType || 'normal')}
                 </span>
                 <div className="mt-2 space-y-1 text-[10px] opacity-70">

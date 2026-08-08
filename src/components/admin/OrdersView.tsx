@@ -501,7 +501,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-serif text-2xl font-black">Invoice & Orders</h2>
+          <h2 className="font-serif text-2xl font-semibold">Invoice & Orders</h2>
           <p className="text-xs opacity-70">Manage orders, update status, and process fulfillment.</p>
         </div>
         <button
@@ -520,7 +520,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
           <div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-indigo-500" />
-              <h3 className="text-sm font-black">Invoice Dispatch Queue</h3>
+              <h3 className="text-sm font-semibold">Invoice Dispatch Queue</h3>
             </div>
             <p className="mt-1 text-[11px] text-slate-500">Prioritized by delivery/pickup date, slot time, payment verification, and order status.</p>
           </div>
@@ -530,7 +530,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                 key={filter}
                 type="button"
                 onClick={() => setQueueDateFilter(filter)}
-                className={`rounded-lg px-3 py-2 text-[10px] font-black uppercase transition ${
+                className={`rounded-lg px-3 py-2 text-[10px] font-semibold uppercase transition ${
                   queueDateFilter === filter
                     ? 'bg-indigo-700 text-white shadow'
                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -544,16 +544,16 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
 
         <div className="mb-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
-            <p className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-300">Due Soon</p>
-            <p className="mt-1 text-xl font-black">{queueCounts.dueSoon}</p>
+            <p className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Due Soon</p>
+            <p className="mt-1 text-xl font-semibold">{queueCounts.dueSoon}</p>
           </div>
           <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-900 dark:bg-rose-950/20">
-            <p className="text-[10px] font-black uppercase text-rose-700 dark:text-rose-300">Delayed</p>
-            <p className="mt-1 text-xl font-black">{queueCounts.delayed}</p>
+            <p className="text-[10px] font-semibold uppercase text-rose-700 dark:text-rose-300">Delayed</p>
+            <p className="mt-1 text-xl font-semibold">{queueCounts.delayed}</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
-            <p className="text-[10px] font-black uppercase text-slate-500">Payment Pending</p>
-            <p className="mt-1 text-xl font-black">{queueCounts.paymentPending}</p>
+            <p className="text-[10px] font-semibold uppercase text-slate-500">Payment Pending</p>
+            <p className="mt-1 text-xl font-semibold">{queueCounts.paymentPending}</p>
           </div>
         </div>
 
@@ -570,13 +570,13 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
             <table className="w-full min-w-[920px] text-left text-xs">
               <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-950">
                 <tr>
-                  <th className="px-3 py-2 font-black">Priority</th>
-                  <th className="px-3 py-2 font-black">Slot</th>
-                  <th className="px-3 py-2 font-black">Order</th>
-                  <th className="px-3 py-2 font-black">Customer</th>
-                  <th className="px-3 py-2 font-black">Payment</th>
-                  <th className="px-3 py-2 text-right font-black">Amount</th>
-                  <th className="px-3 py-2 text-right font-black">Actions</th>
+                  <th className="px-3 py-2 font-semibold">Priority</th>
+                  <th className="px-3 py-2 font-semibold">Slot</th>
+                  <th className="px-3 py-2 font-semibold">Order</th>
+                  <th className="px-3 py-2 font-semibold">Customer</th>
+                  <th className="px-3 py-2 font-semibold">Payment</th>
+                  <th className="px-3 py-2 text-right font-semibold">Amount</th>
+                  <th className="px-3 py-2 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -609,22 +609,22 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                     <tr key={order.id} className="border-t border-slate-100 dark:border-slate-800">
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-black text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
                             {index + 1}
                           </span>
-                          <span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${priorityBadgeClass(order)}`}>
+                          <span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase ${priorityBadgeClass(order)}`}>
                             {order.invoiceQueue?.priorityLabel || 'Queued'}
                           </span>
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <p className="font-black capitalize">{order.invoiceQueue?.scheduledDay || 'unknown'}</p>
+                        <p className="font-semibold capitalize">{order.invoiceQueue?.scheduledDay || 'unknown'}</p>
                         <p className="text-[10px] text-slate-500">{order.invoiceQueue?.scheduledDateDisplay || order.invoiceQueue?.scheduledDate || '-'}</p>
                         <p className="font-mono text-[10px] text-slate-500">{order.invoiceQueue?.slotLabel || order.selectedSlot || 'No slot'}</p>
                       </td>
                       <td className="px-3 py-3">
-                        <p className="font-mono font-black">{order.orderRef || order.id.slice(0, 8)}</p>
-                        <p className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${statusColors[order.status] || statusColors.pending}`}>
+                        <p className="font-mono font-semibold">{order.orderRef || order.id.slice(0, 8)}</p>
+                        <p className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase ${statusColors[order.status] || statusColors.pending}`}>
                           {order.status.replace(/_/g, ' ')}
                         </p>
                       </td>
@@ -635,20 +635,20 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       </td>
                       <td className="px-3 py-3">
                         <p className="font-bold uppercase">{paymentMethod}</p>
-                        <p className={`text-[10px] font-black uppercase ${paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>{paymentStatus}</p>
+                        <p className={`text-[10px] font-semibold uppercase ${paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>{paymentStatus}</p>
                         {order.paymentRef && <p className="font-mono text-[10px] text-slate-500">{order.paymentRef}</p>}
                         {isUpi && paymentStatus !== 'paid' && (
                           <span className="mt-1 block text-[9px] font-bold text-amber-600 animate-pulse">Verification Pending from Store Side</span>
                         )}
                       </td>
-                      <td className="px-3 py-3 text-right font-black">{money(order.finalTotal)}</td>
+                      <td className="px-3 py-3 text-right font-bold">{money(order.finalTotal)}</td>
                       <td className="px-3 py-3">
                         <div className="flex justify-end gap-2">
                           {canPrintBill(order) && (
                             <button
                               type="button"
                               onClick={() => handlePrintInvoice(order)}
-                              className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-black hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                              className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                             >
                               Print
                             </button>
@@ -659,7 +659,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                                 type="button"
                                 disabled={loadingId === order.id}
                                 onClick={() => setCodChoiceOrder(order)}
-                                className="rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[10px] font-black text-white disabled:opacity-50"
+                                className="rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[10px] font-semibold text-white disabled:opacity-50"
                               >
                                 Collect COD
                               </button>
@@ -668,7 +668,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                                   type="button"
                                   disabled={loadingId === order.id}
                                   onClick={() => handleMarkCodPaid(order)}
-                                  className="rounded-lg bg-blue-700 px-2.5 py-1.5 text-[10px] font-black text-white disabled:opacity-50"
+                                  className="rounded-lg bg-blue-700 px-2.5 py-1.5 text-[10px] font-semibold text-white disabled:opacity-50"
                                 >
                                   COD Paid
                                 </button>
@@ -679,7 +679,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                               type="button"
                               disabled={loadingId === order.id}
                               onClick={() => handleVerifyUpiPaid(order)}
-                              className="rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[10px] font-black text-white disabled:opacity-50"
+                              className="rounded-lg bg-emerald-700 px-2.5 py-1.5 text-[10px] font-semibold text-white disabled:opacity-50"
                             >
                               Verify UPI & Accept
                             </button>
@@ -689,7 +689,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                                 type="button"
                                 disabled={loadingId === order.id || !canProgress}
                                 onClick={() => handleAdvanceStatus(order)}
-                                className="rounded-lg bg-indigo-700 px-2.5 py-1.5 text-[10px] font-black text-white disabled:opacity-50"
+                                className="rounded-lg bg-indigo-700 px-2.5 py-1.5 text-[10px] font-semibold text-white disabled:opacity-50"
                               >
                                 Mark {nextStatus.replace(/_/g, ' ')}
                               </button>
@@ -775,7 +775,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                     <span className="text-xs opacity-70">{order.customerName}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-black">{money(order.finalTotal)}</span>
+                    <span className="text-sm font-bold">{money(order.finalTotal)}</span>
                     {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </div>
                 </div>
@@ -785,17 +785,17 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                   <div className="border-t border-slate-200 p-4 dark:border-slate-700">
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       <div>
-                        <p className="mb-1 text-[10px] font-black uppercase tracking-wider opacity-70">Order Identity</p>
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider opacity-70">Order Identity</p>
                         <p className="font-mono text-xs font-bold">{order.orderRef || '-'}</p>
                         <p className="break-all font-mono text-[10px] opacity-70">ID: {order.id}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-wider opacity-70 mb-1">Customer</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider opacity-70 mb-1">Customer</p>
                         <p className="text-sm font-bold">{order.customerName}</p>
                         <p className="text-xs opacity-70">{order.customerPhone}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-wider opacity-70 mb-1">Delivery</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider opacity-70 mb-1">Delivery</p>
                         <p className="text-sm font-bold capitalize">{order.deliveryMethod}</p>
                         <p className="text-xs opacity-70">{order.selectedSlot || 'No slot'}</p>
                         {order.deliveryMethod === 'delivery' && order.deliveryAddress && (
@@ -805,7 +805,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                         )}
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-wider opacity-70 mb-1">Payment</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider opacity-70 mb-1">Payment</p>
                         <p className="text-sm font-bold capitalize">{paymentMethod}</p>
                         <p className={`text-xs font-bold ${paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>
                           {paymentStatus}
@@ -818,7 +818,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
 
                     {/* Order Items */}
                     <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-700">
-                      <p className="text-[10px] font-black uppercase tracking-wider opacity-70 mb-2">Items</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider opacity-70 mb-2">Items</p>
                       <div className="space-y-1">
                         {order.items?.map((item: any, idx: number) => (
                           <div key={idx} className="flex justify-between text-xs">
@@ -844,7 +844,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                           <span className="opacity-70">Discount</span>
                           <span className="font-bold">- {money(order.discountAmount ?? order.discount)}</span>
                         </div>
-                        <div className="flex justify-between pt-1 text-sm font-black">
+                        <div className="flex justify-between pt-1 text-sm font-semibold">
                           <span>Grand total</span>
                           <span>{money(order.finalTotal)}</span>
                         </div>
@@ -933,10 +933,10 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
             <section className={`mt-6 rounded-xl border p-4 shadow-sm ${isDarkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
               <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-sm font-black">Completed Delivered Invoices</h3>
+                  <h3 className="text-sm font-semibold">Completed Delivered Invoices</h3>
                   <p className="text-[11px] text-slate-500">Delivered orders are stored here.</p>
                 </div>
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                   {completedFilteredOrders.length} Completed
                 </span>
               </div>
@@ -944,12 +944,12 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                 <table className="w-full min-w-[760px] text-left text-xs">
                   <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-950">
                     <tr>
-                      <th className="px-3 py-2 font-black">Invoice</th>
-                      <th className="px-3 py-2 font-black">Customer</th>
-                      <th className="px-3 py-2 font-black">Payment</th>
-                      <th className="px-3 py-2 font-black">Delivered At</th>
-                      <th className="px-3 py-2 text-right font-black">Amount</th>
-                      <th className="px-3 py-2 text-right font-black">Actions</th>
+                      <th className="px-3 py-2 font-semibold">Invoice</th>
+                      <th className="px-3 py-2 font-semibold">Customer</th>
+                      <th className="px-3 py-2 font-semibold">Payment</th>
+                      <th className="px-3 py-2 font-semibold">Delivered At</th>
+                      <th className="px-3 py-2 text-right font-semibold">Amount</th>
+                      <th className="px-3 py-2 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -959,7 +959,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       return (
                         <tr key={order.id} className="border-t border-slate-100 dark:border-slate-800">
                           <td className="px-3 py-3">
-                            <p className="font-mono font-black">{order.orderRef || order.id.slice(0, 8)}</p>
+                            <p className="font-mono font-semibold">{order.orderRef || order.id.slice(0, 8)}</p>
                             <p className="break-all font-mono text-[10px] text-slate-500">{order.id}</p>
                           </td>
                           <td className="px-3 py-3">
@@ -968,25 +968,25 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                           </td>
                           <td className="px-3 py-3">
                             <p className="font-bold uppercase">{paymentMethod}</p>
-                            <p className={`text-[10px] font-black uppercase ${paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>{paymentStatus}</p>
+                            <p className={`text-[10px] font-semibold uppercase ${paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>{paymentStatus}</p>
                             {order.paymentRef && <p className="font-mono text-[10px] text-slate-500">{order.paymentRef}</p>}
                           </td>
                           <td className="px-3 py-3 text-slate-500">{formatDateTimeDDMMYYYY(order.updatedAt || order.createdAt)}</td>
-                          <td className="px-3 py-3 text-right font-black">{money(order.finalTotal)}</td>
+                          <td className="px-3 py-3 text-right font-bold">{money(order.finalTotal)}</td>
                           <td className="px-3 py-3">
                             <div className="flex justify-end gap-2">
                               {canPrintBill(order) && (
-                                <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-black dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
+                                <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-semibold dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
                                   Print
                                 </button>
                               )}
                               {canSendWhatsAppBill(order) && (
-                                <button disabled={loadingId === order.id} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 flex items-center gap-1" onClick={() => handleSendWhatsAppInvoice(order)}>
+                                <button disabled={loadingId === order.id} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[10px] font-semibold text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 flex items-center gap-1" onClick={() => handleSendWhatsAppInvoice(order)}>
                                   <Send className="w-3 h-3" /> WhatsApp Bill
                                 </button>
                               )}
                               {isOwner && (
-                                <button disabled={loadingId === order.id} className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[10px] font-black text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200" onClick={() => handleDeleteOrder(order)}>
+                                <button disabled={loadingId === order.id} className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[10px] font-semibold text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200" onClick={() => handleDeleteOrder(order)}>
                                   Archive
                                 </button>
                               )}
@@ -1009,8 +1009,8 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
           <div className={`w-full max-w-md rounded-2xl border p-5 shadow-2xl ${isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'}`}>
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Delivery COD Collection</p>
-                <h3 className="mt-1 font-serif text-xl font-black">{codChoiceOrder.orderRef || codChoiceOrder.id.slice(0, 8)}</h3>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-600">Delivery COD Collection</p>
+                <h3 className="mt-1 font-serif text-xl font-semibold">{codChoiceOrder.orderRef || codChoiceOrder.id.slice(0, 8)}</h3>
                 <p className="text-xs text-slate-500">Ask customer how they want to pay the COD amount.</p>
               </div>
               <button type="button" onClick={() => setCodChoiceOrder(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -1019,8 +1019,8 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center dark:border-slate-800 dark:bg-slate-950">
-              <p className="text-[10px] font-black uppercase text-slate-500">Amount to collect</p>
-              <p className="mt-1 text-3xl font-black">{money(codChoiceOrder.finalTotal)}</p>
+              <p className="text-[10px] font-semibold uppercase text-slate-500">Amount to collect</p>
+              <p className="mt-1 text-3xl font-bold">{money(codChoiceOrder.finalTotal)}</p>
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1028,7 +1028,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                 type="button"
                 disabled={loadingId === codChoiceOrder.id}
                 onClick={() => handleMarkCodCashPaid(codChoiceOrder)}
-                className="rounded-xl bg-emerald-700 px-4 py-4 text-sm font-black text-white shadow-sm disabled:opacity-50"
+                className="rounded-xl bg-emerald-700 px-4 py-4 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
               >
                 Cash Collected
                 <span className="mt-1 block text-[10px] font-bold opacity-80">Mark COD paid now</span>
@@ -1037,7 +1037,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                 type="button"
                 disabled={loadingId === codChoiceOrder.id}
                 onClick={() => openCodCollectionQr(codChoiceOrder)}
-                className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-4 text-sm font-black text-indigo-800 shadow-sm disabled:opacity-50 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200"
+                className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-4 text-sm font-semibold text-indigo-800 shadow-sm disabled:opacity-50 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200"
               >
                 Show QR Code
                 <span className="mt-1 block text-[10px] font-bold opacity-80">Submit UTR after payment</span>
@@ -1053,8 +1053,8 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
           <div className={`w-full max-w-md rounded-2xl border p-5 shadow-2xl ${isDarkMode ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'}`}>
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Delivery COD Collection</p>
-                <h3 className="mt-1 font-serif text-xl font-black">{codCollection.order.orderRef || codCollection.order.id.slice(0, 8)}</h3>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-600">Delivery COD Collection</p>
+                <h3 className="mt-1 font-serif text-xl font-semibold">{codCollection.order.orderRef || codCollection.order.id.slice(0, 8)}</h3>
                 <p className="text-xs text-slate-500">Show this exact amount QR to the customer.</p>
               </div>
               <button type="button" onClick={() => setCodCollection(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -1063,13 +1063,13 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
             </div>
 
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center dark:border-emerald-900 dark:bg-emerald-950/30">
-              <p className="mb-2 text-xs font-black uppercase text-emerald-700 dark:text-emerald-300">Fixed payable amount</p>
-              <p className="mb-3 text-3xl font-black">{money(codCollection.order.finalTotal)}</p>
+              <p className="mb-2 text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300">Fixed payable amount</p>
+              <p className="mb-3 text-3xl font-bold">{money(codCollection.order.finalTotal)}</p>
               <img src={codCollection.qrDataUrl} alt="COD UPI QR" className="mx-auto h-56 w-56 rounded-xl bg-white p-2 shadow-sm" />
             </div>
 
             <label className="mt-4 block">
-              <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">Customer payment UTR / reference</span>
+              <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Customer payment UTR / reference</span>
               <input
                 value={codCollection.providerRef}
                 onChange={(event) => setCodCollection((prev) => prev ? { ...prev, providerRef: event.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 30) } : prev)}
@@ -1079,10 +1079,10 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
             </label>
 
             <div className="mt-5 flex gap-2">
-              <button type="button" onClick={() => setCodCollection(null)} className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-xs font-black dark:border-slate-700">
+              <button type="button" onClick={() => setCodCollection(null)} className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold dark:border-slate-700">
                 Cancel
               </button>
-              <button type="button" disabled={loadingId === codCollection.order.id} onClick={submitCodCollection} className="flex-1 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-black text-white disabled:opacity-50">
+              <button type="button" disabled={loadingId === codCollection.order.id} onClick={submitCodCollection} className="flex-1 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">
                 Submit Collection
               </button>
             </div>

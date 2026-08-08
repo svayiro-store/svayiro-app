@@ -81,13 +81,13 @@ export default function ComplaintsView({ isDarkMode, showToast }: { isDarkMode: 
   });
 
   const statusColor = (s: string) => s === 'open' ? 'bg-amber-100 text-amber-700' : s === 'in_progress' ? 'bg-blue-100 text-blue-700' : s === 'resolved' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700';
-  const priorityColor = (p: string) => p === 'high' ? 'text-rose-600 font-black' : p === 'medium' ? 'text-amber-600 font-bold' : 'text-slate-500';
+  const priorityColor = (p: string) => p === 'high' ? 'text-rose-600 font-semibold' : p === 'medium' ? 'text-amber-600 font-bold' : 'text-slate-500';
 
   return (
     <div className={`rounded-2xl border p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
-          <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white">Complaints & Tickets</h3>
+          <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Complaints & Tickets</h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">Manage customer support tickets</p>
         </div>
         <div className="flex items-center gap-2">

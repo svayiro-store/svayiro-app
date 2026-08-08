@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, QrCode, Package, Layers, ShoppingBag, Calendar, Gift, MessageSquare, Bell, BellRing, Image, Settings, LogOut, AlertTriangle, BookOpen, ExternalLink, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { TrendingUp, QrCode, Package, Layers, ShoppingBag, Calendar, Gift, MessageSquare, Bell, BellRing, Image, Settings, LogOut, AlertTriangle, BookOpen, ExternalLink, PanelLeftClose, PanelLeftOpen, Scale } from 'lucide-react';
 
 interface Props {
   activeMenu: string;
@@ -16,6 +16,7 @@ interface Props {
 const menuRoles: Record<string, string[]> = {
   dashboard: ['admin'],
   pos: ['admin', 'inventory_manager'],
+  looseLabels: ['admin', 'inventory_manager'],
   products: ['admin', 'inventory_manager'],
   categories: ['admin', 'inventory_manager'],
   orders: ['admin', 'delivery_partner', 'customer_care'],
@@ -44,6 +45,7 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
   const items = [
     { id: 'dashboard', label: 'Dashboard Control', icon: TrendingUp },
     { id: 'pos', label: 'Walk-In Billing (POS)', icon: QrCode },
+    { id: 'looseLabels', label: 'Loose Weighing Labels', icon: Scale },
     { id: 'products', label: 'Products Catalogue', icon: Package },
     { id: 'categories', label: 'Manage Categories', icon: Layers },
     { id: 'orders', label: 'Invoice & Orders', icon: ShoppingBag, badge: ordersCount },
@@ -67,14 +69,14 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
         </div>
         <div className={`min-w-0 ${isExpanded ? 'md:block' : 'md:hidden'}`}>
           <h2 className="truncate font-extrabold text-indigo-800 text-sm font-mono tracking-wider dark:text-indigo-300">SVAYIRO CONSOLE</h2>
-          <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Operator panel</p>
+          <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">Operator panel</p>
         </div>
       </div>
 
       <button
         type="button"
         onClick={() => setIsExpanded((expanded) => !expanded)}
-        className={`mb-2 hidden h-10 items-center justify-center gap-2 rounded-2xl border px-3 py-2 text-[10px] font-black uppercase transition md:flex ${
+        className={`mb-2 hidden h-10 items-center justify-center gap-2 rounded-2xl border px-3 py-2 text-[10px] font-semibold uppercase transition md:flex ${
           isDarkMode
             ? 'border-slate-800 bg-slate-950 text-slate-300 hover:border-indigo-800'
             : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-200'
@@ -96,7 +98,7 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
               title={item.label}
               className={`group relative flex min-w-fit items-center justify-between gap-3 rounded-2xl border px-3 py-2.5 select-none text-left whitespace-nowrap transition-all md:h-12 md:min-w-0 ${isExpanded ? 'md:justify-between' : 'md:w-12 md:justify-center md:px-0'} ${
               activeMenu === item.id
-                ? 'border-indigo-700 bg-indigo-700 text-white font-black shadow-lg shadow-indigo-900/20'
+                ? 'border-indigo-700 bg-indigo-700 text-white font-semibold shadow-lg shadow-indigo-900/20'
                 : isDarkMode
                   ? 'border-slate-800 bg-slate-950 text-slate-300 hover:border-indigo-700 hover:text-white'
                   : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-800 hover:shadow-sm'
@@ -110,12 +112,12 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
                 <span className={`font-bold ${isExpanded ? '' : 'md:hidden'}`}>{item.label}</span>
               </div>
               {!isExpanded && (
-                <span className="pointer-events-none absolute left-[56px] top-1/2 z-50 hidden -translate-y-1/2 rounded-lg bg-slate-950 px-2.5 py-1.5 text-[10px] font-black uppercase text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100 md:block">
+                <span className="pointer-events-none absolute left-[56px] top-1/2 z-50 hidden -translate-y-1/2 rounded-lg bg-slate-950 px-2.5 py-1.5 text-[10px] font-semibold uppercase text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100 md:block">
                   {item.label}
                 </span>
               )}
               {item.badge ? (
-                <span className={`text-[9px] px-1.5 py-0.2 rounded font-black font-mono leading-none bg-rose-50 text-rose-500 ${isExpanded ? '' : 'md:absolute md:right-1 md:top-1'}`}>
+                <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold font-mono leading-none bg-rose-50 text-rose-500 ${isExpanded ? '' : 'md:absolute md:right-1 md:top-1'}`}>
                   {item.badge}
                 </span>
               ) : null}
@@ -127,13 +129,13 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
       {(canOpenCustomerStorefront || onLogout) && (
         <div className="mt-2 grid shrink-0 grid-cols-2 gap-2 border-t border-slate-200 pt-2 dark:border-slate-800/80 md:mt-auto md:grid-cols-1">
           {canOpenCustomerStorefront && (
-            <button onClick={openCustomerStorefront} title="Preview Storefront" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50 px-3 text-[10px] font-black uppercase text-indigo-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 ${isExpanded ? '' : 'md:px-0'}`}>
+            <button onClick={openCustomerStorefront} title="Preview Storefront" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50 px-3 text-[10px] font-semibold uppercase text-indigo-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 ${isExpanded ? '' : 'md:px-0'}`}>
               <ExternalLink className="h-4 w-4 shrink-0" />
               <span className={`truncate ${isExpanded ? '' : 'md:hidden'}`}>Preview Storefront</span>
             </button>
           )}
           {onLogout && (
-            <button onClick={onLogout} title="Logout" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-3 text-[10px] font-black uppercase text-rose-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 ${isExpanded ? '' : 'md:px-0'}`}>
+            <button onClick={onLogout} title="Logout" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-3 text-[10px] font-semibold uppercase text-rose-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 ${isExpanded ? '' : 'md:px-0'}`}>
               <LogOut className="h-4 w-4 shrink-0" />
               <span className={`truncate ${isExpanded ? '' : 'md:hidden'}`}>Logout</span>
             </button>

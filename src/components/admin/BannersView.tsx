@@ -35,7 +35,7 @@ function BannerDevicePreview({ imageUrl, title }: { imageUrl: string; title: str
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase text-slate-500">
+      <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase text-slate-500">
         <span>Customer banner preview</span>
         <span>16:9 storefront card</span>
       </div>
@@ -50,7 +50,7 @@ function BannerDevicePreview({ imageUrl, title }: { imageUrl: string; title: str
         {previewTitle && (
           <div className="absolute inset-x-0 bottom-0 p-4">
             <h2
-              className="line-clamp-2 max-w-[84%] text-base font-black leading-tight text-white"
+              className="line-clamp-2 max-w-[84%] text-base font-semibold leading-tight text-white"
               style={{ textShadow: '0 2px 0 rgba(15,23,42,0.95), 0 5px 14px rgba(15,23,42,0.65)' }}
             >
               {previewTitle}
@@ -171,18 +171,18 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
   };
 
   const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
-  const labelClass = 'mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500';
+  const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-black">Homepage Banners</h2>
+        <h2 className="font-serif text-2xl font-semibold">Homepage Banners</h2>
         <p className="text-xs opacity-70">Manage promotional banners shown on the customer storefront carousel.</p>
       </div>
 
       {/* Create Banner Form */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
+        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
           <Plus className="h-4 w-4" /> Add New Banner
         </h3>
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
@@ -207,7 +207,7 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
                     }}
                   />
                 </div>
-                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
                   <Upload className="h-4 w-4" />
                   Upload
                   <input
@@ -271,7 +271,7 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
             <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.5fr)_minmax(240px,0.7fr)]">
               <BannerDevicePreview imageUrl={imagePreview || imageUrl.trim()} title={title} />
               <div className="flex flex-col justify-center">
-                <h4 className="text-sm font-black text-slate-950 dark:text-slate-50">Banner image</h4>
+                <h4 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Banner image</h4>
                 <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
                   This image will appear across the top of your customer home page.
                 </p>
@@ -279,7 +279,7 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
                   Banner display uses a 16:9 card. For best results on all devices, use an image that is at least {MIN_BANNER_WIDTH} x {MIN_BANNER_HEIGHT} pixels and {MAX_IMAGE_BYTES} MB or less.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-white px-4 py-2 text-xs font-black text-slate-950 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700">
+                  <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-950 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700">
                     Change
                     <input
                       type="file"
@@ -295,7 +295,7 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
                     type="button"
                     onClick={clearBannerImage}
                     disabled={!imagePreview && !imageUrl}
-                    className="inline-flex items-center justify-center gap-1 rounded-full bg-white px-4 py-2 text-xs font-black text-slate-950 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700"
+                    className="inline-flex items-center justify-center gap-1 rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-950 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700"
                   >
                     <X className="h-3.5 w-3.5" />
                     Remove
@@ -305,7 +305,7 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
             </div>
             <button
               onClick={handleCreate}
-              className="mt-5 w-full rounded-lg bg-indigo-700 px-6 py-2.5 text-xs font-black uppercase tracking-wide text-white shadow-lg hover:bg-indigo-800"
+              className="mt-5 w-full rounded-lg bg-indigo-700 px-6 py-2.5 text-xs font-semibold uppercase tracking-wide text-white shadow-lg hover:bg-indigo-800"
             >
               Create Banner
             </button>

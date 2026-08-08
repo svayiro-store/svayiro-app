@@ -267,18 +267,18 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
   };
 
   const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
-  const labelClass = 'mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500';
+  const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-black">Manage Categories</h2>
+        <h2 className="font-serif text-2xl font-semibold">Manage Categories</h2>
         <p className="text-xs opacity-70">Create, edit, and remove category groups and subcategories for your store.</p>
       </div>
 
       {/* Create/Edit Category Form */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
+        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
           {editingId ? <><Plus className="h-4 w-4" /> Edit Category</> : <><Plus className="h-4 w-4" /> Add New Category</>}
         </h3>
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
@@ -334,7 +334,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
                     }}
                   />
                 </div>
-                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-900/30">
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-900/30">
                   <Upload className="h-4 w-4" />
                   Upload
                   <input
@@ -364,7 +364,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
               <button
                 onClick={editingId ? () => handleUpdate(editingId) : handleCreate}
                 disabled={loading}
-                className="rounded-lg bg-indigo-700 px-4 py-2 text-xs font-black uppercase tracking-wide text-white disabled:opacity-60"
+                className="rounded-lg bg-indigo-700 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-60"
               >
                 {loading ? 'Saving...' : editingId ? 'Update' : 'Create'}
               </button>
@@ -385,20 +385,20 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
         <div className="rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
             <div>
-              <h3 className="text-xs font-black uppercase tracking-wide text-slate-800 dark:text-slate-100">Category Display Order</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800 dark:text-slate-100">Category Display Order</h3>
               <p className="text-[10px] font-semibold text-slate-500">Tick categories, move them up/down, then save. Parent and subcategory order are handled separately.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => moveSelectedCategories('up')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-black uppercase text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
+              <button onClick={() => moveSelectedCategories('up')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
                 <ArrowUp className="h-3.5 w-3.5" /> Selected Up
               </button>
-              <button onClick={() => moveSelectedCategories('down')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-black uppercase text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
+              <button onClick={() => moveSelectedCategories('down')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
                 <ArrowDown className="h-3.5 w-3.5" /> Selected Down
               </button>
               <button
                 onClick={saveCategoryOrder}
                 disabled={savingOrder || !hasOrderChanges}
-                className="inline-flex items-center gap-1 rounded-lg bg-indigo-700 px-3 py-2 text-[10px] font-black uppercase text-white shadow disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-lg bg-indigo-700 px-3 py-2 text-[10px] font-semibold uppercase text-white shadow disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" /> {savingOrder ? 'Saving...' : 'Save Order'}
               </button>

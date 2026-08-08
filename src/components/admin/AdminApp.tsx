@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import DashboardView from './DashboardView';
 import PosView from './PosView';
 import ProductsView from './ProductsView';
+import LooseLabelsView from './LooseLabelsView';
 import OrdersView from './OrdersView';
 import CategoriesView from './CategoriesView';
 import AdvanceRequestsView from './AdvanceRequestsView';
@@ -19,7 +20,19 @@ import { api } from '../../api';
 import { ShopProfile, Category, Product, Banner, Notification, User } from '../../types';
 import { PackageSearch, ShoppingBag, UserCircle } from 'lucide-react';
 
-type PosCartItem = { productId: string; name: string; quantity: number; price: number; maxStock: number; weightGrams?: number };
+type PosCartItem = {
+  cartKey?: string;
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  maxStock: number;
+  weightGrams?: number;
+  stockQuantity?: number;
+  displayQuantityLabel?: string;
+  scannedBarcode?: string;
+  isLooseLabel?: boolean;
+};
 type PosRegister = { id: string; name: string; cart: PosCartItem[] };
 
 interface AdminAppProps {
@@ -36,11 +49,12 @@ interface AdminAppProps {
   onLogout?: () => void;
 }
 
-type AdminMenu = 'dashboard'|'pos'|'products'|'categories'|'orders'|'advances'|'coupons'|'reviews'|'broadcasting'|'banners'|'settings'|'complaints'|'adminAlerts'|'manual';
+type AdminMenu = 'dashboard'|'pos'|'looseLabels'|'products'|'categories'|'orders'|'advances'|'coupons'|'reviews'|'broadcasting'|'banners'|'settings'|'complaints'|'adminAlerts'|'manual';
 
 const menuTitles: Record<AdminMenu, string> = {
   dashboard: 'Dashboard Control',
   pos: 'Walk-In Billing POS',
+  looseLabels: 'Loose Weighing Labels',
   products: 'Products Catalogue',
   categories: 'Manage Categories',
   orders: 'Invoice & Orders',
@@ -63,8 +77,8 @@ const roleLabels: Record<string, string> = {
 };
 
 const roleMenus: Record<string, AdminMenu[]> = {
-  admin: ['dashboard', 'pos', 'products', 'categories', 'orders', 'advances', 'coupons', 'reviews', 'complaints', 'adminAlerts', 'banners', 'broadcasting', 'settings', 'manual'],
-  inventory_manager: ['pos', 'products', 'categories', 'manual'],
+  admin: ['dashboard', 'pos', 'looseLabels', 'products', 'categories', 'orders', 'advances', 'coupons', 'reviews', 'complaints', 'adminAlerts', 'banners', 'broadcasting', 'settings', 'manual'],
+  inventory_manager: ['pos', 'looseLabels', 'products', 'categories', 'manual'],
   delivery_partner: ['orders', 'manual'],
   customer_care: ['orders', 'reviews', 'complaints', 'manual']
 };
@@ -131,41 +145,75 @@ export default function AdminApp({ shop, categories, products, banners, notifica
       .catch(() => {});
   };
 
-  const handleAddToOfflineCart = (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string; product?: Product }) => {
-    const qty = opts.qty || 1;
+  const handleAddToOfflineCart = (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string; product?: Product; scannedBarcode?: string }) => {
+    const qty = Math.max(1, Number(opts.qty || 1));
     if (opts.customItemName && opts.customItemName.trim()) {
       const pid = 'unlisted_' + Date.now();
-      updateActiveRegisterCart(prev => [...prev, { productId: pid, name: opts.customItemName!.trim(), quantity: qty, price: opts.priceOverride || 0, maxStock: 99999, weightGrams: 0 }]);
+      updateActiveRegisterCart(prev => [...prev, { cartKey: pid, productId: pid, name: opts.customItemName!.trim(), quantity: qty, price: Math.max(0, Number(opts.priceOverride || 0)), maxStock: 99999, weightGrams: 0 }]);
       return;
     }
     if (!opts.productId) return;
     const product = opts.product || products.find(p => p.id === opts.productId);
     if (!product) return;
+    const looseScan = product.metadata?.looseScan;
+    if (looseScan) {
+      const scannedBarcode = opts.scannedBarcode || looseScan.barcodeValue;
+      if (offlineCart.some((item) => item.scannedBarcode && item.scannedBarcode === scannedBarcode)) {
+        showToast('This loose item label is already in the cart.', 'warning');
+        return;
+      }
+      const stockQuantity = Math.max(0, Number(looseScan.stockQuantity ?? looseScan.baseQuantity ?? 0));
+      if (stockQuantity <= 0) {
+        showToast('Loose item label quantity is invalid.', 'error');
+        return;
+      }
+      if (stockQuantity > Number(product.stockCount || 0)) {
+        showToast(`Insufficient stock for ${product.name}.`, 'error');
+        return;
+      }
+      const displayQuantityLabel = String(looseScan.quantityLabel || `${stockQuantity} ${product.stockUnit || 'g'}`);
+      const cartKey = `loose_${scannedBarcode || Date.now()}`;
+      updateActiveRegisterCart(prev => [...prev, {
+        cartKey,
+        productId: product.id,
+        name: `${product.name} (${displayQuantityLabel})`,
+        quantity: 1,
+        price: Math.max(0, Number(looseScan.amount || 0)),
+        maxStock: 1,
+        weightGrams: product.stockUnit === 'g' || product.metadata?.stockUnit === 'g' ? stockQuantity : product.weight,
+        stockQuantity,
+        displayQuantityLabel,
+        scannedBarcode,
+        isLooseLabel: true
+      }]);
+      return;
+    }
     const price = typeof opts.priceOverride === 'number' && !isNaN(opts.priceOverride) ? opts.priceOverride : (product.offerPrice > 0 ? product.offerPrice : product.basePrice);
-    const existing = offlineCart.find(i => i.productId === product.id);
+    const existing = offlineCart.find(i => (i.cartKey || i.productId) === product.id);
     if (existing) {
       const newQty = existing.quantity + qty;
       if (newQty > product.stockCount) return;
-      updateActiveRegisterCart(prev => prev.map(i => i.productId === product.id ? { ...i, quantity: newQty, price } : i));
+      updateActiveRegisterCart(prev => prev.map(i => (i.cartKey || i.productId) === product.id ? { ...i, quantity: newQty, price } : i));
     } else {
-      updateActiveRegisterCart(prev => [...prev, { productId: product.id, name: product.name, quantity: qty, price, maxStock: product.stockCount, weightGrams: product.weight }]);
+      updateActiveRegisterCart(prev => [...prev, { cartKey: product.id, productId: product.id, name: product.name, quantity: qty, price: Math.max(0, Number(price || 0)), maxStock: product.stockCount, weightGrams: product.weight }]);
     }
   };
 
-  const updateOfflineCartQuantity = (productId: string, delta: number) => {
-    const item = offlineCart.find(i => i.productId === productId);
+  const updateOfflineCartQuantity = (cartKey: string, delta: number) => {
+    const item = offlineCart.find(i => (i.cartKey || i.productId) === cartKey);
     if (!item) return;
+    if (item.isLooseLabel) return;
     const newQty = item.quantity + delta;
     if (newQty <= 0) {
-      updateActiveRegisterCart(prev => prev.filter(i => i.productId !== productId));
+      updateActiveRegisterCart(prev => prev.filter(i => (i.cartKey || i.productId) !== cartKey));
       return;
     }
     if (newQty > item.maxStock) return;
-    updateActiveRegisterCart(prev => prev.map(i => i.productId === productId ? { ...i, quantity: newQty } : i));
+    updateActiveRegisterCart(prev => prev.map(i => (i.cartKey || i.productId) === cartKey ? { ...i, quantity: newQty } : i));
   };
 
-  const removeOfflineCartItem = (productId: string) => {
-    updateActiveRegisterCart(prev => prev.filter(i => i.productId !== productId));
+  const removeOfflineCartItem = (cartKey: string) => {
+    updateActiveRegisterCart(prev => prev.filter(i => (i.cartKey || i.productId) !== cartKey));
   };
 
   const handleOfflineSaleSubmit = async (overrides?: { customerName?: string; customerPhone?: string; paymentMethod?: 'cod' | 'upi'; upiReference?: string; bagOption?: 'own' | 'need'; bagCost?: number; note?: string }) => {
@@ -174,7 +222,17 @@ export default function AdminApp({ shop, categories, products, banners, notifica
       return;
     }
     const payload = {
-      items: offlineCart.map(i => ({ productId: i.productId, quantity: i.quantity, name: i.name, price: i.price, isUnlisted: i.productId.startsWith('unlisted_') })),
+      items: offlineCart.map(i => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        name: i.name,
+        price: i.price,
+        isUnlisted: i.productId.startsWith('unlisted_'),
+        stockQuantity: i.stockQuantity,
+        displayQuantityLabel: i.displayQuantityLabel,
+        scannedBarcode: i.scannedBarcode,
+        isLooseLabel: i.isLooseLabel
+      })),
       customerName: overrides?.customerName || 'Walk-In Customer',
       customerPhone: overrides?.customerPhone || '',
       paymentMethod: overrides?.paymentMethod || 'cod',
@@ -245,8 +303,8 @@ export default function AdminApp({ shop, categories, products, banners, notifica
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-sm font-black uppercase tracking-[0.16em] text-indigo-800 dark:text-indigo-300">SVAYIRO Console</h1>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${shop.isOpen ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'}`}>
+                <h1 className="text-sm font-semibold uppercase tracking-[0.16em] text-indigo-800 dark:text-indigo-300">SVAYIRO Console</h1>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${shop.isOpen ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'}`}>
                   <span className={`h-2 w-2 rounded-full ${shop.isOpen ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                   {shop.isOpen ? 'Store Open' : 'Store Closed'}
                 </span>
@@ -257,7 +315,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
             </div>
 
             <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
-              <div className={`flex flex-wrap items-center gap-2 rounded-full border px-3 py-2 text-xs font-black ${isDarkMode ? 'border-slate-800 bg-slate-900/70 text-slate-200' : 'border-slate-200 bg-slate-50/80 text-slate-700'}`}>
+              <div className={`flex flex-wrap items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold ${isDarkMode ? 'border-slate-800 bg-slate-900/70 text-slate-200' : 'border-slate-200 bg-slate-50/80 text-slate-700'}`}>
                 <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                   <ShoppingBag className="h-3.5 w-3.5 text-indigo-600" />
                   <span className="text-slate-400">Pending</span>
@@ -283,6 +341,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
         <div className="p-4 md:p-6 xl:p-8">
         {activeMenu === 'dashboard' && <DashboardView reportsLoading={admin.reportsLoading} isDarkMode={isDarkMode} reports={admin.reports} lowStockProducts={lowStockProducts} onOpenLowStockProduct={openProductFromDashboard} />}
         {activeMenu === 'pos' && <PosView isDarkMode={isDarkMode} products={products} offlineCart={offlineCart} registers={registerSummaries} activeRegisterId={activeRegisterId} bags={admin.bags} inventoryLogs={admin.invLogs} canOverridePrice={isOwner} onSelectRegister={setActiveRegisterId} onAddRegister={addPosRegister} onCloseRegister={closePosRegister} onFilterInventoryLogs={handleFilterInventoryLogs} onCleanupInventoryLogs={handleCleanupInventoryLogs} onAddToCart={handleAddToOfflineCart} onUpdateQuantity={updateOfflineCartQuantity} onRemoveItem={removeOfflineCartItem} onSubmitSale={handleOfflineSaleSubmit} onClearCart={() => updateActiveRegisterCart(() => [])} />}
+        {activeMenu === 'looseLabels' && <LooseLabelsView isDarkMode={isDarkMode} />}
         {activeMenu === 'products' && <ProductsView isDarkMode={isDarkMode} focusedProductId={focusedProductId} onFocusedProductHandled={() => setFocusedProductId(null)} />}
         {activeMenu === 'orders' && <OrdersView orders={admin.orders} shop={shop} roles={userRoles} isDarkMode={isDarkMode} refresh={admin.refresh} showToast={showToast} />}
         {activeMenu === 'categories' && <CategoriesView categories={adminCategories} isDarkMode={isDarkMode} showToast={showToast} refresh={() => { refreshAdminCategories(); onRefreshData(); }} />}

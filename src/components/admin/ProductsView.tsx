@@ -23,6 +23,15 @@ function productCode(product: Product) {
   return String(product.sku || product.id.substring(0, 8).toUpperCase()).trim().toUpperCase();
 }
 
+function productPluCode(product: Product) {
+  return String(product.pluCode || product.metadata?.pluCode || '').trim();
+}
+
+function numericPluCode(product: Product) {
+  const parsed = Number.parseInt(productPluCode(product), 10);
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
 function code128SvgDataUri(value: string) {
   const safeValue = value.replace(/[^\x20-\x7E]/g, '').slice(0, 80) || 'SVAYIRO';
   const codes = [104, ...safeValue.split('').map((char) => char.charCodeAt(0) - 32)];
@@ -76,6 +85,11 @@ interface ProductForm {
   isEnabled: boolean;
   isDailyEssential: boolean;
   isFeatured: boolean;
+  isLooseItem: boolean;
+  looseSection: string;
+  stockUnit: 'g' | 'ml' | 'piece';
+  sellingUnit: string;
+  pluCode: string;
   lowStockAlertThreshold: string;
 }
 
@@ -104,8 +118,30 @@ const emptyForm = (): ProductForm => ({
   isEnabled: true,
   isDailyEssential: false,
   isFeatured: false,
+  isLooseItem: false,
+  looseSection: 'vegetables',
+  stockUnit: 'g',
+  sellingUnit: 'kg',
+  pluCode: '',
   lowStockAlertThreshold: '5'
 });
+
+const LOOSE_SECTION_OPTIONS = [
+  { value: 'vegetables', label: 'Vegetables', hint: 'PLU 101-199' },
+  { value: 'fruits', label: 'Fruits', hint: 'PLU 201-299' },
+  { value: 'grains', label: 'Grains', hint: 'PLU 301-399' },
+  { value: 'flours', label: 'Flours', hint: 'PLU 401-499' },
+  { value: 'spices', label: 'Spices', hint: 'PLU 501-599' },
+  { value: 'dry_fruits', label: 'Dry Fruits', hint: 'PLU 601-699' },
+  { value: 'dairy', label: 'Dairy', hint: 'PLU 701-799' },
+  { value: 'other', label: 'Other Loose Items', hint: 'PLU 801-899' }
+] as const;
+
+const LOOSE_STOCK_UNIT_OPTIONS = [
+  { value: 'g', label: 'grams (g)' },
+  { value: 'ml', label: 'milliliters (ml)' },
+  { value: 'piece', label: 'pieces' }
+] as const;
 
 export default function ProductsView({ isDarkMode, focusedProductId, onFocusedProductHandled }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -125,6 +161,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const [productSubcategoryFilter, setProductSubcategoryFilter] = useState('');
   const [codeSearch, setCodeSearch] = useState('');
   const [codeCategoryFilter, setCodeCategoryFilter] = useState('');
+  const [codeListType, setCodeListType] = useState<'product' | 'plu'>('product');
   const [selectedCodeIds, setSelectedCodeIds] = useState<Set<string>>(new Set());
   const [includePriceOnSticker, setIncludePriceOnSticker] = useState(false);
   const [includeMfdOnSticker, setIncludeMfdOnSticker] = useState(false);
@@ -293,6 +330,9 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     if (!form.packageQuantity || Number(form.packageQuantity) <= 0) return 'Product quantity/size must be greater than 0.';
     if (form.unit === 'custom' && !form.customUnit.trim()) return 'Custom unit label is required.';
     if (!form.weight || Number(form.weight) <= 0) return 'Packing weight must be greater than 0 grams for bag calculation.';
+    if (Number(form.stockCount || 0) < 0) return 'Stock count cannot be negative.';
+    if (form.isLooseItem && !form.looseSection) return 'Select a PLU section for loose/weighed item.';
+    if (form.pluCode.trim() && !/^\d{2,4}$/.test(form.pluCode.trim())) return 'Manual PLU code must be 2 to 4 digits.';
     return '';
   };
 
@@ -325,6 +365,11 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
         isEnabled: form.isEnabled,
         isDailyEssential: form.isDailyEssential,
         isFeatured: form.isFeatured,
+        isLooseItem: form.isLooseItem,
+        looseSection: form.looseSection,
+        stockUnit: form.stockUnit,
+        sellingUnit: form.sellingUnit,
+        pluCode: form.pluCode.trim(),
         lowStockAlertThreshold: Number(form.lowStockAlertThreshold) || 5
       };
       if (editingId) {
@@ -382,6 +427,11 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       isEnabled: prod.isEnabled,
       isDailyEssential: prod.isDailyEssential || false,
       isFeatured: prod.isFeatured || false,
+      isLooseItem: Boolean(prod.isLooseItem || prod.metadata?.isLooseItem),
+      looseSection: String(prod.looseSection || prod.metadata?.looseSection || 'vegetables'),
+      stockUnit: (String(prod.stockUnit || prod.metadata?.stockUnit || 'g') as ProductForm['stockUnit']),
+      sellingUnit: String(prod.sellingUnit || prod.metadata?.sellingUnit || prod.unit || 'kg'),
+      pluCode: String(prod.pluCode || prod.metadata?.pluCode || ''),
       lowStockAlertThreshold: String((prod as any).lowStockAlertThreshold || 5)
     });
     setCarouselIndex(0);
@@ -440,6 +490,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       const query = productSearch.toLowerCase();
       result = result.filter(p =>
         p.name.toLowerCase().includes(query) ||
+        String(p.pluCode || p.metadata?.pluCode || '').includes(query) ||
         productCategoryIds(p).some((categoryId) => categories.find(c => c.id === categoryId)?.name.toLowerCase().includes(query))
       );
     }
@@ -453,20 +504,27 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   }, [products, productSearch, productStatusFilter, productCategoryFilter, productSubcategoryFilter, categories]);
 
   const codeProducts = useMemo(() => {
-    let result = products;
+    let result = products.filter((product) => {
+      const isLoose = Boolean(product.isLooseItem || product.metadata?.isLooseItem);
+      return codeListType === 'plu' ? isLoose : !isLoose;
+    });
     if (codeSearch) {
       const query = codeSearch.toLowerCase();
       result = result.filter(p =>
         (p.name?.toLowerCase().includes(query) || false) ||
         (p.id?.substring(0, 8).toLowerCase().includes(query) || false) ||
+        (String(p.pluCode || p.metadata?.pluCode || '').toLowerCase().includes(query) || false) ||
         productCategoryIds(p).some((categoryId) => categories.find(c => c.id === categoryId)?.name.toLowerCase().includes(query))
       );
     }
     if (codeCategoryFilter) {
       result = result.filter(p => productMatchesCategory(p, codeCategoryFilter));
     }
+    if (codeListType === 'plu') {
+      result = [...result].sort((a, b) => numericPluCode(a) - numericPluCode(b) || a.name.localeCompare(b.name));
+    }
     return result;
-  }, [products, codeSearch, codeCategoryFilter, categories]);
+  }, [products, codeListType, codeSearch, codeCategoryFilter, categories]);
 
   const visibleFilteredProducts = useMemo(
     () => filteredProducts.slice(0, visibleProductRows),
@@ -538,7 +596,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
 
   const buildBarcodeLabelHtml = (items: Product[]) => {
     return items.map((product) => {
-      const code = productCode(product);
+      const code = codeListType === 'plu' ? productPluCode(product) : productCode(product);
       const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
       const dateInfo = stickerDateInfo[product.id] || { mfd: '', exp: '', bestBefore: '' };
       const priceLine = includePriceOnSticker
@@ -608,6 +666,70 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
     printWindow.document.close();
   };
 
+  const printPluReferenceList = (items: Product[]) => {
+    if (items.length === 0) {
+      alert('No PLU products found to print.');
+      return;
+    }
+    const rows = [...items].sort((a, b) => numericPluCode(a) - numericPluCode(b) || a.name.localeCompare(b.name)).map((product) => {
+      const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
+      return `
+        <tr>
+          <td class="plu">${escapeHtml(productPluCode(product) || '-')}</td>
+          <td>${escapeHtml(product.name)}</td>
+          <td>${escapeHtml(productCategoryLabel(product))}</td>
+          <td>${escapeHtml(formatProductMeasure(product))}</td>
+          <td class="price">Rs ${Number(activePrice || 0).toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+    const documentHtml = `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>SVAYIRO PLU Reference List</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { margin: 14mm; font-family: Arial, sans-serif; color: #000; }
+            h1 { margin: 0 0 2mm; font-size: 18px; }
+            p { margin: 0 0 5mm; font-size: 11px; color: #333; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            th, td { border: 1px solid #222; padding: 2.2mm; text-align: left; vertical-align: top; }
+            th { background: #f1f1f1; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
+            .plu { font-size: 14px; font-weight: 900; text-align: center; }
+            .price { font-weight: 800; white-space: nowrap; }
+            @page { size: A4; margin: 10mm; }
+          </style>
+        </head>
+        <body>
+          <h1>SVAYIRO PLU Reference List</h1>
+          <p>Use this list beside the weighing counter. Enter the PLU number to select the loose item.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>PLU</th>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Unit</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <script>window.onload = () => { window.focus(); window.print(); };</script>
+        </body>
+      </html>
+    `;
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      alert('Popup blocked. Allow popups to print PLU reference list.');
+      return;
+    }
+    printWindow.document.write(documentHtml);
+    printWindow.document.close();
+  };
+
   const downloadBarcodeLabelTemplate = (items: Product[]) => {
     if (items.length === 0) {
       alert('Select at least one product label to download.');
@@ -637,7 +759,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   }, [productCategoryFilter, categories]);
 
   const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
-  const labelClass = 'mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500';
+  const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
   const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900';
 
   const categoryLabel = (categoryId: string, subcategoryId?: string) => {
@@ -661,11 +783,11 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-black">Products Catalogue</h2>
+        <h2 className="font-serif text-2xl font-semibold">Products Catalogue</h2>
         <p className="text-xs opacity-70">Create and manage your product inventory with multiple images (carousel).</p>
       </div>
 
-      <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 text-xs font-black dark:border-slate-800 dark:bg-slate-900">
+      <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 text-xs font-semibold dark:border-slate-800 dark:bg-slate-900">
         <button
           type="button"
           onClick={() => setCatalogueView('products')}
@@ -684,7 +806,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
 
       {catalogueView === 'products' && (
       <div id="admin-product-edit-form" className={`${sectionClass} scroll-mt-6`}>
-        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
+        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
           {editingId ? <><Plus className="h-4 w-4" /> Edit Product</> : <><Plus className="h-4 w-4" /> Add New Product</>}
         </h3>
         <div className="grid gap-6 lg:grid-cols-3">
@@ -696,7 +818,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 <input className={inputClass} value={form.name} onChange={(e) => updateForm('name', e.target.value)} placeholder="e.g. Organic Toor Dal" />
               </label>
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Product Code</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Product Code</span>
                 <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs font-semibold text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
                   Auto-generated after saving
                 </div>
@@ -724,7 +846,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 <button
                   type="button"
                   onClick={handleAddExternalBarcode}
-                  className="rounded-lg bg-indigo-700 px-4 py-2 text-xs font-black text-white hover:bg-indigo-600"
+                  className="rounded-lg bg-indigo-700 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-600"
                 >
                   Add Barcode
                 </button>
@@ -764,7 +886,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                     : '-- Select product categories --'}
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
                     {form.categoryIds.length}
                   </span>
                   <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
@@ -773,13 +895,13 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               {categoryDropdownOpen && (
                 <div className="absolute left-3 right-3 top-[calc(100%-0.75rem)] z-30 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-950">
                   <div className="mb-2 flex items-center justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-800">
-                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Selected: {form.categoryIds.length}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Selected: {form.categoryIds.length}</span>
                     <button
                       type="button"
                       onClick={() => {
                         setForm((prev) => ({ ...prev, categoryIds: [], categoryId: '', subcategoryId: undefined }));
                       }}
-                      className="text-[10px] font-black text-rose-600 hover:underline"
+                      className="text-[10px] font-semibold text-rose-600 hover:underline"
                     >
                       Clear
                     </button>
@@ -789,7 +911,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                       const childCategories = categories.filter((subcat) => subcat.parentId === cat.id);
                       return (
                         <div key={cat.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
-                          <label className="flex items-center gap-2 text-xs font-black text-slate-800 dark:text-slate-100">
+                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-100">
                             <input
                               type="checkbox"
                               checked={form.categoryIds.includes(cat.id)}
@@ -844,7 +966,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
               <label className="block">
                 <span className={labelClass}>Real Item Cost / Purchase Price (Rs) * Admin Only</span>
-                <input className={inputClass} type="number" step="0.01" value={form.purchasePrice} onChange={(e) => updateForm('purchasePrice', e.target.value)} placeholder="e.g. 120" />
+                <input className={inputClass} type="number" min="0" step="0.01" value={form.purchasePrice} onChange={(e) => updateForm('purchasePrice', e.target.value)} placeholder="e.g. 120" />
                 <span className="text-[9px] text-amber-700 dark:text-amber-200">Hidden from customers - used for profit margins</span>
               </label>
             </div>
@@ -852,11 +974,11 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className={labelClass}>Base Price (Rs) *</span>
-                <input className={inputClass} type="number" step="0.01" value={form.basePrice} onChange={(e) => updateForm('basePrice', e.target.value)} placeholder="e.g. 150" />
+                <input className={inputClass} type="number" min="0" step="0.01" value={form.basePrice} onChange={(e) => updateForm('basePrice', e.target.value)} placeholder="e.g. 150" />
               </label>
               <label className="block">
                 <span className={labelClass}>Offer Price (Rs - optional)</span>
-                <input className={inputClass} type="number" step="0.01" value={form.offerPrice} onChange={(e) => updateForm('offerPrice', e.target.value)} placeholder="Leave empty for no discount" />
+                <input className={inputClass} type="number" min="0" step="0.01" value={form.offerPrice} onChange={(e) => updateForm('offerPrice', e.target.value)} placeholder="Leave empty for no discount" />
               </label>
             </div>
 
@@ -864,11 +986,11 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="block">
                 <span className={labelClass}>Stock Count</span>
-                <input className={inputClass} type="number" value={form.stockCount} onChange={(e) => updateForm('stockCount', e.target.value)} placeholder="0" />
+                <input className={inputClass} type="number" min="0" value={form.stockCount} onChange={(e) => updateForm('stockCount', e.target.value)} placeholder="0" />
               </label>
               <label className="block">
                 <span className={labelClass}>Product Quantity / Size</span>
-                <input className={inputClass} type="number" step="0.01" value={form.packageQuantity} onChange={(e) => updatePackageField('packageQuantity', e.target.value)} placeholder="e.g. 1, 500, 6" />
+                <input className={inputClass} type="number" min="0" step="0.01" value={form.packageQuantity} onChange={(e) => updatePackageField('packageQuantity', e.target.value)} placeholder="e.g. 1, 500, 6" />
               </label>
               <label className="block">
                 <span className={labelClass}>Unit</span>
@@ -889,13 +1011,71 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               )}
               <label className="block">
                 <span className={labelClass}>Packing Weight (grams)</span>
-                <input className={inputClass} type="number" value={form.weight} onChange={(e) => updateForm('weight', e.target.value)} placeholder="Used for smart bag" />
+                <input className={inputClass} type="number" min="0" value={form.weight} onChange={(e) => updateForm('weight', e.target.value)} placeholder="Used for smart bag" />
                 <span className="text-[9px] text-slate-500">Used only for smart bag calculation. Customers see quantity/unit above.</span>
               </label>
               <label className="block">
                 <span className={labelClass}>Low Stock Alert At</span>
-                <input className={inputClass} type="number" value={form.lowStockAlertThreshold} onChange={(e) => updateForm('lowStockAlertThreshold', e.target.value)} placeholder="5" />
+                <input className={inputClass} type="number" min="0" value={form.lowStockAlertThreshold} onChange={(e) => updateForm('lowStockAlertThreshold', e.target.value)} placeholder="5" />
               </label>
+            </div>
+
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/25">
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={form.isLooseItem}
+                  onChange={(e) => updateForm('isLooseItem', e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                />
+                <span>
+                  <span className="block text-xs font-semibold text-emerald-900 dark:text-emerald-100">Loose / weighed item with PLU barcode</span>
+                  <span className="block text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                    Use for vegetables, fruits, grains, and loose products weighed before POS billing.
+                  </span>
+                </span>
+              </label>
+              {form.isLooseItem && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                  <label>
+                    <span className={labelClass}>PLU Section</span>
+                    <select className={inputClass} value={form.looseSection} onChange={(event) => updateForm('looseSection', event.target.value)}>
+                      {LOOSE_SECTION_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label} - {option.hint}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className={labelClass}>Stock Unit</span>
+                    <select className={inputClass} value={form.stockUnit} onChange={(event) => updateForm('stockUnit', event.target.value as ProductForm['stockUnit'])}>
+                      {LOOSE_STOCK_UNIT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className={labelClass}>Selling Unit</span>
+                    <select className={inputClass} value={form.sellingUnit} onChange={(event) => updateForm('sellingUnit', event.target.value)}>
+                      <option value="kg">Price per kg</option>
+                      <option value="g">Price per gram</option>
+                      <option value="liter">Price per liter</option>
+                      <option value="ml">Price per ml</option>
+                      <option value="piece">Price per piece</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className={labelClass}>PLU Code</span>
+                    <input
+                      className={inputClass}
+                      inputMode="numeric"
+                      value={form.pluCode}
+                      onChange={(event) => updateForm('pluCode', event.target.value.replace(/\D/g, '').slice(0, 4))}
+                      placeholder="Auto after save"
+                    />
+                    <span className="text-[9px] font-semibold text-emerald-700 dark:text-emerald-300">Leave blank to auto-generate.</span>
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Flags */}
@@ -940,7 +1120,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               )}
             </div>
             <div className="flex gap-2">
-              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-black text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
                 <Upload className="h-3 w-3" />
                 Upload
                 <input
@@ -956,7 +1136,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               </label>
               <button
                 onClick={handleImageUrlAdd}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-black text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
               >
                 <Link2 className="h-3 w-3" />
                 Paste URL
@@ -984,7 +1164,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 rounded-lg bg-indigo-700 px-4 py-2 text-xs font-black text-white hover:bg-indigo-600 disabled:opacity-60"
+                className="flex-1 rounded-lg bg-indigo-700 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-600 disabled:opacity-60"
               >
                 {saving ? 'Saving...' : editingId ? 'Update' : 'Create'}
               </button>
@@ -1073,7 +1253,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 setProductCategoryFilter('');
                 setProductSubcategoryFilter('');
               }}
-              className="rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-950"
+              className="rounded border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-950"
             >
               Clear Search
             </button>
@@ -1082,8 +1262,30 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
         {catalogueView === 'codes' && (
           <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-end lg:justify-between">
             <div className="grid flex-1 gap-3 sm:grid-cols-[1fr_200px]">
+              <div className="sm:col-span-2 flex flex-wrap gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
+                {[
+                  { value: 'product', label: 'Product Codes' },
+                  { value: 'plu', label: 'PLU Codes' }
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      setCodeListType(option.value as 'product' | 'plu');
+                      setSelectedCodeIds(new Set());
+                    }}
+                    className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                      codeListType === option.value
+                        ? 'bg-indigo-700 text-white shadow'
+                        : 'text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-900'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
               <label>
-                <span className={labelClass}>Search backend generated code, product name, or internal ID</span>
+                <span className={labelClass}>Search {codeListType === 'plu' ? 'PLU code' : 'backend generated code'}, product name, or internal ID</span>
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
@@ -1111,14 +1313,14 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 setCodeCategoryFilter('');
                 setSelectedCodeIds(new Set());
               }}
-              className="rounded border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-950"
+              className="rounded border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-950"
             >
               Clear Search
             </button>
           </div>
         )}
 
-        {catalogueView === 'codes' && (
+        {catalogueView === 'codes' && codeListType === 'product' && (
           <div className="flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3 dark:border-indigo-900 dark:bg-indigo-950/30 lg:flex-row lg:items-center lg:justify-between">
             <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <label className="flex items-start gap-3 text-xs font-bold text-slate-700 dark:text-slate-200">
@@ -1146,7 +1348,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 </span>
               </label>
               <div className="space-y-2 rounded-lg border border-indigo-100 bg-white/70 p-2 text-xs font-bold text-slate-700 dark:border-indigo-900 dark:bg-slate-950/50 dark:text-slate-200 xl:col-span-2">
-                <span className="block text-[10px] font-black uppercase tracking-wide text-slate-500">Shelf-life text</span>
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Shelf-life text</span>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <label className="flex items-center gap-2">
                     <input
@@ -1198,14 +1400,14 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               <button
                 type="button"
                 onClick={() => printBarcodeLabels(codeProducts.filter((product) => selectedCodeIds.has(product.id)))}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white shadow hover:bg-indigo-600"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-indigo-600"
               >
                 <Printer className="h-4 w-4" /> Print Selected
               </button>
               <button
                 type="button"
                 onClick={() => printBarcodeLabels(codeProducts)}
-                className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-700 shadow-sm hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
+                className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
               >
                 <Printer className="h-4 w-4" /> Print All Showing
               </button>
@@ -1215,11 +1417,29 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                   const selectedProducts = codeProducts.filter((product) => selectedCodeIds.has(product.id));
                   downloadBarcodeLabelTemplate(selectedProducts.length > 0 ? selectedProducts : codeProducts);
                 }}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               >
                 <Download className="h-4 w-4" /> Download Template
               </button>
             </div>
+          </div>
+        )}
+
+        {catalogueView === 'codes' && codeListType === 'plu' && (
+          <div className="flex flex-col gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">PLU reference list</h3>
+              <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                This is for staff reference while weighing loose products. No barcode labels are printed here.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => printPluReferenceList(codeProducts)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-emerald-600"
+            >
+              <Printer className="h-4 w-4" /> Print PLU List
+            </button>
           </div>
         )}
 
@@ -1233,7 +1453,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
             <button
               type="button"
               onClick={showMoreRowsInCurrentView}
-              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-700 shadow-sm hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
+              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
             >
               Show More Rows
             </button>
@@ -1242,7 +1462,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               type="button"
               onClick={loadMoreProductsForCurrentView}
               disabled={loadingMoreProducts}
-              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-700 shadow-sm hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
+              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
             >
               {loadingMoreProducts ? 'Loading...' : 'Load More Products'}
             </button>
@@ -1286,6 +1506,11 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                         <div className="font-semibold">{product.name}</div>
                         <div className="text-[10px] opacity-70 font-mono">{product.sku || product.id.substring(0, 8)}</div>
                         <div className="text-[10px] font-semibold text-slate-500">{formatProductMeasure(product)}</div>
+                        {(product.isLooseItem || product.metadata?.isLooseItem) && (
+                          <div className="mt-1 inline-flex rounded bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                            PLU {product.pluCode || product.metadata?.pluCode || 'auto'}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="text-xs opacity-80">{productCategoryLabel(product)}</div>
@@ -1317,7 +1542,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
             </div>
           )
         )}
-        {catalogueView === 'codes' && (
+        {catalogueView === 'codes' && codeListType === 'product' && (
           codeProducts.length === 0 ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
               <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No products found matching your search criteria.</p>
@@ -1357,6 +1582,11 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                     <div>
                       <div className="text-xs font-bold">{product.name}</div>
                       <div className="text-[10px] font-semibold text-slate-500">{formatProductMeasure(product)}</div>
+                      {(product.isLooseItem || product.metadata?.isLooseItem) && (
+                        <div className="mt-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                          PLU {product.pluCode || product.metadata?.pluCode || '-'} - loose label item
+                        </div>
+                      )}
                     </div>
                     <img src={code128SvgDataUri(code)} alt={code} className="h-12 w-36 rounded border border-slate-200 bg-white object-contain p-1" />
                     <div className="text-xs opacity-80">{productCategoryLabel(product)}</div>
@@ -1372,7 +1602,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                     </div>
                     <div className="grid gap-2 text-[10px]">
                       <label className="grid grid-cols-[42px_1fr] items-center gap-2">
-                        <span className="font-black text-slate-500">MFD</span>
+                        <span className="font-semibold text-slate-500">MFD</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -1384,7 +1614,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                         />
                       </label>
                       <label className="grid grid-cols-[42px_1fr] items-center gap-2">
-                        <span className="font-black text-slate-500">EXP</span>
+                        <span className="font-semibold text-slate-500">EXP</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -1396,7 +1626,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                         />
                       </label>
                       <label className="grid grid-cols-[42px_1fr] items-center gap-2">
-                        <span className="font-black text-slate-500">Before</span>
+                        <span className="font-semibold text-slate-500">Before</span>
                         <input
                           type="text"
                           value={dateInfo.bestBefore}
@@ -1410,7 +1640,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                     <button
                       type="button"
                       onClick={() => printBarcodeLabels([product])}
-                      className="inline-flex items-center justify-center gap-1 rounded bg-indigo-700 px-3 py-2 text-[10px] font-black text-white hover:bg-indigo-600"
+                      className="inline-flex items-center justify-center gap-1 rounded bg-indigo-700 px-3 py-2 text-[10px] font-semibold text-white hover:bg-indigo-600"
                     >
                       <Printer className="h-3.5 w-3.5" /> Print
                     </button>
@@ -1420,6 +1650,47 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               </div>
               </div>
             </div>          )
+        )}
+        {catalogueView === 'codes' && codeListType === 'plu' && (
+          codeProducts.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No PLU loose products found.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+              <div className="overflow-x-auto">
+                <div className="min-w-[760px]">
+                  <div className="grid grid-cols-[90px_minmax(0,1.3fr)_minmax(0,1fr)_120px_120px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    <span>PLU No.</span>
+                    <span>Item Name</span>
+                    <span>Category</span>
+                    <span>Unit</span>
+                    <span>Price</span>
+                  </div>
+                  {visibleCodeProducts.map((product) => {
+                    const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
+                    return (
+                      <div key={product.id} className="grid grid-cols-[90px_minmax(0,1.3fr)_minmax(0,1fr)_120px_120px] gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center">
+                        <div className="font-mono text-base font-semibold text-emerald-700 dark:text-emerald-300">{productPluCode(product) || '-'}</div>
+                        <div>
+                          <div className="text-xs font-bold">{product.name}</div>
+                          <div className="text-[10px] text-slate-500">Stock: {product.stockCount} {product.stockUnit || product.metadata?.stockUnit || ''}</div>
+                        </div>
+                        <div className="text-xs opacity-80">{productCategoryLabel(product)}</div>
+                        <div className="text-xs font-bold">{formatProductMeasure(product)}</div>
+                        <div className="text-xs font-semibold">
+                          Rs {Number(activePrice).toFixed(2)}
+                          {product.offerPrice > 0 && (
+                            <span className="block text-[10px] font-bold text-slate-400 line-through">MRP Rs {Number(product.basePrice).toFixed(2)}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )
         )}
       </div>
     </div>

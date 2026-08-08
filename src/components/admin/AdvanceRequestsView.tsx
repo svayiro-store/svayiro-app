@@ -42,7 +42,7 @@ export default function AdvanceRequestsView({ advanceRequests, isDarkMode, refre
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-serif text-2xl font-black">Advance Bookings</h2>
+          <h2 className="font-serif text-2xl font-semibold">Advance Bookings</h2>
           <p className="text-xs opacity-70">Manage future product reservations from customers.</p>
         </div>
         <button onClick={refresh} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white">Refresh</button>

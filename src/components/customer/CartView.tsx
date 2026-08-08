@@ -3,7 +3,7 @@ import {
   ShoppingBag, Minus, Plus, Trash2, ArrowRight, MapPin, Loader2, AlertCircle, Building, Check 
 } from 'lucide-react';
 import { CustomerTab, Product, Coupon, CheckoutBagInfo, ShopProfile } from '../../types';
-import { formatProductMeasure } from '../../utils/productMeasure';
+import { cartQuantityLabel, formatProductMeasure, isLooseProduct, loosePriceFactor, looseQuantityOptions } from '../../utils/productMeasure';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
 
@@ -102,7 +102,7 @@ export default function CartView({
 
   return (
     <div className="space-y-6">
-      <h2 className="font-serif text-2xl font-black text-left">Shopping Bag Summary</h2>
+      <h2 className="font-serif text-2xl font-semibold text-left">Shopping Bag Summary</h2>
       
       {cart.length === 0 ? (
         <div className={`p-12 text-center rounded-2xl border ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-slate-50'}`}>
@@ -116,7 +116,11 @@ export default function CartView({
           
           {/* Cart items list */}
           <div className="lg:col-span-2 space-y-4">
-            {totals.itemsList.map(({ product, quantity }) => (
+            {totals.itemsList.map(({ product, quantity }) => {
+              const loose = isLooseProduct(product);
+              const lineFactor = loose ? loosePriceFactor(product, quantity) : quantity;
+              const lineTotal = (product.offerPrice > 0 ? product.offerPrice : product.basePrice) * lineFactor;
+              return (
               <div 
                 key={product.id}
                 className={`flex gap-4 p-4 border rounded-2xl relative ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-white'}`}
@@ -127,11 +131,31 @@ export default function CartView({
                   <p className="text-xs opacity-70">Price: ₹{product.offerPrice > 0 ? product.offerPrice : product.basePrice} | Size: {formatProductMeasure(product)}</p>
                   
                   <div className="flex items-center gap-3 mt-2">
-                    <div className="flex items-center gap-1 border border-slate-300 dark:border-slate-700 rounded-full py-0.5 px-2 bg-slate-50 dark:bg-slate-900">
-                      <button onClick={() => updateCartQty(product.id, quantity - 1)} className="p-1"><Minus className="h-3 w-3" /></button>
-                      <span className="text-xs font-bold w-4 text-center">{quantity}</span>
-                      <button onClick={() => updateCartQty(product.id, quantity + 1)} className="p-1"><Plus className="h-3 w-3" /></button>
-                    </div>
+                    {loose ? (
+                      <div className="flex flex-wrap gap-1">
+                        {looseQuantityOptions(product).map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            disabled={product.stockCount === 0}
+                            onClick={() => updateCartQty(product.id, option.value)}
+                            className={`rounded-full border px-2 py-1 text-[10px] font-semibold transition disabled:opacity-40 ${
+                              quantity === option.value
+                                ? 'border-indigo-600 bg-indigo-600 text-white'
+                                : 'border-indigo-100 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 border border-slate-300 dark:border-slate-700 rounded-full py-0.5 px-2 bg-slate-50 dark:bg-slate-900">
+                        <button onClick={() => updateCartQty(product.id, quantity - 1)} className="p-1"><Minus className="h-3 w-3" /></button>
+                        <span className="text-xs font-bold min-w-10 text-center">{cartQuantityLabel(product, quantity)}</span>
+                        <button onClick={() => updateCartQty(product.id, quantity + 1)} className="p-1"><Plus className="h-3 w-3" /></button>
+                      </div>
+                    )}
 
                     <button onClick={() => removeFromCart(product.id)} className="text-xs text-rose-500 font-bold hover:underline">
                       Remove
@@ -141,11 +165,13 @@ export default function CartView({
 
                 <div className="text-right flex flex-col justify-between">
                   <span className="font-extrabold text-sm text-indigo-600 dark:text-indigo-400">
-                    ₹{(product.offerPrice > 0 ? product.offerPrice : product.basePrice) * quantity}
+                    Rs {lineTotal.toFixed(2)}
                   </span>
+                  <span className="text-[10px] font-mono opacity-60">{cartQuantityLabel(product, quantity)}</span>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             <div className="flex items-center justify-between pt-2">
               <button onClick={clearCart} className="text-xs text-rose-500 font-bold hover:underline flex items-center gap-1">
@@ -165,8 +191,8 @@ export default function CartView({
             {activeUser && (
               <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-xs dark:border-indigo-900 dark:bg-indigo-950/20">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-black uppercase text-indigo-700 dark:text-indigo-300">Savings Points</span>
-                  <span className="font-mono text-lg font-black text-indigo-700 dark:text-indigo-300">{loyaltySummary?.points || 0}</span>
+                  <span className="font-semibold uppercase text-indigo-700 dark:text-indigo-300">Savings Points</span>
+                  <span className="font-mono text-lg font-semibold text-indigo-700 dark:text-indigo-300">{loyaltySummary?.points || 0}</span>
                 </div>
                 <p className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                   Earn 1 point for every Rs {(loyaltySummary?.earnRateAmount || 200).toLocaleString('en-IN')} purchase.
@@ -174,7 +200,7 @@ export default function CartView({
                 {maxRedeemBlocks > 0 ? (
                   <div className="mt-3 rounded-lg bg-white p-2 dark:bg-slate-950">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-black uppercase text-slate-500">Redeem</span>
+                      <span className="text-[10px] font-semibold uppercase text-slate-500">Redeem</span>
                       <span className="text-[10px] font-bold text-emerald-600">
                         {redeemBlockPoints} pts = Rs {redeemBlockValue}
                       </span>
@@ -207,14 +233,14 @@ export default function CartView({
 
             {suggestedCoupons.length > 0 && (
               <div className="space-y-2 rounded-xl border border-emerald-100 bg-white p-3 dark:border-emerald-900 dark:bg-slate-950">
-                <p className="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300">Available Offers</p>
+                <p className="text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-300">Available Offers</p>
                 <div className="flex flex-wrap gap-2">
                   {suggestedCoupons.slice(0, 3).map((coupon) => (
                     <button
                       key={coupon.id || coupon.code}
                       type="button"
                       onClick={() => onUseCoupon?.(coupon.code)}
-                      className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+                      className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
                     >
                       Apply {coupon.code}
                     </button>
@@ -291,7 +317,7 @@ export default function CartView({
                             <>
                               <div className="flex justify-between items-center">
                                 <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Google Maps Route:</span>
-                                <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400">
+                                <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
                                   {googleMapsDistanceText || `${totals.deliveryDistanceKm?.toFixed(1)} km`}
                                 </span>
                               </div>
@@ -392,12 +418,12 @@ export default function CartView({
 
               <div className="space-y-1.5">
                 <div className="space-y-2 text-xs">
-                  <span className="block font-black uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Do you need carrier bags?</span>
+                  <span className="block font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Do you need carrier bags?</span>
                   <div className="grid grid-cols-2 gap-2 text-[11px] sm:text-xs">
                     <button 
                       type="button"
                       onClick={() => setBagOption('own')}
-                      className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 py-3 font-black shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${
+                      className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 py-3 font-semibold shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${
                         bagOption === 'own'
                           ? 'border-emerald-500 bg-emerald-600 text-white shadow-emerald-600/20'
                           : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
@@ -409,7 +435,7 @@ export default function CartView({
                     <button 
                       type="button"
                       onClick={() => setBagOption('need')}
-                      className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 py-3 font-black shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${
+                      className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 py-3 font-semibold shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${
                         bagOption === 'need'
                           ? 'border-indigo-500 bg-indigo-600 text-white shadow-indigo-600/20'
                           : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
@@ -463,7 +489,7 @@ export default function CartView({
                 </div>
               )}
 
-              <div className="flex justify-between font-black text-base border-t border-dashed border-slate-300 dark:border-slate-700 pt-3">
+              <div className="flex justify-between font-semibold text-base border-t border-dashed border-slate-300 dark:border-slate-700 pt-3">
                 <span>Store Checkout Total</span>
                 <span className="text-indigo-600 dark:text-indigo-400">₹{totals.finalTotal}</span>
               </div>

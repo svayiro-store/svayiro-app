@@ -211,12 +211,12 @@ export default function CheckoutModal({
             <div className="space-y-5 py-6 animate-fadeIn flex flex-col items-center">
               <div className="relative flex items-center justify-center">
                 <div className="w-16 h-16 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin"></div>
-                <div className="absolute font-sans font-black text-indigo-600 text-[10px] uppercase tracking-wider">
+                <div className="absolute font-sans font-semibold text-indigo-600 text-[10px] uppercase tracking-wider">
                   UPI
                 </div>
               </div>
               <div className="space-y-2">
-                <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white tracking-tight">Identifying UPI Application...</h3>
+                <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white tracking-tight">Identifying UPI Application...</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
                   Redirecting your device to your default secure payment app (Google Pay, PhonePe, Paytm, or BHIM) to pay <strong className="text-indigo-600 dark:text-indigo-400 font-sans">₹{totals.finalTotal}</strong>.
                 </p>
@@ -233,15 +233,15 @@ export default function CheckoutModal({
             <div className="space-y-2 py-2 animate-fadeIn w-full flex flex-col items-center">
               <div className="relative flex items-center justify-center">
                 <div className="w-9 h-9 rounded-full border-4 border-emerald-150 border-t-emerald-600 animate-spin"></div>
-                <div className="absolute font-sans font-black text-emerald-600 text-[8px] uppercase tracking-wider animate-pulse">
+                <div className="absolute font-sans font-semibold text-emerald-600 text-[8px] uppercase tracking-wider animate-pulse">
                   PAYING
                 </div>
               </div>
               
               <div className="space-y-1.5 text-center">
-                <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white tracking-tight">Awaiting UPI Payment</h3>
+                <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white tracking-tight">Awaiting UPI Payment</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
-                  Pay exactly <strong className="text-emerald-600 dark:text-emerald-400 font-sans text-sm font-black">₹{totals.finalTotal}</strong> to complete your order.
+                  Pay exactly <strong className="text-emerald-600 dark:text-emerald-400 font-sans text-sm font-bold">₹{totals.finalTotal}</strong> to complete your order.
                 </p>
               </div>
 
@@ -299,7 +299,7 @@ export default function CheckoutModal({
                 </div>
                 <div className="flex justify-between text-slate-500 dark:text-slate-400 font-mono text-[10px]">
                   <span>Amount Due:</span>
-                  <span className="font-black text-indigo-600 dark:text-indigo-400">₹{totals.finalTotal}</span>
+                  <span className="font-bold text-indigo-600 dark:text-indigo-400">₹{totals.finalTotal}</span>
                 </div>
                 
                 <div className="border-t border-dashed border-slate-200 dark:border-slate-850 pt-3 space-y-1.5">
@@ -363,7 +363,7 @@ export default function CheckoutModal({
                 ✓
               </div>
               <div className="space-y-1 text-center">
-                <h3 className="font-serif text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">UPI Reference Submitted</h3>
+                <h3 className="font-serif text-xl font-semibold text-emerald-600 dark:text-emerald-400 tracking-tight">UPI Reference Submitted</h3>
                 <p className="font-serif text-lg font-bold text-slate-950 dark:text-white">Order placed for owner verification</p>
                 <p className="text-slate-500 dark:text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
                   The owner will verify the payment in the bank or UPI app before accepting and preparing this order.
@@ -523,7 +523,7 @@ export default function CheckoutModal({
                       : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
                   }`}
                 >
-                  <span className="block text-xs font-black">{day.label}</span>
+                  <span className="block text-xs font-semibold">{day.label}</span>
                   <span className="mt-0.5 block font-mono text-[10px] opacity-70">{day.date}</span>
                 </button>
               ))}
@@ -540,7 +540,7 @@ export default function CheckoutModal({
                     onClick={() => setSelectedSlot(buildScheduledSlot(slotDay, slot))}
                     className={`rounded-xl border px-3 py-2 text-left text-xs transition disabled:cursor-not-allowed disabled:opacity-45 ${
                       active
-                        ? 'border-emerald-500 bg-emerald-50 font-black text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
+                        ? 'border-emerald-500 bg-emerald-50 font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
                         : 'border-slate-200 bg-white font-bold text-slate-700 hover:border-emerald-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
                     }`}
                   >
@@ -702,7 +702,7 @@ export default function CheckoutModal({
                   <div className="rounded-xl border border-indigo-200 bg-white p-3 dark:border-indigo-900 dark:bg-slate-950">
                     <div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Pin exact delivery location</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Pin exact delivery location</p>
                         <p className="text-[10px] font-semibold text-slate-500">Required for accurate Google Maps road distance and delivery charge.</p>
                       </div>
                     </div>
@@ -1053,7 +1053,7 @@ export default function CheckoutModal({
 
             {appliedCoupon && (
               <div className="animate-fadeIn rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-800 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200">
-                <p className="text-[10px] font-black uppercase tracking-wide">
+                <p className="text-[10px] font-semibold uppercase tracking-wide">
                   Code applied - {appliedCoupon.discountType === 'percentage' ? `${appliedCoupon.discountValue}%` : `Rs ${appliedCoupon.discountValue}`} saved
                 </p>
                 <p className="mt-1 text-[11px] font-bold leading-relaxed">
@@ -1069,7 +1069,7 @@ export default function CheckoutModal({
                     key={coupon.id || coupon.code}
                     type="button"
                     onClick={() => onUseCoupon?.(coupon.code)}
-                    className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+                    className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
                   >
                     Use {coupon.code}
                   </button>
@@ -1110,7 +1110,7 @@ export default function CheckoutModal({
 
             {paymentMethod === 'upi' && (
               <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4 text-xs font-semibold text-indigo-900 animate-fadeIn dark:border-indigo-900 dark:bg-indigo-950/20 dark:text-indigo-200">
-                <p className="font-black uppercase tracking-wide">UPI selected</p>
+                <p className="font-semibold uppercase tracking-wide">UPI selected</p>
                 <p className="mt-1 leading-relaxed">
                   Click the submit button below. The next screen will show one payment QR, direct UPI app link, and the UTR/reference input after the order is reserved.
                 </p>
@@ -1154,7 +1154,7 @@ export default function CheckoutModal({
                 <span>-Rs {totals.loyaltyDiscount}</span>
               </div>
             )}
-            <div className="border-t border-slate-200 dark:border-slate-850 pt-2 mt-2 flex justify-between font-black text-sm text-indigo-600 dark:text-indigo-400">
+            <div className="border-t border-slate-200 dark:border-slate-850 pt-2 mt-2 flex justify-between font-semibold text-sm text-indigo-600 dark:text-indigo-400">
               <span>Grand Payout due</span>
               <span>₹{totals.finalTotal}</span>
             </div>

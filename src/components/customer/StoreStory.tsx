@@ -38,8 +38,8 @@ export default function StoreStory({ shop, compact = false }: StoreStoryProps) {
                   <Icon className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{item.year}</p>
-                  <p className="text-xs font-black text-slate-900 dark:text-white">{item.title}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{item.year}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{item.title}</p>
                   <p className="mt-0.5 text-[11px] font-semibold leading-relaxed text-slate-500 dark:text-slate-400">{item.text}</p>
                 </div>
               </div>
@@ -48,7 +48,7 @@ export default function StoreStory({ shop, compact = false }: StoreStoryProps) {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/60">
-          <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">What We Sell</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">What We Sell</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
             Groceries, daily needs, dairy products, natural food products, cereals, millets, flours, rotis, grains, poha, fresh fruits, and fresh vegetables.
           </p>
@@ -77,21 +77,21 @@ export default function StoreStory({ shop, compact = false }: StoreStoryProps) {
       <div className={`grid gap-3 ${compact ? 'grid-cols-1' : 'sm:grid-cols-3'}`}>
         <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/20">
           <Store className="mb-2 h-4 w-4 text-emerald-600 dark:text-emerald-300" />
-          <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Since 2022</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Since 2022</p>
           <p className="mt-1 text-[11px] font-semibold leading-relaxed text-slate-600 dark:text-slate-300">
             Started as Sri Ram Enterprises, serving local daily needs as a general store.
           </p>
         </div>
         <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 dark:border-amber-900/60 dark:bg-amber-950/20">
           <PackageCheck className="mb-2 h-4 w-4 text-amber-600 dark:text-amber-300" />
-          <p className="text-[10px] font-black uppercase tracking-wide text-amber-700 dark:text-amber-300">Since 2024</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Since 2024</p>
           <p className="mt-1 text-[11px] font-semibold leading-relaxed text-slate-600 dark:text-slate-300">
             Started our own natural food products for cereals, millets, flours, grains, poha, and more.
           </p>
         </div>
         <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 dark:border-indigo-900/60 dark:bg-indigo-950/20">
           <Leaf className="mb-2 h-4 w-4 text-indigo-600 dark:text-indigo-300" />
-          <p className="text-[10px] font-black uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Since 2026</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Since 2026</p>
           <p className="mt-1 text-[11px] font-semibold leading-relaxed text-slate-600 dark:text-slate-300">
             Launched {shopName} online to reach more families with trusted groceries and natural staples.
           </p>
@@ -99,7 +99,7 @@ export default function StoreStory({ shop, compact = false }: StoreStoryProps) {
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white/80 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-        <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">What We Sell</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">What We Sell</p>
         <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
           We provide all types of groceries, daily needs, dairy products, natural food products, cereals, millets, flours, rotis, grains, poha, fresh fruits, and fresh vegetables.
         </p>

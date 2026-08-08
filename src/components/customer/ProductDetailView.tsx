@@ -3,7 +3,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Heart, X, AlertTriangle, Star, Mi
 import { Product, Category, User as UserType, Review } from '../../types';
 import { ReviewList } from './ReviewList';
 import { commonStyles } from './commonStyles';
-import { formatProductMeasure } from '../../utils/productMeasure';
+import { cartQuantityLabel, formatProductMeasure, isLooseProduct, loosePriceFactor, looseQuantityOptions } from '../../utils/productMeasure';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=900';
 
@@ -77,7 +77,17 @@ export default function ProductDetailView({
   const productImages = selectedProduct.images?.length ? selectedProduct.images : [productImageFallback];
   const hasMultipleImages = productImages.length > 1;
   const activePrice = selectedProduct.offerPrice > 0 ? selectedProduct.offerPrice : selectedProduct.basePrice;
-  const detailTotal = activePrice * detailQty;
+  const looseOptions = isLooseProduct(selectedProduct) ? looseQuantityOptions(selectedProduct) : [];
+  const detailPriceFactor = isLooseProduct(selectedProduct) ? loosePriceFactor(selectedProduct, detailQty) : detailQty;
+  const detailTotal = activePrice * detailPriceFactor;
+
+  useEffect(() => {
+    if (isLooseProduct(selectedProduct)) {
+      setDetailQty(looseOptions[0]?.value || 500);
+    } else {
+      setDetailQty(1);
+    }
+  }, [selectedProduct.id]);
   const selectedWords = new Set(
     `${selectedProduct.name} ${selectedProduct.description}`
       .toLowerCase()
@@ -114,7 +124,7 @@ export default function ProductDetailView({
       <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200 dark:border-slate-850">
         <button 
           onClick={() => setSelectedProduct(null)}
-          className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+          className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
         >
           <ArrowLeft className="h-4.5 w-4.5" />
           <span>Back to Store</span>
@@ -201,13 +211,13 @@ export default function ProductDetailView({
             
             {/* Dynamic tag */}
             {isLowStock && (
-              <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1.5 text-[10px] font-bold uppercase text-white shadow-lg">
+              <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1.5 text-[10px] font-semibold uppercase text-white shadow-lg">
                 <AlertTriangle className="h-3 w-3" />
                 <span>Low Stock</span>
               </div>
             )}
             {selectedProduct.stockCount === 0 && (
-              <div className="absolute left-3 top-3 rounded-full bg-rose-500 px-3 py-1.5 text-[10px] font-bold uppercase text-white shadow-lg">
+              <div className="absolute left-3 top-3 rounded-full bg-rose-500 px-3 py-1.5 text-[10px] font-semibold uppercase text-white shadow-lg">
                 <span>Out of stock</span>
               </div>
             )}
@@ -240,7 +250,7 @@ export default function ProductDetailView({
             
             {/* Breadcrumbs or Category block */}
             <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1 rounded-full">
+              <span className="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1 rounded-full">
                 {categories.find(c => c.id === selectedProduct.categoryId)?.name || 'Chakki Specialty'}
               </span>
               
@@ -251,12 +261,12 @@ export default function ProductDetailView({
 
             {/* Title & Stats */}
             <div className="space-y-2">
-              <h1 className="font-serif text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+              <h1 className="font-serif text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
                 {selectedProduct.name}
               </h1>
               
               <div className="flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1 text-amber-500 font-bold bg-amber-50 dark:bg-amber-950/20 px-3 py-1 rounded-full border border-amber-200/40 dark:border-amber-800/40">
+                <div className="flex items-center gap-1 text-amber-500 font-semibold bg-amber-50 dark:bg-amber-950/20 px-3 py-1 rounded-full border border-amber-200/40 dark:border-amber-800/40">
                   <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
                   <span>{selectedProduct.ratingAverage || 'New'} Avg Rating</span>
                 </div>
@@ -274,7 +284,7 @@ export default function ProductDetailView({
                   {selectedProduct.offerPrice > 0 && (
                     <>
                       <span className="text-slate-400 line-through text-sm">{money(selectedProduct.basePrice)}</span>
-                      <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-black px-2.5 py-0.5 rounded-md">
+                      <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 rounded-md">
                         Save {Math.round(((selectedProduct.basePrice - selectedProduct.offerPrice) / selectedProduct.basePrice) * 100)}%
                       </span>
                     </>
@@ -286,18 +296,18 @@ export default function ProductDetailView({
             {/* Net weight description */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product Package Weight</p>
-                <p className="text-sm font-black text-slate-900 dark:text-white mt-1">{formatProductMeasure(selectedProduct)}</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Product Package Weight</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1">{formatProductMeasure(selectedProduct).toLowerCase()}</p>
               </div>
               <div className="p-4 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Store Product Quality</p>
-                <p className="text-sm font-black text-slate-900 dark:text-white mt-1">100% Hand-Selected Quality</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Store Product Quality</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1">100% Hand-Selected Quality</p>
               </div>
             </div>
 
             {/* Product Description */}
             <div className="space-y-2 text-left">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sourcing & Quality Standards</h3>
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Sourcing & Quality Standards</h3>
               <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 {selectedProduct.description}
               </p>
@@ -307,26 +317,51 @@ export default function ProductDetailView({
             {selectedProduct.stockCount > 0 && (
               <div className="p-4 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Quantities</p>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">Total: {money(detailTotal)}</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Select Quantity</p>
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-900 dark:text-white">
+                    <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+                      {cartQuantityLabel(selectedProduct, detailQty).toLowerCase()}
+                    </span>
+                    <span>Total: {money(detailTotal)}</span>
+                  </p>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/30 dark:border-slate-700/30">
-                  <button 
-                    onClick={() => setDetailQty(prev => Math.max(1, prev - 1))}
-                    className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:shadow-sm transition"
-                    title="Reduce quantity"
-                  >
-                    <Minus className="h-3.5 w-3.5" />
-                  </button>
-                  <span className="w-8 text-center text-xs font-black text-slate-800 dark:text-white">{detailQty}</span>
-                  <button 
-                    onClick={() => setDetailQty(prev => Math.min(selectedProduct.stockCount, prev + 1))}
-                    className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:shadow-sm transition"
-                    title="Increase quantity"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                {isLooseProduct(selectedProduct) ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {looseOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        disabled={selectedProduct.stockCount === 0}
+                        onClick={() => setDetailQty(option.value)}
+                        className={`rounded-xl border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+                          detailQty === option.value
+                            ? 'border-indigo-600 bg-indigo-600 text-white shadow'
+                            : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/30 dark:border-slate-700/30">
+                    <button
+                      onClick={() => setDetailQty(prev => Math.max(1, prev - 1))}
+                      className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:shadow-sm transition"
+                      title="Reduce quantity"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="w-8 text-center text-xs font-semibold text-slate-800 dark:text-white">{detailQty}</span>
+                    <button
+                      onClick={() => setDetailQty(prev => Math.min(selectedProduct.stockCount, prev + 1))}
+                      className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:shadow-sm transition"
+                      title="Increase quantity"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -335,14 +370,14 @@ export default function ProductDetailView({
           {/* ATC Buttons panel */}
           <div className="space-y-4 text-left">
             {selectedProduct.stockCount === 0 ? (
-              <button disabled className="w-full bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-bold py-4 text-xs rounded-2xl cursor-not-allowed uppercase tracking-wider">Product out of stock</button>
+              <button disabled className="w-full bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-semibold py-4 text-xs rounded-2xl cursor-not-allowed uppercase tracking-wider">Product out of stock</button>
             ) : (
               <button 
                 onClick={() => {
                   addToCart(selectedProduct.id, detailQty);
                   setSelectedProduct(null);
                 }}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl text-xs font-black shadow-lg text-center flex items-center justify-center gap-2 transition hover:shadow-indigo-600/10 hover:translate-y-[-1px] uppercase tracking-wider"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl text-xs font-semibold shadow-lg text-center flex items-center justify-center gap-2 transition hover:shadow-indigo-600/10 hover:translate-y-[-1px] uppercase tracking-wider"
               >
                 <ShoppingCart className="h-4 w-4" />
                 <span>Add to Shopping Bag - {money(detailTotal)}</span>
@@ -353,8 +388,8 @@ export default function ProductDetailView({
           {/* Review submit sub-component inside Drawer */}
           <div className="border-t border-slate-200/50 dark:border-slate-800/50 pt-8 mt-8 space-y-6 text-left">
             <div className="flex justify-between items-center">
-              <h4 className="font-serif text-lg font-black text-slate-900 dark:text-white">Customer Reviews</h4>
-              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">{selectedProduct.ratingCount} verified ratings</span>
+              <h4 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Customer Reviews</h4>
+              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{selectedProduct.ratingCount} verified ratings</span>
             </div>
             
             <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
@@ -365,7 +400,7 @@ export default function ProductDetailView({
             <div className="bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50 p-5 rounded-3xl space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h5 className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                  <h5 className="font-semibold text-xs text-slate-800 dark:text-slate-200">
                     {ownReview ? 'Edit your product review' : 'How was your product quality?'}
                   </h5>
                   <p className="text-[10px] text-slate-400 mt-0.5">
@@ -400,7 +435,7 @@ export default function ProductDetailView({
                 <button
                   disabled={!activeUser}
                   onClick={handleSubmittingReview}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-5 py-2.5 rounded-xl text-xs shadow hover:shadow-indigo-600/10 transition uppercase tracking-wider shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl text-xs shadow hover:shadow-indigo-600/10 transition uppercase tracking-wider shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {ownReview ? 'Update' : 'Rate'}
                 </button>
@@ -412,7 +447,7 @@ export default function ProductDetailView({
             <div className="border-t border-slate-200/50 dark:border-slate-800/50 pt-8 mt-8 space-y-4 text-left">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h4 className="font-serif text-lg font-black text-slate-900 dark:text-white">Similar Products</h4>
+                  <h4 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Similar Products</h4>
                   <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Based on category, product name, and description.</p>
                 </div>
               </div>
@@ -440,7 +475,7 @@ export default function ProductDetailView({
                         />
                       </div>
                       <div className="space-y-1 p-2">
-                        <p className="line-clamp-2 text-[11px] font-black text-slate-900 dark:text-white">{product.name}</p>
+                        <p className="line-clamp-2 text-[11px] font-semibold text-slate-900 dark:text-white">{product.name}</p>
                         <div className="flex items-baseline gap-1">
                           <span className="text-xs font-black text-indigo-600 dark:text-indigo-300">{money(price)}</span>
                           {hasDiscount && <span className="text-[9px] text-slate-400 line-through">{money(product.basePrice)}</span>}

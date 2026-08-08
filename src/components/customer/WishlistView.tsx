@@ -25,7 +25,7 @@ export default function WishlistView({
 }: WishlistViewProps) {
   return (
     <div className="space-y-6">
-      <h2 className="font-serif text-2xl font-black text-left">My Bookmarks & Wishlist</h2>
+      <h2 className="font-serif text-2xl font-semibold text-left">My Bookmarks & Wishlist</h2>
       
       {wishlistedProducts.length === 0 ? (
         <div className={`p-12 text-center rounded-2xl border ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-slate-50'}`}>

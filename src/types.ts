@@ -97,6 +97,11 @@ export interface Product {
   purchasePrice?: number;
   isDailyEssential?: boolean;
   isFeatured?: boolean;
+  isLooseItem?: boolean;
+  looseSection?: string;
+  pluCode?: string;
+  stockUnit?: 'g' | 'ml' | 'piece';
+  sellingUnit?: string;
 }
 
 export interface OrderItem {

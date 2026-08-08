@@ -301,6 +301,51 @@ export default function App() {
   }, [adminOtpSent, adminOtpExpiresAt]);
 
   // Fetch central database logs
+  const loadCustomerHomeProductSets = async () => {
+    const getRecentSearchTerms = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem('svayiro_search_history') || '[]');
+        return Array.isArray(saved)
+          ? saved.map((term) => String(term || '').trim()).filter(Boolean).slice(0, 8)
+          : [];
+      } catch {
+        return [];
+      }
+    };
+    const personalizedRecommended = isCustomerOnlyUser(activeUser)
+      ? api.getRecommendedProducts({ limit: 8, searchTerms: getRecentSearchTerms() })
+          .then((res) => ({
+            items: (res.items || []).map((product, index) => ({
+              ...product,
+              metadata: {
+                ...(product.metadata || {}),
+                personalizedRecommendationRank: index + 1
+              }
+            })),
+            total: res.items?.length || 0,
+            limit: res.limit || 8,
+            offset: 0
+          }))
+          .catch(() => api.getProductPage({ limit: 8, offset: 0, summary: true, sort: 'recommended' }))
+      : api.getProductPage({ limit: 8, offset: 0, summary: true, sort: 'recommended' });
+    const [page, featured, offers, recommended] = await Promise.all([
+      api.getProductPage({ limit: CUSTOMER_PRODUCT_PAGE_SIZE, offset: 0, summary: true }),
+      api.getProductPage({ limit: 8, offset: 0, summary: true, sort: 'featured' }),
+      api.getProductPage({ limit: 8, offset: 0, summary: true, sort: 'offers' }),
+      personalizedRecommended
+    ]);
+    const merged = [...(page.items || []), ...(featured.items || []), ...(offers.items || []), ...(recommended.items || [])];
+    const seen = new Set<string>();
+    return {
+      page,
+      products: merged.filter((product: Product) => {
+        if (!product?.id || seen.has(product.id)) return false;
+        seen.add(product.id);
+        return true;
+      })
+    };
+  };
+
   const loadCentralResources = async (
     modeOverride?: 'customer' | 'admin',
     options: { skipStable?: boolean } = {}
@@ -309,29 +354,30 @@ export default function App() {
       setErrorMessage('');
       const resourceMode = modeOverride || lockedMode || currentMode;
       if (options.skipStable && stableResourcesLoadedRef.current) {
-        const productsPage = resourceMode === 'admin'
+        const customerProductSets = resourceMode === 'admin'
           ? null
-          : await api.getProductPage({ limit: CUSTOMER_PRODUCT_PAGE_SIZE, offset: 0, summary: true });
+          : await loadCustomerHomeProductSets();
         const productsRes = resourceMode === 'admin'
           ? await api.getProducts({ limit: 50, offset: 0 })
-          : productsPage?.items || [];
+          : customerProductSets?.products || [];
         const normalizedProducts = productsRes.map(normalizeProduct);
         setProducts(normalizedProducts);
         if (resourceMode !== 'admin') {
-          setCustomerHomeProducts(normalizedProducts);
-          setCustomerHomeProductTotal(Number(productsPage?.total || 0));
+          const pageProductIds = new Set((customerProductSets?.page.items || []).map((product: Product) => product.id));
+          setCustomerHomeProducts(normalizedProducts.filter((product) => pageProductIds.has(product.id)));
+          setCustomerHomeProductTotal(Number(customerProductSets?.page.total || 0));
           setCustomerHomeProductPage(1);
           setCustomerHomeProductCategoryId(null);
         }
         return;
       }
-      const customerProductsPage = resourceMode === 'admin'
+      const customerProductSets = resourceMode === 'admin'
         ? null
-        : await api.getProductPage({ limit: CUSTOMER_PRODUCT_PAGE_SIZE, offset: 0, summary: true });
+        : await loadCustomerHomeProductSets();
       const [shopRes, categoriesRes, productsRes, bannersRes, notificationsRes] = await Promise.all([
         api.getShopProfile(),
         api.getCategories(),
-        resourceMode === 'admin' ? api.getProducts({ limit: 50, offset: 0 }) : Promise.resolve(customerProductsPage?.items || []),
+        resourceMode === 'admin' ? api.getProducts({ limit: 50, offset: 0 }) : Promise.resolve(customerProductSets?.products || []),
         api.getBanners(),
         api.getNotifications()
       ]);
@@ -341,8 +387,9 @@ export default function App() {
       const normalizedProducts = productsRes.map(normalizeProduct);
       setProducts(normalizedProducts);
       if (resourceMode !== 'admin') {
-        setCustomerHomeProducts(normalizedProducts);
-        setCustomerHomeProductTotal(Number(customerProductsPage?.total || 0));
+        const pageProductIds = new Set((customerProductSets?.page.items || []).map((product: Product) => product.id));
+        setCustomerHomeProducts(normalizedProducts.filter((product) => pageProductIds.has(product.id)));
+        setCustomerHomeProductTotal(Number(customerProductSets?.page.total || 0));
         setCustomerHomeProductPage(1);
         setCustomerHomeProductCategoryId(null);
       }
@@ -659,7 +706,7 @@ export default function App() {
           </div>
         </div>
         <div className="text-center">
-          <p className="font-serif text-2xl font-black tracking-wide text-white animate-pulse">{splashName}</p>
+          <p className="font-serif text-2xl font-semibold tracking-wide text-white animate-pulse">{splashName}</p>
           <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.35em] text-emerald-300">Fresh store loading</p>
         </div>
         <div className="flex items-center gap-2">
@@ -714,7 +761,7 @@ export default function App() {
         <div className="mb-5 space-y-1">
           <div className="flex items-center gap-2">
             <Settings className="h-5 w-5 text-indigo-600" />
-            <h1 className="font-serif text-xl font-black">Admin Login</h1>
+            <h1 className="font-serif text-xl font-semibold">Admin Login</h1>
           </div>
           <p className="text-xs opacity-70">Owner logs in with owner credentials. Workers log in with owner-created ID and password.</p>
         </div>
@@ -766,7 +813,7 @@ export default function App() {
             type="button"
             disabled={adminLoginLoading}
             onClick={handleAdminPasswordLogin}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white disabled:opacity-60"
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-60"
           >
             {adminLoginLoading ? 'Checking...' : 'Login to Role Console'}
           </button>

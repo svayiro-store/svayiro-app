@@ -220,7 +220,7 @@ export default function GoogleMapPicker({
     <div className="space-y-3 p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{label}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{label}</p>
           <p className="text-[10px] font-semibold text-slate-500">
             {provider === 'osm' ? `${helperText} Free OpenStreetMap search mode is active.` : helperText}
           </p>
@@ -228,7 +228,7 @@ export default function GoogleMapPicker({
         <button
           type="button"
           onClick={useCurrentLocation}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-[10px] font-black uppercase text-white hover:bg-indigo-500"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-[10px] font-semibold uppercase text-white hover:bg-indigo-500"
         >
           <LocateFixed className="h-3.5 w-3.5" />
           Use GPS
@@ -254,7 +254,7 @@ export default function GoogleMapPicker({
             type="button"
             onClick={handleSearch}
             disabled={searching}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-black uppercase text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-semibold uppercase text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
           >
             <Search className="h-3.5 w-3.5" />
             {searching ? 'Searching' : 'Search'}

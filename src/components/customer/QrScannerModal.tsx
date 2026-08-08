@@ -216,7 +216,7 @@ export default function QrScannerModal({
               <Camera className="w-4.5 h-4.5" />
             </div>
             <div>
-              <h3 className="font-serif font-black text-sm tracking-tight text-slate-900 dark:text-slate-100">
+              <h3 className="font-serif font-semibold text-sm tracking-tight text-slate-900 dark:text-slate-100">
                 SVAYIRO Scan & Pay
               </h3>
               <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-none">
@@ -292,7 +292,7 @@ export default function QrScannerModal({
                     ✓
                   </div>
                   <div>
-                    <h4 className="font-serif font-black text-xs">UPI Payment QR Detected!</h4>
+                    <h4 className="font-serif font-semibold text-xs">UPI Payment QR Detected!</h4>
                     <p className="text-[10px] opacity-95">Successfully parsed payment deep-link parameters.</p>
                   </div>
                 </div>
@@ -309,7 +309,7 @@ export default function QrScannerModal({
                     <div className="font-bold text-slate-800 dark:text-slate-200 text-right select-all">{parsedUpi.pa || shopUpiId}</div>
                     
                     <div className="text-slate-400 dark:text-slate-500">Amount Due:</div>
-                    <div className="font-black text-indigo-600 dark:text-indigo-400 text-right text-xs">₹{parsedUpi.am || currentCartTotal || '0'}</div>
+                    <div className="font-semibold text-indigo-600 dark:text-indigo-400 text-right text-xs">₹{parsedUpi.am || currentCartTotal || '0'}</div>
                     
                     {parsedUpi.tr && (
                       <>

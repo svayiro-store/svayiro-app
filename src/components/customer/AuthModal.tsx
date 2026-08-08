@@ -102,8 +102,8 @@ export default function AuthModal({
 
         <div className="flex-1 overflow-y-auto px-4 py-3 text-xs sm:px-5">
           <div className="sticky top-0 z-10 mb-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-950">
-            <button type="button" onClick={() => setAuthMode('login')} className={`rounded-lg py-2 font-black ${authMode === 'login' ? 'bg-indigo-700 text-white' : 'text-slate-500'}`}>Login</button>
-            <button type="button" onClick={() => setAuthMode('register')} className={`rounded-lg py-2 font-black ${authMode === 'register' ? 'bg-indigo-700 text-white' : 'text-slate-500'}`}>Register</button>
+            <button type="button" onClick={() => setAuthMode('login')} className={`rounded-lg py-2 font-semibold ${authMode === 'login' ? 'bg-indigo-700 text-white' : 'text-slate-500'}`}>Login</button>
+            <button type="button" onClick={() => setAuthMode('register')} className={`rounded-lg py-2 font-semibold ${authMode === 'register' ? 'bg-indigo-700 text-white' : 'text-slate-500'}`}>Register</button>
           </div>
 
           <div className={`grid grid-cols-1 gap-3 ${authMode === 'register' ? 'sm:grid-cols-2' : ''}`}>
@@ -218,7 +218,7 @@ export default function AuthModal({
           {authMode === 'register' && (
             <div className="space-y-2 sm:col-span-2">
               <details className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
-                <summary className="cursor-pointer text-[11px] font-black text-indigo-700 dark:text-indigo-300">
+                <summary className="cursor-pointer text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
                   Read Terms & Conditions before registering
                 </summary>
                 <div className="mt-3 max-h-44 overflow-y-auto rounded-lg bg-white p-3 dark:bg-slate-900">
@@ -252,7 +252,7 @@ export default function AuthModal({
                   type="button"
                   onClick={authMode === 'register' ? handleRequestRegistrationOtp : handleRequestOtp}
                   disabled={!canResendOtp}
-                  className="font-black uppercase disabled:cursor-not-allowed disabled:opacity-40"
+                  className="font-semibold uppercase disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Resend OTP
                 </button>
@@ -271,7 +271,7 @@ export default function AuthModal({
                 autoComplete="one-time-code"
                 pattern="[0-9]{6}"
                 onChange={(e) => setAuthOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="w-full border border-indigo-400 dark:border-indigo-600 bg-white dark:bg-slate-900 p-2.5 rounded-lg font-black tracking-widest text-xl text-center text-indigo-600 dark:text-indigo-400 placeholder-indigo-300/60 dark:placeholder-indigo-900/40 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" 
+                className="w-full border border-indigo-400 dark:border-indigo-600 bg-white dark:bg-slate-900 p-2.5 rounded-lg font-semibold tracking-widest text-xl text-center text-indigo-600 dark:text-indigo-400 placeholder-indigo-300/60 dark:placeholder-indigo-900/40 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" 
               />
             </div>
           )}
@@ -293,7 +293,7 @@ export default function AuthModal({
                 <button
                   type="button"
                   onClick={() => setAuthMode('forgot')}
-                  className="w-full text-[11px] font-black text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                  className="w-full text-[11px] font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
                 >
                   Forgot password? Reset using email OTP
                 </button>

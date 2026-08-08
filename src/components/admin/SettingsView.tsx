@@ -58,7 +58,7 @@ const defaultSlots = [
 ];
 
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
-const labelClass = 'mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500';
+const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
 const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900';
 const maxLogoUploadBytes = 2 * 1024 * 1024;
 
@@ -475,14 +475,14 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
     <div className={`space-y-6 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
       <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 dark:border-slate-800 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="font-serif text-2xl font-black">Configure SVAYIRO configs and parameters</h2>
+          <h2 className="font-serif text-2xl font-semibold">Configure SVAYIRO configs and parameters</h2>
           <p className="text-xs text-slate-500">Adjust branding, physical address, support helplines, operational schedules, and delivery limits.</p>
         </div>
         <button
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-700 px-4 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-indigo-900/20 disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-700 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-indigo-900/20 disabled:opacity-60"
         >
           <Save className="h-4 w-4" />
           {saving ? 'Saving...' : 'Save Store Settings'}
@@ -509,7 +509,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                   onChange={(e) => updateDetail('logoUrl', e.target.value)}
                 />
               </div>
-              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
                 <Upload className="h-4 w-4" />
                 Upload
                 <input
@@ -559,11 +559,11 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
 
       <section className={sectionClass}>
         <div className="mb-4 flex items-center justify-between gap-3 border-b border-indigo-700 pb-2">
-          <div className="flex items-center gap-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
             <Globe2 className="h-4 w-4" />
             Social Media Links
           </div>
-          <button type="button" onClick={addSocialLink} className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white">
+          <button type="button" onClick={addSocialLink} className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-3 py-2 text-xs font-semibold text-white">
             <Plus className="h-4 w-4" />
             Add Link
           </button>
@@ -591,11 +591,11 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
 
       <section className={sectionClass}>
         <div className="mb-4 flex items-center justify-between gap-3 border-b border-indigo-700 pb-2">
-          <div className="flex items-center gap-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
             <Building2 className="h-4 w-4" />
             Store Branches & Facility Addresses
           </div>
-          <button type="button" onClick={addBranch} className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-3 py-2 text-xs font-black text-white">
+          <button type="button" onClick={addBranch} className="inline-flex items-center gap-2 rounded-lg bg-indigo-700 px-3 py-2 text-xs font-semibold text-white">
             <Plus className="h-4 w-4" />
             Add Store Branch
           </button>
@@ -622,10 +622,10 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-black uppercase text-slate-500">Branch {index + 1}</span>
-                      <span className="truncate text-sm font-black">{branch.branchName || 'Unnamed Branch'}</span>
-                      {branch.isDefault && <span className="rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-black text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">Main Branch</span>}
-                      {branch.lat && branch.lng && <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">Pinned</span>}
+                      <span className="text-xs font-semibold uppercase text-slate-500">Branch {index + 1}</span>
+                      <span className="truncate text-sm font-semibold">{branch.branchName || 'Unnamed Branch'}</span>
+                      {branch.isDefault && <span className="rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">Main Branch</span>}
+                      {branch.lat && branch.lng && <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">Pinned</span>}
                     </div>
                     <p className="mt-1 truncate text-[11px] font-semibold text-slate-500">{branchSummary}</p>
                   </div>
@@ -636,7 +636,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                 {isOpen && (
                   <div className="border-t border-slate-200 p-4 dark:border-slate-800">
                     <div className="mb-3 flex items-center justify-between gap-2">
-                      <input className={`${inputClass} font-black`} value={branch.branchName} onChange={(e) => updateBranch(branch.id, { branchName: e.target.value })} />
+                      <input className={`${inputClass} font-semibold`} value={branch.branchName} onChange={(e) => updateBranch(branch.id, { branchName: e.target.value })} />
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input className={inputClass} placeholder="Flat / building" value={branch.flatAndHouse} onChange={(e) => updateBranch(branch.id, { flatAndHouse: e.target.value })} />
@@ -652,7 +652,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                     <div className="mt-3 rounded-xl border border-indigo-100 bg-white p-3 dark:border-indigo-900 dark:bg-slate-950">
                       <div className="mb-2">
                         <div>
-                          <p className="text-[10px] font-black uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Pinned branch location</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Pinned branch location</p>
                           <p className="text-[10px] font-semibold text-slate-500">Used as route origin for delivery billing.</p>
                         </div>
                       </div>
@@ -679,7 +679,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                       </p>
                     </div>
                     <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-                      {!branch.isDefault && <button type="button" onClick={() => setMainBranch(branch.id)} className="text-xs font-black text-indigo-700 dark:text-indigo-300">Set Main Branch</button>}
+                      {!branch.isDefault && <button type="button" onClick={() => setMainBranch(branch.id)} className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Set Main Branch</button>}
                       <button type="button" title="Delete branch" onClick={() => {
                         setBranches((prev) => prev.filter((item) => item.id !== branch.id));
                         setOpenBranchId((current) => current === branch.id ? null : current);
@@ -758,7 +758,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
             </Field>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
-            <div className="mb-3 flex items-center justify-between text-xs font-black uppercase text-emerald-700 dark:text-emerald-300">
+            <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300">
               <span>Edit Slotted Delivery Timings</span>
               <span>{deliverySlots.length} Slots</span>
             </div>
@@ -771,7 +771,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                   </button>
                 </div>
               ))}
-              <button type="button" onClick={() => setDeliverySlots((prev) => [...prev, ''])} className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-emerald-400 px-3 py-2 text-xs font-black text-emerald-700 dark:text-emerald-300">
+              <button type="button" onClick={() => setDeliverySlots((prev) => [...prev, ''])} className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-emerald-400 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                 <Plus className="h-4 w-4" />
                 Add New Delivery Slot
               </button>
@@ -837,11 +837,11 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           </Field>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={editingStaffId ? handleSaveStaffEdit : handleRegisterStaff} disabled={savingStaff} className="rounded-lg bg-indigo-800 px-4 py-3 text-xs font-black uppercase text-white disabled:opacity-60">
+          <button type="button" onClick={editingStaffId ? handleSaveStaffEdit : handleRegisterStaff} disabled={savingStaff} className="rounded-lg bg-indigo-800 px-4 py-3 text-xs font-semibold uppercase text-white disabled:opacity-60">
             {savingStaff ? 'Saving...' : editingStaffId ? 'Save Staff Changes' : 'Register Staff Account'}
           </button>
           {editingStaffId && (
-            <button type="button" onClick={resetStaffForm} disabled={savingStaff} className="rounded-lg border border-slate-200 px-4 py-3 text-xs font-black uppercase text-slate-600 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900">
+            <button type="button" onClick={resetStaffForm} disabled={savingStaff} className="rounded-lg border border-slate-200 px-4 py-3 text-xs font-semibold uppercase text-slate-600 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900">
               Cancel Edit
             </button>
           )}
@@ -850,11 +850,11 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           <table className="w-full min-w-[760px] text-left text-xs">
             <thead className="bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-950">
               <tr>
-                <th className="px-3 py-2 font-black">Name</th>
-                <th className="px-3 py-2 font-black">Login ID</th>
-                <th className="px-3 py-2 font-black">Role</th>
-                <th className="px-3 py-2 font-black">Status</th>
-                <th className="px-3 py-2 font-black">Actions</th>
+                <th className="px-3 py-2 font-semibold">Name</th>
+                <th className="px-3 py-2 font-semibold">Login ID</th>
+                <th className="px-3 py-2 font-semibold">Role</th>
+                <th className="px-3 py-2 font-semibold">Status</th>
+                <th className="px-3 py-2 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -863,16 +863,16 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               ) : staffUsers.map((staff) => (
                 <tr key={staff.id} className="border-t border-slate-100 dark:border-slate-800">
                   <td className="px-3 py-2 font-bold">{staff.name}</td>
-                  <td className="px-3 py-2 font-mono font-black text-indigo-700 dark:text-indigo-300">{staff.staffLoginId || 'Not generated'}</td>
+                  <td className="px-3 py-2 font-mono font-semibold text-indigo-700 dark:text-indigo-300">{staff.staffLoginId || 'Not generated'}</td>
                   <td className="px-3 py-2">{staffRoleLabels[(staff.roles?.find((role) => role !== 'admin' && role !== 'customer') as Exclude<RoleCode, 'admin' | 'customer'>) || 'inventory_manager']}</td>
                   <td className="px-3 py-2">{staff.isActive === false ? 'Inactive' : 'Active'}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => handleEditStaff(staff)} className="inline-flex items-center gap-1 rounded-md border border-indigo-200 px-2 py-1 text-[10px] font-black uppercase text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/30">
+                      <button type="button" onClick={() => handleEditStaff(staff)} className="inline-flex items-center gap-1 rounded-md border border-indigo-200 px-2 py-1 text-[10px] font-semibold uppercase text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/30">
                         <Edit3 className="h-3 w-3" />
                         Edit
                       </button>
-                      <button type="button" onClick={() => handleDeleteStaff(staff)} className="inline-flex items-center gap-1 rounded-md border border-rose-200 px-2 py-1 text-[10px] font-black uppercase text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30">
+                      <button type="button" onClick={() => handleDeleteStaff(staff)} className="inline-flex items-center gap-1 rounded-md border border-rose-200 px-2 py-1 text-[10px] font-semibold uppercase text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30">
                         <Trash2 className="h-3 w-3" />
                         Delete
                       </button>
@@ -894,8 +894,8 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           <div className="flex items-center gap-4 rounded-xl border border-slate-900 p-4 dark:border-slate-700">
             <img src={qrPreviewUrl} alt="UPI QR preview" className="h-28 w-28 rounded-lg border bg-white p-2" />
             <div>
-              <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black uppercase text-emerald-700">Auto-generated live preview</span>
-              <p className="mt-2 font-serif text-lg font-black">Dynamic QR Code Working</p>
+              <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold uppercase text-emerald-700">Auto-generated live preview</span>
+              <p className="mt-2 font-serif text-lg font-semibold">Dynamic QR Code Working</p>
               <p className="text-xs text-slate-500">Scan this sample QR to test routing to {details.upiId || 'svayiro.essentials@upi'} with a test value of ₹100.00.</p>
             </div>
           </div>
@@ -924,11 +924,11 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           ))}
         </div>
         <div className="mt-5 flex flex-col gap-3 md:flex-row">
-          <button type="button" onClick={() => setBags((prev) => [...prev, { id: `bag_${Date.now()}`, size: 'New Carrier Bag', capacityGrams: 1000, price: 0, isEnabled: true, position: prev.length }])} className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-indigo-400 px-4 py-3 text-xs font-black text-indigo-700 dark:text-indigo-300">
+          <button type="button" onClick={() => setBags((prev) => [...prev, { id: `bag_${Date.now()}`, size: 'New Carrier Bag', capacityGrams: 1000, price: 0, isEnabled: true, position: prev.length }])} className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-indigo-400 px-4 py-3 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
             <Plus className="h-4 w-4" />
             Add New Carrier Bag Type
           </button>
-          <button type="button" onClick={handleSaveBags} disabled={savingBags} className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-800 px-4 py-3 text-xs font-black uppercase text-white disabled:opacity-60">
+          <button type="button" onClick={handleSaveBags} disabled={savingBags} className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-800 px-4 py-3 text-xs font-semibold uppercase text-white disabled:opacity-60">
             <CreditCard className="h-4 w-4" />
             {savingBags ? 'Saving...' : 'Save Smart Bag Pricing'}
           </button>
@@ -941,7 +941,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
 function SectionTitle({ icon: Icon, title, accent = 'indigo' }: { icon: any; title: string; accent?: 'indigo' | 'emerald' }) {
   const color = accent === 'emerald' ? 'text-emerald-700 border-emerald-700 dark:text-emerald-300' : 'text-indigo-700 border-indigo-700 dark:text-indigo-300';
   return (
-    <div className={`mb-4 flex items-center gap-2 border-b pb-2 text-xs font-black uppercase ${color}`}>
+    <div className={`mb-4 flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase ${color}`}>
       <Icon className="h-4 w-4" />
       {title}
     </div>
@@ -981,12 +981,12 @@ function Toggle({
   return (
     <div className="mb-4 flex items-center justify-between gap-3">
       <div>
-        <span className="text-sm font-black">{label}</span>
+        <span className="text-sm font-semibold">{label}</span>
         <p className={`text-[11px] font-bold ${checked ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
           Current: {checked ? checkedLabel : uncheckedLabel}
         </p>
       </div>
-      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-black dark:border-slate-800 dark:bg-slate-950">
+      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-semibold dark:border-slate-800 dark:bg-slate-950">
         <button
           type="button"
           onClick={() => onChange(true)}

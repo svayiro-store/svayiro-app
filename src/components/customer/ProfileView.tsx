@@ -366,7 +366,7 @@ export default function ProfileView({
       <div className="sm:hidden">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black flex items-center justify-center text-lg shadow-lg">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-semibold flex items-center justify-center text-lg shadow-lg">
               {activeUser?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
             <div>
@@ -383,7 +383,7 @@ export default function ProfileView({
             <div className="inline-flex p-4 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 mb-5">
               <User className="h-10 w-10" />
             </div>
-            <h2 className="font-serif text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Customer Hub</h2>
+            <h2 className="font-serif text-2xl font-semibold text-slate-900 dark:text-white tracking-tight mb-2">Customer Hub</h2>
             <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed max-w-sm mx-auto mb-6">
               Access your profile, addresses, orders, and support tickets.
             </p>
@@ -402,14 +402,14 @@ export default function ProfileView({
           <div className="hidden sm:block relative overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-indigo-500/10 via-violet-500/5 to-transparent p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
               <div className="flex items-center gap-5">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black flex items-center justify-center text-2xl shadow-lg shadow-indigo-600/15 uppercase">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-semibold flex items-center justify-center text-2xl shadow-lg shadow-indigo-600/15 uppercase">
                   {activeUser.name.charAt(0) || 'U'}
                 </div>
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-serif text-xl font-black text-slate-900 dark:text-white">{activeUser.name}</h2>
+                    <h2 className="font-serif text-xl font-semibold text-slate-900 dark:text-white">{activeUser.name}</h2>
                     {activeUser.roles?.includes('admin') && (
-                      <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 text-[10px] font-black uppercase tracking-wider">Admin</span>
+                      <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 text-[10px] font-semibold uppercase tracking-wider">Admin</span>
                     )}
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400">+91 {activeUser.phone}</p>
@@ -434,14 +434,14 @@ export default function ProfileView({
               <details className={`group min-w-0 rounded-xl border ${isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-100 bg-slate-50'}`}>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3">
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-indigo-500">Account</p>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Registered details & savings rules</h3>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-indigo-500">Account</p>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Registered details & savings rules</h3>
                     <p className="mt-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                       Tap to view verified profile details and how Savings Points work.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="hidden rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 sm:inline-flex">Verified</span>
+                    <span className="hidden rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-semibold uppercase text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 sm:inline-flex">Verified</span>
                     <ChevronRight className="h-4 w-4 text-slate-400 transition group-open:rotate-90" />
                   </div>
                 </summary>
@@ -449,19 +449,19 @@ export default function ProfileView({
                 <div className="border-t border-slate-200/70 px-3 pb-3 pt-3 dark:border-slate-800">
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div className={`rounded-lg border px-3 py-2 ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
-                      <p className="text-[9px] font-black uppercase text-slate-400">Name</p>
+                      <p className="text-[9px] font-semibold uppercase text-slate-400">Name</p>
                       <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{activeUser.name || 'Not added'}</p>
                     </div>
                     <div className={`rounded-lg border px-3 py-2 ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
-                      <p className="text-[9px] font-black uppercase text-slate-400">Verified phone</p>
+                      <p className="text-[9px] font-semibold uppercase text-slate-400">Verified phone</p>
                       <p className="truncate text-xs font-bold text-slate-900 dark:text-white">+91 {activeUser.phone}</p>
                     </div>
                     <div className={`rounded-lg border px-3 py-2 ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
-                      <p className="text-[9px] font-black uppercase text-slate-400">Verified email</p>
+                      <p className="text-[9px] font-semibold uppercase text-slate-400">Verified email</p>
                       <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{activeUser.email || 'Not added'}</p>
                     </div>
                     <div className={`rounded-lg border px-3 py-2 ${isDarkMode ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
-                      <p className="text-[9px] font-black uppercase text-slate-400">Date of birth</p>
+                      <p className="text-[9px] font-semibold uppercase text-slate-400">Date of birth</p>
                       <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{activeUser.dateOfBirth || 'Not added'}</p>
                     </div>
                   </div>
@@ -469,17 +469,17 @@ export default function ProfileView({
                   <div className={`mt-3 rounded-xl border p-3 text-[11px] font-semibold leading-relaxed ${isDarkMode ? 'border-indigo-900/60 bg-indigo-950/20 text-indigo-100' : 'border-indigo-100 bg-indigo-50 text-indigo-900'}`}>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-wide">Savings Points Rules</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide">Savings Points Rules</p>
                         <p className="mt-1">Only UPI-paid orders earn Savings Points: 1 point for each Rs {loyaltySummary?.earnRateAmount || 200} paid.</p>
                         <p className="mt-1">At checkout, {loyaltySummary?.redeemBlockPoints || 10} points can be redeemed for Rs {loyaltySummary?.redeemBlockValue || 20} discount. Redeemed points are reduced from the account.</p>
                         <p className="mt-1">Referral points are added only after the referred customer completes a UPI-paid Rs 100+ order.</p>
                       </div>
                       <div className={`shrink-0 rounded-xl border p-3 sm:min-w-[180px] ${isDarkMode ? 'border-indigo-900/70 bg-slate-950/50' : 'border-indigo-100 bg-white'}`}>
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-300">Current Points</p>
+                          <p className="text-[9px] font-semibold uppercase text-indigo-600 dark:text-indigo-300">Current Points</p>
                           <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
                         </div>
-                        <p className="mt-1 text-2xl font-black text-indigo-900 dark:text-white">{rewardPoints}</p>
+                        <p className="mt-1 text-2xl font-semibold text-indigo-900 dark:text-white">{rewardPoints}</p>
                         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-indigo-100 dark:bg-slate-800">
                           <div className="h-full rounded-full bg-indigo-700" style={{ width: `${rewardProgress}%` }} />
                         </div>
@@ -497,8 +497,8 @@ export default function ProfileView({
           <section className={`hidden rounded-2xl border p-4 shadow-sm sm:rounded-3xl sm:p-5 ${isDarkMode ? 'border-slate-800 bg-slate-900/70' : 'border-slate-100 bg-white'}`}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-500">Registered details</p>
-                <h3 className="mt-1 font-serif text-lg font-black text-slate-900 dark:text-white">Account Information</h3>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-indigo-500">Registered details</p>
+                <h3 className="mt-1 font-serif text-lg font-semibold text-slate-900 dark:text-white">Account Information</h3>
                 <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                   Phone and email are verified and locked for account safety.
                 </p>
@@ -507,19 +507,19 @@ export default function ProfileView({
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className={`rounded-xl border p-3 ${isDarkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-100 bg-slate-50'}`}>
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Name</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Name</p>
                 <p className="mt-1 truncate text-sm font-bold text-slate-900 dark:text-white">{activeUser.name || 'Not added'}</p>
               </div>
               <div className={`rounded-xl border p-3 ${isDarkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-100 bg-slate-50'}`}>
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Verified Phone</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Verified Phone</p>
                 <p className="mt-1 truncate text-sm font-bold text-slate-900 dark:text-white">+91 {activeUser.phone}</p>
               </div>
               <div className={`rounded-xl border p-3 ${isDarkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-100 bg-slate-50'}`}>
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Verified Email</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Verified Email</p>
                 <p className="mt-1 truncate text-sm font-bold text-slate-900 dark:text-white">{activeUser.email || 'Not added'}</p>
               </div>
               <div className={`rounded-xl border p-3 ${isDarkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-100 bg-slate-50'}`}>
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Date of Birth</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Date of Birth</p>
                 <p className="mt-1 truncate text-sm font-bold text-slate-900 dark:text-white">{activeUser.dateOfBirth || 'Not added'}</p>
               </div>
             </div>
@@ -528,8 +528,8 @@ export default function ProfileView({
           <section className={`hidden rounded-2xl border p-4 shadow-sm ${isDarkMode ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-white'}`}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-500">Member benefits</p>
-                <h3 className="mt-1 text-base font-black text-slate-900 dark:text-white">Savings that customers can actually use</h3>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-indigo-500">Member benefits</p>
+                <h3 className="mt-1 text-base font-semibold text-slate-900 dark:text-white">Savings that customers can actually use</h3>
               </div>
             </div>
 
@@ -537,8 +537,8 @@ export default function ProfileView({
               <div className={`rounded-xl border p-4 ${isDarkMode ? 'border-indigo-900/60 bg-indigo-950/30' : 'border-indigo-100 bg-indigo-50'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Savings Points</p>
-                    <p className="mt-1 text-3xl font-black text-indigo-900 dark:text-white">{rewardPoints}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Savings Points</p>
+                    <p className="mt-1 text-3xl font-semibold text-indigo-900 dark:text-white">{rewardPoints}</p>
                   </div>
                   <div className="rounded-xl bg-white p-2 text-indigo-700 shadow-sm dark:bg-slate-950 dark:text-indigo-300">
                     <Sparkles className="h-5 w-5" />
@@ -554,7 +554,7 @@ export default function ProfileView({
 
               <div className={`rounded-xl border p-4 ${isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50'}`}>
                 <BadgePercent className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
-                <p className="mt-3 text-xs font-black uppercase text-slate-900 dark:text-white">Refer & Win</p>
+                <p className="mt-3 text-xs font-semibold uppercase text-slate-900 dark:text-white">Refer & Win</p>
                 {referralCoupons.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {referralCoupons.slice(0, 3).map((coupon) => (
@@ -562,7 +562,7 @@ export default function ProfileView({
                         key={coupon.id || coupon.code}
                         type="button"
                         onClick={() => onUseCoupon?.(coupon.code)}
-                        className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+                        className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
                       >
                         {coupon.code} · {couponValueText(coupon)}
                       </button>
@@ -576,7 +576,7 @@ export default function ProfileView({
                 <button
                   type="button"
                   onClick={() => setProfileSubSection('referrals')}
-                  className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-[10px] font-black uppercase text-white hover:bg-emerald-500"
+                  className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-[10px] font-semibold uppercase text-white hover:bg-emerald-500"
                 >
                   Open Refer & Win
                 </button>
@@ -593,9 +593,9 @@ export default function ProfileView({
                     onClick={() => onUseCoupon?.(coupon.code)}
                     className="min-w-[160px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-indigo-800 dark:hover:bg-indigo-950/30"
                   >
-                    <p className="font-mono text-xs font-black text-slate-900 dark:text-white">{coupon.code}</p>
+                    <p className="font-mono text-xs font-semibold text-slate-900 dark:text-white">{coupon.code}</p>
                     <p className="mt-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">{couponValueText(coupon)}</p>
-                    <p className="text-[10px] font-semibold text-slate-500">Min order Rs {coupon.minOrderValue || 0}</p>
+                    <p className="text-[10px] font-bold text-slate-500">Min order Rs {coupon.minOrderValue || 0}</p>
                   </button>
                 ))}
               </div>
@@ -624,7 +624,7 @@ export default function ProfileView({
                         <Icon className="h-4 w-4" />
                       </span>
                       <span className="min-w-0">
-                        <span className="block whitespace-nowrap text-[11px] font-black lg:text-xs lg:whitespace-normal">{card.label}</span>
+                        <span className="block whitespace-nowrap text-[11px] font-semibold lg:text-xs lg:whitespace-normal">{card.label}</span>
                         <span className={`hidden text-[10px] lg:block ${active ? 'text-indigo-100' : 'text-slate-400'}`}>{card.desc}</span>
                       </span>
                     </button>
@@ -638,7 +638,7 @@ export default function ProfileView({
             <button
               type="button"
               onClick={() => setProfileSubSection('menu')}
-              className={`flex w-full items-center gap-2 rounded-2xl border px-4 py-3 text-left text-xs font-black sm:hidden ${
+              className={`flex w-full items-center gap-2 rounded-2xl border px-4 py-3 text-left text-xs font-semibold sm:hidden ${
                 isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-100' : 'border-slate-100 bg-white text-slate-800'
               }`}
             >
@@ -650,7 +650,7 @@ export default function ProfileView({
           {profileSubSection === 'menu' && (
             <div className="space-y-4 animate-fadeIn">
               <div className={`rounded-2xl border p-4 sm:rounded-3xl sm:p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
-                <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white">Customer Profile</h3>
+                <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Customer Profile</h3>
                 <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Choose what you want to manage.</p>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
@@ -668,7 +668,7 @@ export default function ProfileView({
                       <span className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${card.color} text-white shadow-sm`}>
                         <Icon className="h-5 w-5" />
                       </span>
-                      <span className="block text-xs font-black text-slate-900 dark:text-white">{card.label}</span>
+                      <span className="block text-xs font-semibold text-slate-900 dark:text-white">{card.label}</span>
                       <span className="mt-1 block text-[10px] leading-snug text-slate-500 dark:text-slate-400">{card.desc}</span>
                     </button>
                   );
@@ -678,7 +678,7 @@ export default function ProfileView({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className={`flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-black ${
+                  className={`flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-semibold ${
                     isDarkMode ? 'border-rose-900/60 bg-rose-950/20 text-rose-300' : 'border-rose-200 bg-rose-50 text-rose-600'
                   }`}
                 >
@@ -693,7 +693,7 @@ export default function ProfileView({
             <div className={`rounded-2xl border p-4 animate-fadeIn sm:rounded-3xl sm:p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white">Refer & Win</h3>
+                  <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Refer & Win</h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Share your system-generated invite code. Rewards unlock only after your friend completes a UPI-paid order of Rs 100 or more.
                   </p>
@@ -701,7 +701,7 @@ export default function ProfileView({
                 <button
                   type="button"
                   onClick={loadReferralInfo}
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-[10px] font-black uppercase text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   Refresh
                 </button>
@@ -713,9 +713,9 @@ export default function ProfileView({
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                   <div className="space-y-4">
                     <div className={`rounded-2xl border p-4 ${isDarkMode ? 'border-emerald-900/50 bg-emerald-950/20' : 'border-emerald-100 bg-emerald-50'}`}>
-                      <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Your valid invite code</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Your valid invite code</p>
                       <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <div className="flex-1 rounded-xl bg-white px-4 py-3 font-mono text-xl font-black tracking-widest text-emerald-800 shadow-sm dark:bg-slate-950 dark:text-emerald-200">
+                        <div className="flex-1 rounded-xl bg-white px-4 py-3 font-mono text-xl font-semibold tracking-widest text-emerald-800 shadow-sm dark:bg-slate-950 dark:text-emerald-200">
                           {referralInfo?.code || 'Loading'}
                         </div>
                         <button
@@ -725,20 +725,20 @@ export default function ProfileView({
                             navigator.clipboard.writeText(referralInfo.code);
                             showToast?.('Referral code copied.', 'success');
                           }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-semibold text-white"
                         >
                           <Copy className="h-4 w-4" /> Copy
                         </button>
                         <button
                           type="button"
                           onClick={handleShareReferralInvite}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-700 px-4 py-3 text-xs font-black text-white hover:bg-indigo-600"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-700 px-4 py-3 text-xs font-semibold text-white hover:bg-indigo-600"
                         >
                           <ArrowRight className="h-4 w-4" /> Share & Invite
                         </button>
                       </div>
                       <div className={`mt-3 rounded-xl border p-3 text-[11px] font-semibold leading-relaxed ${isDarkMode ? 'border-emerald-900/50 bg-slate-950/50 text-emerald-100' : 'border-emerald-100 bg-white text-emerald-900'}`}>
-                        <p className="text-[10px] font-black uppercase tracking-wide">Invite message preview</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide">Invite message preview</p>
                         <p className="mt-1 whitespace-pre-line">{referralInfo?.code ? getReferralInviteText() : 'Your invite text appears after the referral code loads.'}</p>
                       </div>
                       <p className="mt-2 text-[10px] font-semibold text-emerald-800/80 dark:text-emerald-200/80">
@@ -753,7 +753,7 @@ export default function ProfileView({
 
                     {!referralInfo?.receivedReferral && (
                       <div className={`rounded-2xl border p-4 ${isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50'}`}>
-                        <p className="text-xs font-black text-slate-900 dark:text-white">Have a referral code?</p>
+                        <p className="text-xs font-semibold text-slate-900 dark:text-white">Have a referral code?</p>
                         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                           <input
                             id="profile_referral_code"
@@ -763,7 +763,7 @@ export default function ProfileView({
                             onChange={(event) => setReferralInput(event.target.value.toUpperCase())}
                             placeholder="Enter code"
                           />
-                          <button type="button" onClick={handleApplyReferralCode} className="rounded-xl bg-indigo-600 px-4 py-3 text-xs font-black text-white">
+                          <button type="button" onClick={handleApplyReferralCode} className="rounded-xl bg-indigo-600 px-4 py-3 text-xs font-semibold text-white">
                             Apply Code
                           </button>
                         </div>
@@ -777,7 +777,7 @@ export default function ProfileView({
                     )}
 
                     <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Your referral history</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Your referral history</p>
                       {(referralInfo?.referrals || []).length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-slate-200 p-5 text-center text-xs font-semibold text-slate-500 dark:border-slate-800">
                           No referrals yet. Share your code with regular buyers.
@@ -787,10 +787,10 @@ export default function ProfileView({
                           <div key={referral.id} className={`rounded-xl border p-3 text-xs ${isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-white'}`}>
                             <div className="flex items-center justify-between gap-3">
                               <div>
-                                <p className="font-black text-slate-900 dark:text-white">{referral.referred_name || 'Customer'} · {referral.referred_phone}</p>
+                                <p className="font-semibold text-slate-900 dark:text-white">{referral.referred_name || 'Customer'} · {referral.referred_phone}</p>
                                 <p className="text-[10px] text-slate-500">Min UPI-paid order: Rs 100 · Reward: 5 points</p>
                               </div>
-                              <span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${referral.status === 'qualified' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'}`}>
+                              <span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase ${referral.status === 'qualified' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'}`}>
                                 {referral.status}
                               </span>
                             </div>
@@ -804,7 +804,7 @@ export default function ProfileView({
                     <div className="flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-amber-500" />
                       <div>
-                        <p className="text-xs font-black text-slate-900 dark:text-white">Yearly Leaderboard</p>
+                        <p className="text-xs font-semibold text-slate-900 dark:text-white">Yearly Leaderboard</p>
                         <p className="text-[10px] font-semibold text-slate-500">Top 3 referrers can receive owner-created year-end coupons.</p>
                       </div>
                     </div>
@@ -814,8 +814,8 @@ export default function ProfileView({
                       ) : (
                         referralInfo?.leaderboard.slice(0, 3).map((row, index) => (
                           <div key={row.id || row.phone} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs shadow-sm dark:bg-slate-900">
-                            <span className="font-black text-slate-900 dark:text-white">#{index + 1} {row.name || 'Customer'}</span>
-                            <span className="font-mono font-black text-indigo-600 dark:text-indigo-300">{row.qualified_referrals} refs</span>
+                            <span className="font-semibold text-slate-900 dark:text-white">#{index + 1} {row.name || 'Customer'}</span>
+                            <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-300">{row.qualified_referrals} refs</span>
                           </div>
                         ))
                       )}
@@ -831,13 +831,13 @@ export default function ProfileView({
             <div className={`rounded-2xl border p-4 animate-fadeIn sm:rounded-3xl sm:p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
               <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white">Address Book</h3>
+                  <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Address Book</h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Manage delivery destinations</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsAddingAddress(true)}
-                  className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-xs font-black text-white shadow-sm transition hover:bg-indigo-500 sm:w-auto sm:py-2"
+                  className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500 sm:w-auto sm:py-2"
                 >
                   + Add New Address
                 </button>
@@ -853,7 +853,7 @@ export default function ProfileView({
                 >
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
-                      <h4 className="text-sm font-black text-slate-900 dark:text-white">New Delivery Address</h4>
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-white">New Delivery Address</h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">Step 1: select region. Step 2: pin exact location. Step 3: add house details.</p>
                     </div>
                     <button type="button" onClick={() => setIsAddingAddress(false)} className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -940,7 +940,7 @@ export default function ProfileView({
                     <div className="order-5 rounded-xl border border-indigo-100 bg-white p-3 dark:border-indigo-900 dark:bg-slate-950 md:col-span-2">
                       <div>
                         <div>
-                          <p className="text-[10px] font-black uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Pin exact delivery location</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Pin exact delivery location</p>
                           <p className="text-[10px] font-semibold text-slate-500">Required for accurate Google Maps road distance and delivery charge.</p>
                         </div>
                       </div>
@@ -990,7 +990,7 @@ export default function ProfileView({
                       Set as default address
                     </label>
                   </div>
-                  <Button type="submit" className="mt-4 w-full rounded-xl text-xs font-black uppercase tracking-wider">
+                  <Button type="submit" className="mt-4 w-full rounded-xl text-xs font-semibold uppercase tracking-wider">
                     Save Address
                   </Button>
                 </form>
@@ -1009,7 +1009,7 @@ export default function ProfileView({
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-black text-slate-900 dark:text-white">{addr.label}</span>
+                            <span className="text-xs font-semibold text-slate-900 dark:text-white">{addr.label}</span>
                             {addr.isDefault && <span className="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-[9px] font-bold text-indigo-700 dark:text-indigo-300">DEFAULT</span>}
                           </div>
                           <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">{addr.flatAndHouse}</p>
@@ -1030,7 +1030,7 @@ export default function ProfileView({
           {/* ==================== FEEDBACK SECTION ==================== */}
           {profileSubSection === 'feedback' && (
             <div className={`rounded-2xl border p-4 animate-fadeIn sm:rounded-3xl sm:p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
-              <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white mb-1">Feedback Desk</h3>
+              <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white mb-1">Feedback Desk</h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-5">Sent to the admin alert desk as general store feedback.</p>
               
               {feedbackSuccess && (
@@ -1072,7 +1072,7 @@ export default function ProfileView({
                 }
               }} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Rating</label>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Rating</label>
                   <div className="flex gap-2">
                     {[1,2,3,4,5].map(star => (
                       <button key={star} type="button" onClick={() => setFeedbackRating(star)} className="p-1">
@@ -1082,14 +1082,14 @@ export default function ProfileView({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Type</label>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Type</label>
                   <div className="grid grid-cols-2 gap-2">
                     {(['feedback', 'support'] as const).map((type) => (
                       <button
                         key={type}
                         type="button"
                         onClick={() => setFeedbackType(type)}
-                        className={`rounded-xl px-3 py-2 text-xs font-black uppercase ${feedbackType === type ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}
+                        className={`rounded-xl px-3 py-2 text-xs font-semibold uppercase ${feedbackType === type ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}
                       >
                         {type}
                       </button>
@@ -1097,7 +1097,7 @@ export default function ProfileView({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Message</label>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Message</label>
                   <textarea 
                     id="profile_feedback_message"
                     name="profile_feedback_message"
@@ -1107,7 +1107,7 @@ export default function ProfileView({
                     placeholder="Tell us about your experience..."
                   />
                 </div>
-                <button type="submit" disabled={feedbackLoading} className="w-full py-3 bg-indigo-600 text-white text-xs font-black uppercase tracking-wider rounded-xl disabled:opacity-60">
+                <button type="submit" disabled={feedbackLoading} className="w-full py-3 bg-indigo-600 text-white text-xs font-semibold uppercase tracking-wider rounded-xl disabled:opacity-60">
                   {feedbackLoading ? 'Submitting...' : 'Submit Feedback'}
                 </button>
               </form>
@@ -1118,7 +1118,7 @@ export default function ProfileView({
           {profileSubSection === 'complaints' && (
             <Card className={`animate-fadeIn rounded-2xl sm:rounded-3xl ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
               <CardHeader className="p-4 pb-3 sm:p-6 sm:pb-4">
-                <CardTitle className="font-serif text-lg font-black text-slate-900 dark:text-white">Raise a Complaint</CardTitle>
+                <CardTitle className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Raise a Complaint</CardTitle>
                 <CardDescription className="text-[11px]">Submit a support ticket and track resolution</CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
@@ -1136,7 +1136,7 @@ export default function ProfileView({
 
               <form onSubmit={handleSubmitComplaint} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Category</label>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Category</label>
                   <select id="profile_complaint_category" name="profile_complaint_category" value={complaintCategory} onChange={(e) => setComplaintCategory(e.target.value)} className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl text-xs text-slate-900 dark:text-slate-100">
                     <option value="delivery">Delivery Issue</option>
                     <option value="product">Product Quality</option>
@@ -1146,7 +1146,7 @@ export default function ProfileView({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Subject</label>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Subject</label>
                   <Input
                     value={complaintSubject}
                     onChange={(e) => setComplaintSubject(e.target.value)}
@@ -1156,7 +1156,7 @@ export default function ProfileView({
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Priority</label>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Priority</label>
                   <div className="flex gap-2">
                     {['low', 'medium', 'high'].map(p => (
                       <button key={p} type="button" onClick={() => setComplaintPriority(p as any)} className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase ${complaintPriority === p ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
@@ -1166,7 +1166,7 @@ export default function ProfileView({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Description</label>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Description</label>
                   <Textarea
                     value={complaintDescription}
                     onChange={(e) => setComplaintDescription(e.target.value)}
@@ -1175,7 +1175,7 @@ export default function ProfileView({
                     placeholder="Provide detailed description of your complaint..."
                   />
                 </div>
-                <Button type="submit" disabled={complaintLoading} className="w-full bg-rose-600 py-3 text-xs font-black uppercase tracking-wider hover:bg-rose-500">
+                <Button type="submit" disabled={complaintLoading} className="w-full bg-rose-600 py-3 text-xs font-semibold uppercase tracking-wider hover:bg-rose-500">
                   {complaintLoading ? 'Submitting...' : 'Submit Complaint'}
                 </Button>
               </form>
@@ -1213,7 +1213,7 @@ export default function ProfileView({
           {/* ==================== HELP & FAQ SECTION ==================== */}
           {profileSubSection === 'help' && (
             <div className={`rounded-2xl border p-4 animate-fadeIn sm:rounded-3xl sm:p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
-              <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white mb-1">Help & Support</h3>
+              <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white mb-1">Help & Support</h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-5">Find answers and get assistance</p>
               
               <div className="space-y-3">
@@ -1236,7 +1236,7 @@ export default function ProfileView({
               </div>
 
               <form onSubmit={handleSubmitFaqQuestion} className={`mt-5 rounded-2xl border p-4 ${isDarkMode ? 'border-indigo-900/60 bg-indigo-950/20' : 'border-indigo-100 bg-indigo-50/60'}`}>
-                <h4 className="text-sm font-black text-slate-900 dark:text-white">Any more questions?</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Any more questions?</h4>
                 <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                   Ask the admin directly. The answer will be tracked as a support ticket.
                 </p>
@@ -1257,7 +1257,7 @@ export default function ProfileView({
                   className="mt-3 h-28 text-xs"
                   placeholder="Type your question for the admin..."
                 />
-                <Button type="submit" disabled={faqQuestionLoading} className="mt-3 w-full bg-indigo-600 py-3 text-xs font-black uppercase tracking-wider hover:bg-indigo-500">
+                <Button type="submit" disabled={faqQuestionLoading} className="mt-3 w-full bg-indigo-600 py-3 text-xs font-semibold uppercase tracking-wider hover:bg-indigo-500">
                   {faqQuestionLoading ? 'Sending...' : 'Ask Admin'}
                 </Button>
               </form>
@@ -1274,7 +1274,7 @@ export default function ProfileView({
           {/* ==================== OUR STORY ==================== */}
           {profileSubSection === 'about' && (
             <div className={`rounded-2xl border p-4 animate-fadeIn sm:rounded-3xl sm:p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
-              <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white mb-1">Our Story</h3>
+              <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white mb-1">Our Story</h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-5">From Sri Ram Enterprises to SVAYIRO</p>
               <StoreStory shop={shop} />
             </div>
@@ -1283,7 +1283,7 @@ export default function ProfileView({
           {/* ==================== SETTINGS SECTION ==================== */}
           {profileSubSection === 'settings' && (
             <div className={`rounded-2xl border p-4 animate-fadeIn sm:rounded-3xl sm:p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
-              <h3 className="font-serif text-lg font-black text-slate-900 dark:text-white mb-1">App Preferences</h3>
+              <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white mb-1">App Preferences</h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-5">Configure your experience</p>
               
               <div className="space-y-4">
@@ -1317,7 +1317,7 @@ export default function ProfileView({
                 <div className={`rounded-2xl border p-4 ${isDarkMode ? 'border-rose-900/60 bg-rose-950/20' : 'border-rose-200 bg-rose-50'}`}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-xs font-black text-rose-700 dark:text-rose-300">Delete Account</p>
+                      <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">Delete Account</p>
                       <p className="mt-1 text-[10px] leading-relaxed text-rose-600/80 dark:text-rose-300/80">
                         Permanently remove your customer account and related customer records from SVAYIRO.
                       </p>
@@ -1329,7 +1329,7 @@ export default function ProfileView({
                         setDeleteAccountError('');
                         setIsDeleteAccountOpen(true);
                       }}
-                      className="rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-rose-500"
+                      className="rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-rose-500"
                     >
                       Delete Account
                     </button>
@@ -1348,7 +1348,7 @@ export default function ProfileView({
           <div className={`${commonStyles.modalContent} max-w-md`}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-3 dark:border-slate-800">
               <div>
-                <h3 className="font-serif text-lg font-black text-rose-700 dark:text-rose-300">Delete Account</h3>
+                <h3 className="font-serif text-lg font-semibold text-rose-700 dark:text-rose-300">Delete Account</h3>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">This action is permanent.</p>
               </div>
               <button
@@ -1364,7 +1364,7 @@ export default function ProfileView({
                 Warning: your customer account and related customer data will be permanently deleted, including saved addresses, wishlist, saved cart profile data, complaints, reservations, orders, invoices, and payment records linked to this customer.
               </div>
               <div>
-                <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Type delete to confirm
                 </label>
                 <Input
@@ -1387,7 +1387,7 @@ export default function ProfileView({
                   type="button"
                   disabled={deleteAccountLoading || deleteAccountText.trim().toLowerCase() !== 'delete'}
                   onClick={handleDeleteAccount}
-                  className="rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {deleteAccountLoading ? 'Deleting...' : 'Permanently Delete'}
                 </button>

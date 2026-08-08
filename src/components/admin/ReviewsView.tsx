@@ -76,7 +76,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-serif text-2xl font-black">Quality Reviews</h2>
+          <h2 className="font-serif text-2xl font-semibold">Quality Reviews</h2>
           <p className="text-xs opacity-70">Respond to customer reviews and moderate content.</p>
         </div>
         <button onClick={refresh} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white">Refresh</button>
@@ -90,8 +90,8 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
           { label: 'Average Rating', value: ratingStats.average ? `${ratingStats.average.toFixed(1)}/5` : '0/5' }
         ].map((stat) => (
           <div key={stat.label} className={`rounded-xl border p-4 ${sectionBg}`}>
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{stat.label}</p>
-            <p className="mt-1 text-xl font-black">{stat.value}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{stat.label}</p>
+            <p className="mt-1 text-xl font-semibold">{stat.value}</p>
           </div>
         ))}
       </div>
@@ -99,7 +99,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
       <div className={`rounded-xl border p-3 ${sectionBg}`}>
         <div className="grid gap-3 lg:grid-cols-[1fr_240px_auto] lg:items-end">
           <label>
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Search Review / Product / Reviewer</span>
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Search Review / Product / Reviewer</span>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
@@ -111,7 +111,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
             </div>
           </label>
           <label>
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">Sort By Rating</span>
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Sort By Rating</span>
             <select className={inputClass} value={sortMode} onChange={(event) => setSortMode(event.target.value as typeof sortMode)}>
               <option value="newest">Newest first</option>
               <option value="rating-high">Highest rating first</option>
@@ -124,7 +124,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
               setReviewSearch('');
               setSortMode('newest');
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <ArrowDownUp className="h-3.5 w-3.5" />
             Reset
@@ -153,7 +153,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
                     <User className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Reviewed By</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Reviewed By</p>
                     <p className="text-sm font-bold">{review.customerName || 'Customer'}</p>
                     {review.customerPhone && <p className="font-mono text-[10px] text-slate-500">+91 {review.customerPhone}</p>}
                     {review.customerEmail && <p className="truncate text-[10px] text-slate-500">{review.customerEmail}</p>}
@@ -164,7 +164,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
                       <Package className="h-4 w-4 text-indigo-600" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Product Reviewed</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Product Reviewed</p>
                       <p className="truncate text-sm font-bold">{review.productName || 'Product not found'}</p>
                       <p className="font-mono text-[10px] text-slate-500">{review.productSku || review.productId}</p>
                     </div>
@@ -175,7 +175,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
                         <Star key={star} className={`h-3 w-3 ${star <= review.rating ? 'text-amber-500 fill-amber-500' : 'text-slate-300'}`} />
                       ))}
                       <span className="text-[10px] font-mono opacity-70 ml-1">{review.rating}/5</span>
-                      {review.isHidden && <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">Hidden</span>}
+                      {review.isHidden && <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-semibold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">Hidden</span>}
                     </div>
                   </div>
                 </div>

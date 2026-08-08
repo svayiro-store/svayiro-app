@@ -41,7 +41,7 @@ export default function CustomerFooter({
           <div className="space-y-4">
             <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
               <Info className="h-5 w-5 text-indigo-500" />
-              <h3 className="font-serif font-black text-lg text-slate-900 dark:text-white">About {shop.name}</h3>
+              <h3 className="font-serif font-semibold text-lg text-slate-900 dark:text-white">About {shop.name}</h3>
             </div>
             <StoreStory shop={shop} compact />
           </div>
@@ -51,7 +51,7 @@ export default function CustomerFooter({
           <div className="space-y-4">
             <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
               <Phone className="h-5 w-5 text-indigo-500" />
-              <h3 className="font-serif font-black text-lg text-slate-900 dark:text-white">Contact Our Hub</h3>
+              <h3 className="font-serif font-semibold text-lg text-slate-900 dark:text-white">Contact Our Hub</h3>
             </div>
             <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
               Got queries regarding custom weight milling, bulk orders, or active delivery tracking? Get in touch with our operations desk:
@@ -89,29 +89,29 @@ export default function CustomerFooter({
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
               <div className="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-950 z-10">
               <HelpCircle className="h-5 w-5 text-indigo-500" />
-              <h3 className="font-serif font-black text-lg text-slate-900 dark:text-white">Frequently Asked Questions</h3>
+              <h3 className="font-serif font-semibold text-lg text-slate-900 dark:text-white">Frequently Asked Questions</h3>
             </div>
             <div className="space-y-4 pt-1">
               <div className="space-y-1">
-                <h4 className="text-xs font-black text-slate-800 dark:text-slate-200">Q1. How does the Dynamic UPI QR payment work?</h4>
+                <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200">Q1. How does the Dynamic UPI QR payment work?</h4>
                 <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
                   During checkout, we automatically generate a secure dynamic UPI payment payload using your exact bill amount. You can scan this QR code with any active UPI application (such as GPay, PhonePe, Paytm, or BHIM) or tap the direct payment link on mobile to settle the transaction immediately with the merchant.
                 </p>
               </div>
               <div className="space-y-1">
-                <h4 className="text-xs font-black text-slate-800 dark:text-slate-200">Q2. Can I schedule or reserve a customized product?</h4>
+                <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200">Q2. Can I schedule or reserve a customized product?</h4>
                 <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
                   Yes! Click the "Reserve & Schedule Product" button in the footer or header menu. You can input customized requirements (such as extra fine milling, custom weights, or unique slot delivery dates) and our staff will coordinate the processing dynamically.
                 </p>
               </div>
               <div className="space-y-1">
-                <h4 className="text-xs font-black text-slate-800 dark:text-slate-200">Q3. How can I cancel an active order?</h4>
+                <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200">Q3. How can I cancel an active order?</h4>
                 <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
                   You can easily cancel any active order directly from your "Order History" page. Simply expand the relevant order card and tap the "Cancel Order" button. This option is available at any time prior to the order being out for delivery. Once cancelled, inventory is automatically restored.
                 </p>
               </div>
               <div className="space-y-1">
-                <h4 className="text-xs font-black text-slate-800 dark:text-slate-200">Q4. When will my order be delivered?</h4>
+                <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200">Q4. When will my order be delivered?</h4>
                 <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
                   During checkout, you choose your preferred delivery slots (Morning, Afternoon, or Evening) and delivery method (Local Delivery or Self-Pickup). Our delivery executives route shipments dynamically within the selected window.
                 </p>
@@ -145,7 +145,7 @@ export default function CustomerFooter({
                 alt="Logo" 
                 className="w-8 h-8 rounded-full object-cover border border-indigo-500 shadow-sm" 
               />
-              <h3 className="font-serif font-black text-lg text-indigo-600 dark:text-indigo-400">
+              <h3 className="font-serif font-semibold text-lg text-indigo-600 dark:text-indigo-400">
                 {shop.name}
               </h3>
             </div>
@@ -177,7 +177,7 @@ export default function CustomerFooter({
                     target="_blank"
                     rel="noreferrer"
                     title={link.label}
-                    className="inline-flex max-w-[140px] items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-indigo-700 shadow-sm transition hover:bg-slate-50 hover:text-indigo-900 dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+                    className="inline-flex max-w-[140px] items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 shadow-sm transition hover:bg-slate-50 hover:text-indigo-900 dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
                   >
                     <span className="truncate">{link.label}</span>
                   </a>

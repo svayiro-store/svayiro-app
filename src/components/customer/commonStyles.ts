@@ -19,7 +19,7 @@ export const commonStyles = {
   // Buttons: accessible with clear contrast and elegant sizing
   buttonPrimary: "w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs shadow hover:shadow-indigo-600/10 transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none uppercase tracking-wider",
   
-  buttonPrimaryLarge: "w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white py-4 rounded-2xl text-xs font-black shadow-lg text-center flex items-center justify-center gap-2 transition-all duration-150 ease-out hover:shadow-indigo-600/10 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none",
+  buttonPrimaryLarge: "w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white py-4 rounded-2xl text-xs font-semibold shadow-lg text-center flex items-center justify-center gap-2 transition-all duration-150 ease-out hover:shadow-indigo-600/10 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none",
 
   buttonSecondary: "px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] text-center",
 

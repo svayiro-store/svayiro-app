@@ -94,7 +94,7 @@ export default function BroadcastingView({ isDarkMode, showToast }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-serif text-2xl font-black">Alert Bulletins</h2>
+          <h2 className="font-serif text-2xl font-semibold">Alert Bulletins</h2>
           <p className="text-xs opacity-70">Push updates, offers, and holiday messages to customers.</p>
         </div>
         <button onClick={loadNotifications} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white">Reload</button>
@@ -102,7 +102,7 @@ export default function BroadcastingView({ isDarkMode, showToast }: Props) {
 
       {/* Create/Edit Form */}
       <div className={sectionClass}>
-        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">
+        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
           {editingId ? <><Edit3 className="h-4 w-4" /> Edit Bulletin</> : <><Bell className="h-4 w-4" /> Create Bulletin</>}
         </h3>
         <div className="grid gap-4 sm:grid-cols-[1fr_auto_auto]">
