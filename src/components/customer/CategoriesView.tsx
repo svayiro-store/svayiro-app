@@ -126,13 +126,10 @@ export default function CategoriesView({
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] space-y-4 px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="mx-auto w-full max-w-[1440px] space-y-2 px-2 sm:px-4 lg:px-6">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="font-serif text-xl font-semibold text-slate-950 dark:text-white sm:text-2xl">Categories</h2>
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">
-            Browse shop sections, subcategories, and products without leaving this page.
-          </p>
         </div>
         <button
           type="button"
@@ -145,7 +142,7 @@ export default function CategoriesView({
       </div>
 
       <div className={`overflow-hidden rounded-2xl border shadow-sm ${isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'}`}>
-        <div className="grid min-h-[calc(100dvh-150px)] grid-cols-[84px_minmax(0,1fr)] sm:grid-cols-[132px_minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)]">
+        <div className="grid min-h-[calc(100dvh-128px)] grid-cols-[84px_minmax(0,1fr)] sm:grid-cols-[132px_minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)]">
           <aside className={`max-h-[calc(100dvh-190px)] overflow-y-auto border-r ${isDarkMode ? 'border-slate-800 bg-slate-900/40' : 'border-slate-100 bg-slate-50/70'}`}>
             <button
               type="button"
@@ -237,16 +234,20 @@ export default function CategoriesView({
                   </div>
                 </button>
 
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-3">
+                <div className="grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                   {activeSubcategories.map((sub) => (
                     <button
                       key={sub.id}
                       type="button"
                       onClick={() => showCategoryResults(sub.id)}
-                      className={`flex min-h-[52px] items-center gap-2 rounded-xl border p-2 text-left transition sm:min-h-[72px] sm:gap-3 sm:p-3 ${selectedCategory === sub.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300' : isDarkMode ? 'border-slate-800 bg-slate-900 hover:border-indigo-800' : 'border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/40'}`}
+                      className={`group relative flex min-w-0 flex-col items-center justify-start gap-1.5 text-center transition ${selectedCategory === sub.id ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
                     >
-                      <CategoryThumb category={sub} className="h-8 w-8 rounded-lg sm:h-11 sm:w-11 sm:rounded-xl" />
-                      <span className="truncate text-[11px] font-semibold text-slate-800 dark:text-slate-100 sm:text-sm">{sub.name}</span>
+                      <CategoryThumb
+                        category={sub}
+                        className={`h-10 w-10 rounded-xl border-0 shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${selectedCategory === sub.id ? 'ring-2 ring-indigo-500/40' : ''}`}
+                      />
+                      <span className="line-clamp-2 max-w-[76px] text-[10px] font-semibold leading-tight sm:text-xs">{sub.name}</span>
+                      {selectedCategory === sub.id && <span className="absolute -bottom-1 h-0.5 w-8 rounded-full bg-indigo-600" />}
                     </button>
                   ))}
                 </div>

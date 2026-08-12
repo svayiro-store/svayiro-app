@@ -77,6 +77,7 @@ export default function CustomerHeader({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [isCategoryRailCompact, setIsCategoryRailCompact] = useState(false);
   const notificationWrapRef = useRef<HTMLDivElement | null>(null);
   const defaultSearchPlaceholders = [
     'Search staples, high-quality groceries, organic pulses...',
@@ -152,6 +153,16 @@ export default function CustomerHeader({
     return () => window.clearInterval(timer);
   }, [rotatingSearchPlaceholders.length]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsCategoryRailCompact(window.scrollY > 80);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const toggleNotifications = () => {
     setIsNotificationsOpen((open) => {
       const nextOpen = !open;
@@ -176,67 +187,67 @@ export default function CustomerHeader({
     if (!showCategoryRail) return null;
 
     return (
-      <div className={`-mx-4 border-t px-4 pt-2 ${isDarkMode ? 'border-slate-800' : 'border-slate-200/80'}`}>
-        <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className={`-mx-4 border-t px-4 transition-all ${isCategoryRailCompact ? 'pt-1' : 'pt-1.5'} ${isDarkMode ? 'border-slate-800' : 'border-slate-200/80'}`}>
+        <div className={`flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isCategoryRailCompact ? 'gap-1.5 pb-0.5' : 'gap-2.5 pb-0.5'}`}>
           <button
             type="button"
             onClick={() => selectHeaderCategory(null)}
-            className="group relative flex min-w-[58px] flex-col items-center gap-1 pb-1 text-center"
+            className={`group relative flex shrink-0 items-center text-center transition-all ${isCategoryRailCompact ? 'min-w-fit pb-0.5' : 'w-[58px] flex-col gap-0.5 pb-0.5'}`}
             aria-label="Show all products"
           >
-            <span className={`flex h-8 w-8 items-center justify-center rounded-lg border shadow-sm transition ${
-              !selectedCategory
-                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/10 dark:bg-indigo-950/40 dark:text-indigo-300'
-                : isDarkMode
-                  ? 'border-slate-800 bg-slate-900 text-slate-300'
-                  : 'border-slate-200 bg-white text-slate-500'
-            }`}>
-              <Store className="h-4 w-4" />
-            </span>
-            <span className={`max-w-[62px] truncate text-[10px] font-semibold leading-tight ${
+            {!isCategoryRailCompact && (
+              <span className={`flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition ${
+                !selectedCategory
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/10 dark:bg-indigo-950/40 dark:text-indigo-300'
+                  : isDarkMode
+                    ? 'border-slate-800 bg-slate-900 text-slate-300'
+                    : 'border-slate-200 bg-white text-slate-500'
+              }`}>
+                <Store className="h-4 w-4" />
+              </span>
+            )}
+            <span className={`block max-w-full truncate rounded-full px-1 py-0.5 text-[9px] font-semibold leading-tight ${
               !selectedCategory ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'
             }`}>
               All
             </span>
-            {!selectedCategory && <span className="absolute bottom-0 h-0.5 w-8 rounded-full bg-indigo-600" />}
+            {!selectedCategory && <span className="absolute bottom-0 h-0.5 w-7 rounded-full bg-indigo-600" />}
           </button>
 
           {topLevelCategories.map((category) => {
             const isSelected = selectedCategory === category.id || selectedParentCategory?.id === category.id;
-            const hasSubcategories = categories.some((item) => item.parentId === category.id);
             return (
               <button
                 key={category.id}
                 type="button"
                 onClick={() => selectHeaderCategory(category.id)}
-                className="group relative flex min-w-[64px] flex-col items-center gap-1 pb-1 text-center"
+                className={`group relative flex shrink-0 items-center text-center transition-all ${isCategoryRailCompact ? 'min-w-fit pb-0.5' : 'w-[66px] flex-col gap-0.5 pb-0.5'}`}
                 title={category.name}
               >
-                <span className={`relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border bg-white text-[9px] font-semibold uppercase text-indigo-700 shadow-sm transition group-hover:-translate-y-0.5 dark:bg-slate-900 dark:text-indigo-300 ${
-                  isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/10' : 'border-slate-200 group-hover:border-indigo-300 dark:border-slate-800'
-                }`}>
-                  {category.name.substring(0, 2)}
-                  {category.imageUrl && (
-                    <img
-                      src={category.imageUrl}
-                      alt={category.name}
-                      referrerPolicy="no-referrer"
-                      className="absolute inset-0 h-full w-full object-cover"
-                      onError={(event) => {
-                        event.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  )}
-                  {hasSubcategories && (
-                    <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
-                  )}
-                </span>
-                <span className={`max-w-[68px] truncate text-[10px] font-semibold leading-tight ${
+                {!isCategoryRailCompact && (
+                  <span className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border bg-white text-[9px] font-semibold uppercase text-indigo-700 shadow-sm transition group-hover:-translate-y-0.5 dark:bg-slate-900 dark:text-indigo-300 ${
+                    isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/10' : 'border-slate-200 group-hover:border-indigo-300 dark:border-slate-800'
+                  }`}>
+                    {category.name.substring(0, 2)}
+                    {category.imageUrl && (
+                      <img
+                        src={category.imageUrl}
+                        alt={category.name}
+                        referrerPolicy="no-referrer"
+                        className="absolute inset-0 h-full w-full object-cover"
+                        onError={(event) => {
+                          event.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    )}
+                  </span>
+                )}
+                <span className={`block max-w-full truncate rounded-full px-1 py-0.5 text-[9px] font-semibold leading-tight ${
                   isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'
                 }`}>
                   {category.name}
                 </span>
-                {isSelected && <span className="absolute bottom-0 h-0.5 w-8 rounded-full bg-indigo-600" />}
+                {isSelected && <span className="absolute bottom-0 h-0.5 w-7 rounded-full bg-indigo-600" />}
               </button>
             );
           })}

@@ -2060,7 +2060,7 @@ export default function CustomerApp({
       />
       <div
         aria-hidden="true"
-        className={`${activeTab === 'home' || activeTab === 'search' ? 'h-[178px] md:h-[188px]' : 'h-[72px] md:h-[126px]'} shrink-0`}
+        className={`${activeTab === 'home' || activeTab === 'search' ? 'h-[166px] md:h-[178px]' : 'h-[72px] md:h-[126px]'} shrink-0`}
       />
 
       {/* Main Container */}
@@ -2260,16 +2260,18 @@ export default function CustomerApp({
       </main>
 
       {/* Shared Customer Footer */}
-      <CustomerFooter 
-        shop={shop}
-        activeUser={activeUser}
-        activeTab={activeTab}
-        setActiveTab={setProtectedActiveTab}
-        isDarkMode={isDarkMode}
-        setIsAuthOpen={setIsAuthOpen}
-        setIsRequestOpen={openAdvanceRequest}
-        onSwitchMode={onSwitchMode ? () => onSwitchMode('admin') : undefined}
-      />
+      {activeTab !== 'categories' && (
+        <CustomerFooter
+          shop={shop}
+          activeUser={activeUser}
+          activeTab={activeTab}
+          setActiveTab={setProtectedActiveTab}
+          isDarkMode={isDarkMode}
+          setIsAuthOpen={setIsAuthOpen}
+          setIsRequestOpen={openAdvanceRequest}
+          onSwitchMode={onSwitchMode ? () => onSwitchMode('admin') : undefined}
+        />
+      )}
 
       {/* Sticky Bottom Native-Style Tab Rail (for Mobile Users) */}
       <nav className={`md:hidden fixed bottom-0 left-0 right-0 border-t z-40 transition-all backdrop-blur-xl ${

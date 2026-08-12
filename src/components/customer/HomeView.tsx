@@ -484,64 +484,7 @@ export default function HomeView({
         </>
       )}
 
-      {activeSectionId && (() => {
-        const parentCat = categories.find(c => c.id === activeSectionId);
-        const subs = categories.filter(c => c.parentId === activeSectionId);
-        if (!parentCat || subs.length === 0) return null;
-
-        return (
-          <div id="category-subsections-anchor" className={`sticky top-[196px] z-20 -mx-4 border-b px-4 py-2 shadow-sm backdrop-blur sm:-mx-6 sm:px-6 md:static md:shadow-none ${isDarkMode ? 'border-slate-800 bg-slate-950/95' : 'border-slate-200 bg-white/95'}`}>
-            <div className="grid grid-cols-4 gap-2 sm:flex sm:gap-2 sm:overflow-x-auto sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCategory(parentCat.id);
-                  setExpandedCategoryId(parentCat.id);
-                  scrollToProducts();
-                }}
-                className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 text-center text-[9px] font-semibold transition sm:min-w-[78px] sm:flex-row sm:rounded-full sm:px-3 sm:py-2 sm:text-[10px] ${selectedCategory === parentCat.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300' : isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
-              >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-indigo-700 dark:bg-slate-800 dark:text-indigo-300 sm:h-6 sm:w-6">
-                  <Compass className="h-3.5 w-3.5" />
-                </span>
-                <span className="max-w-full truncate leading-tight sm:max-w-[88px]">View All</span>
-              </button>
-
-              {subs.map((sub) => {
-                const isSubSelected = selectedCategory === sub.id;
-                return (
-                  <button
-                    key={sub.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategory(sub.id);
-                      setExpandedCategoryId(parentCat.id);
-                      scrollToProducts();
-                    }}
-                    className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl border px-1 py-1.5 text-center text-[9px] font-semibold transition sm:min-w-[86px] sm:flex-row sm:rounded-full sm:px-3 sm:py-2 sm:text-[10px] ${isSubSelected ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300' : isDarkMode ? 'border-slate-800 bg-slate-900 text-slate-300 hover:border-indigo-700' : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-200'}`}
-                  >
-                    <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-[8px] font-semibold uppercase text-indigo-700 dark:bg-slate-800 dark:text-indigo-300 sm:h-6 sm:w-6">
-                      {sub.name.substring(0, 2)}
-                      {sub.imageUrl && (
-                        <img
-                          src={sub.imageUrl}
-                          alt={sub.name}
-                          referrerPolicy="no-referrer"
-                          className="absolute inset-0 h-full w-full object-cover"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
-                      )}
-                    </span>
-                    <span className="max-w-full truncate leading-tight sm:max-w-[88px]">{sub.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Store status and broadcast messages below categories */}
+      {/* Store status and broadcast messages below main categories */}
       {isShopClosed && (
         <div className={`${shop?.isHolidayMode ? 'bg-amber-500 text-slate-950 border-amber-400/40' : 'bg-rose-600 text-white border-rose-500/30 animate-pulse'} py-2.5 px-4 rounded-xl text-center text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow border`}>
           <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -561,6 +504,65 @@ export default function HomeView({
           <span className="leading-relaxed">{shop.announcement}</span>
         </div>
       )}
+
+      {activeSectionId && (() => {
+        const parentCat = categories.find(c => c.id === activeSectionId);
+        const subs = categories.filter(c => c.parentId === activeSectionId);
+        if (!parentCat || subs.length === 0) return null;
+
+        return (
+          <div id="category-subsections-anchor" className={`-mx-4 border-b px-4 py-3 sm:-mx-6 sm:px-6 ${isDarkMode ? 'border-slate-800 bg-slate-950/70' : 'border-slate-200 bg-white'}`}>
+            <div className="grid grid-cols-4 gap-x-2 gap-y-3 sm:flex sm:gap-4 sm:overflow-x-auto sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(parentCat.id);
+                  setExpandedCategoryId(parentCat.id);
+                  scrollToProducts();
+                }}
+                className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-semibold transition sm:min-w-[68px] ${selectedCategory === parentCat.id ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
+              >
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${selectedCategory === parentCat.id ? 'bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/40 dark:bg-indigo-950/40 dark:text-indigo-300' : isDarkMode ? 'bg-slate-900 text-slate-300' : 'bg-slate-50 text-slate-600'}`}>
+                  <Compass className="h-5 w-5" />
+                </span>
+                <span className="line-clamp-2 max-w-[68px] leading-tight">View All</span>
+                {selectedCategory === parentCat.id && <span className="absolute -bottom-1 h-0.5 w-8 rounded-full bg-indigo-600" />}
+              </button>
+
+              {subs.map((sub) => {
+                const isSubSelected = selectedCategory === sub.id;
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(sub.id);
+                      setExpandedCategoryId(parentCat.id);
+                      scrollToProducts();
+                    }}
+                    className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-semibold transition sm:min-w-[76px] ${isSubSelected ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
+                  >
+                    <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[8px] font-semibold uppercase shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${isSubSelected ? 'bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/40 dark:bg-indigo-950/40 dark:text-indigo-300' : isDarkMode ? 'bg-slate-900 text-indigo-300' : 'bg-slate-50 text-indigo-700'}`}>
+                      {sub.name.substring(0, 2)}
+                      {sub.imageUrl && (
+                        <img
+                          src={sub.imageUrl}
+                          alt={sub.name}
+                          referrerPolicy="no-referrer"
+                          className="absolute inset-0 h-full w-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
+                    </span>
+                    <span className="line-clamp-2 max-w-[72px] leading-tight">{sub.name}</span>
+                    {isSubSelected && <span className="absolute -bottom-1 h-0.5 w-8 rounded-full bg-indigo-600" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Compact responsive banner rail */}
       {banners.length > 0 && (
