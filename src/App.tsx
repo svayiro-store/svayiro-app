@@ -62,34 +62,14 @@ export default function App() {
     }, type === 'error' ? 4200 : 2600);
   };
   
-  // Theme settings state (applied to device current mode)
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
+  // Dark mode has been disabled. Keep these values for existing component props.
+  const isDarkMode = false;
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-    
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleChange);
-    } else {
-      mediaQuery.addListener(handleChange);
-    }
-
-    return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', handleChange);
-      } else {
-        mediaQuery.removeListener(handleChange);
-      }
-    };
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem('svayiro_theme');
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
   }, []);
 
   // Loaded Central Resources
@@ -836,7 +816,7 @@ export default function App() {
   const activeCustomerUser = isCustomerOnlyUser(activeUser) ? activeUser : null;
 
   return (
-    <div className={`min-h-screen min-h-dvh flex flex-col overflow-x-clip ${isDarkMode ? 'dark bg-[#0f172a] text-[#f8fafc]' : 'bg-[#f8fafc] text-[#0f172a]'}`}>
+    <div className="min-h-screen min-h-dvh flex flex-col overflow-x-clip bg-[#f8fafc] text-[#0f172a]">
       
       {/* Render selected app configuration modes */}
       <Suspense fallback={renderRouteLoader()}>

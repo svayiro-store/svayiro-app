@@ -22,6 +22,7 @@ import AuthModal from './AuthModal';
 import CheckoutModal from './CheckoutModal';
 import AdvanceRequestModal from './AdvanceRequestModal';
 import QrScannerModal from './QrScannerModal';
+import { wasPushEnabled } from '../../utils/pushNotifications';
 
 const HomeView = lazy(() => import('./HomeView'));
 const SearchResultsView = lazy(() => import('./SearchResultsView'));
@@ -279,7 +280,7 @@ export default function CustomerApp({
 
   // App settings mock preferences
   const [enableSound, setEnableSound] = useState<boolean>(true);
-  const [enableLocalAlerts, setEnableLocalAlerts] = useState<boolean>(true);
+  const [enableLocalAlerts, setEnableLocalAlerts] = useState<boolean>(() => wasPushEnabled('customer'));
   const [newsletterSubscribed, setNewsletterSubscribed] = useState<boolean>(true);
   
   // Banner slider state

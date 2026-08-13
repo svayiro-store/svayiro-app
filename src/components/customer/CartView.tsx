@@ -102,7 +102,7 @@ export default function CartView({
 
   return (
     <div className="space-y-6">
-      <h2 className="font-serif text-2xl font-semibold text-left">Shopping Bag Summary</h2>
+      <h2 className="font-serif text-2xl font-semibold text-left text-slate-950 dark:text-white">Shopping Bag Summary</h2>
       
       {cart.length === 0 ? (
         <div className={`p-12 text-center rounded-2xl border ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-slate-50'}`}>
@@ -123,11 +123,11 @@ export default function CartView({
               return (
               <div 
                 key={product.id}
-                className={`flex gap-4 p-4 border rounded-2xl relative ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-white'}`}
+                className={`flex gap-4 p-4 border rounded-2xl relative ${isDarkMode ? 'border-slate-700 bg-slate-900/95 shadow-[0_10px_24px_rgba(0,0,0,0.24)]' : 'border-slate-200 bg-white'}`}
               >
                 <img src={product.images?.[0] || productImageFallback} alt={product.name} className="w-20 h-20 rounded-xl object-cover" referrerPolicy="no-referrer" />
                 <div className="flex-1 space-y-1.5 min-w-0 text-left">
-                  <h4 className="font-bold text-sm tracking-tight truncate pr-8">{product.name}</h4>
+                  <h4 className="truncate pr-8 text-sm font-semibold tracking-tight text-slate-950 dark:text-slate-100">{product.name}</h4>
                   <p className="text-xs opacity-70">Price: ₹{product.offerPrice > 0 ? product.offerPrice : product.basePrice} | Size: {formatProductMeasure(product)}</p>
                   
                   <div className="flex items-center gap-3 mt-2">
@@ -167,7 +167,7 @@ export default function CartView({
                   <span className="font-extrabold text-sm text-indigo-600 dark:text-indigo-400">
                     Rs {lineTotal.toFixed(2)}
                   </span>
-                  <span className="text-[10px] font-mono opacity-60">{cartQuantityLabel(product, quantity)}</span>
+                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{cartQuantityLabel(product, quantity)}</span>
                 </div>
               </div>
               );
@@ -185,11 +185,11 @@ export default function CartView({
           </div>
 
           {/* Bill Summary and smart bag estimates */}
-          <div className={`p-6 border rounded-2xl h-fit space-y-5 text-left ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/40' : 'border-slate-200 bg-slate-50'}`}>
-            <h3 className="font-bold text-lg font-serif">Bill Summary</h3>
+          <div className={`p-6 border rounded-2xl h-fit space-y-5 text-left ${isDarkMode ? 'border-slate-700 bg-slate-900/95 shadow-[0_12px_30px_rgba(0,0,0,0.24)]' : 'border-slate-200 bg-slate-50'}`}>
+            <h3 className="font-serif text-lg font-semibold text-slate-950 dark:text-white">Bill Summary</h3>
 
             {activeUser && (
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-xs dark:border-indigo-900 dark:bg-indigo-950/20">
+              <div className={`rounded-xl border p-3 text-xs ${isDarkMode ? 'border-indigo-900/70 bg-indigo-950/30' : 'border-indigo-100 bg-indigo-50'}`}>
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-semibold uppercase text-indigo-700 dark:text-indigo-300">Savings Points</span>
                   <span className="font-mono text-lg font-semibold text-indigo-700 dark:text-indigo-300">{loyaltySummary?.points || 0}</span>
@@ -198,9 +198,9 @@ export default function CartView({
                   Earn 1 point for every Rs {(loyaltySummary?.earnRateAmount || 200).toLocaleString('en-IN')} purchase.
                 </p>
                 {maxRedeemBlocks > 0 ? (
-                  <div className="mt-3 rounded-lg bg-white p-2 dark:bg-slate-950">
+                  <div className={`mt-3 rounded-lg p-2 ${isDarkMode ? 'bg-slate-950/80' : 'bg-white'}`}>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-semibold uppercase text-slate-500">Redeem</span>
+                      <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Redeem</span>
                       <span className="text-[10px] font-bold text-emerald-600">
                         {redeemBlockPoints} pts = Rs {redeemBlockValue}
                       </span>
@@ -250,7 +250,7 @@ export default function CartView({
             )}
 
             {/* FULFILLMENT MODE CHOICE */}
-            <div className="space-y-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+            <div className={`space-y-3 rounded-xl border p-4 ${isDarkMode ? 'border-slate-700 bg-slate-950/80' : 'border-slate-200 bg-white'}`}>
               <span className="text-xs font-bold leading-none text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
                 🚚 Choose Fulfillment Method
               </span>

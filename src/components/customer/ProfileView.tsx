@@ -4,7 +4,7 @@ import {
   ChevronRight, Star, Phone, Check, Trash2, ShieldCheck, BookOpen, 
   Sliders, LogOut, Heart, Map, ArrowRight, Menu, X, FileText,
   AlertTriangle, Clock, CheckCircle, XCircle, Ticket, Mail, Globe,
-  Smartphone, Monitor, Bell, Palette, Volume2, Wifi, ArrowLeft, BadgePercent, Sparkles, Copy, Trophy, Gift
+  Smartphone, Monitor, Bell, Volume2, Wifi, ArrowLeft, BadgePercent, Sparkles, Copy, Trophy, Gift
 } from 'lucide-react';
 import { Category, Coupon, CustomerTab, ShopProfile, User as UserType } from '../../types';
 import { api } from '../../api';
@@ -14,6 +14,7 @@ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import GoogleMapPicker from './GoogleMapPicker';
 import TermsContent from './TermsContent';
 import StoreStory from './StoreStory';
+import { disablePushNotifications, enablePushNotifications } from '../../utils/pushNotifications';
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", 
@@ -128,6 +129,7 @@ export default function ProfileView({
   const [complaintLoading, setComplaintLoading] = useState(false);
   const [complaintSuccess, setComplaintSuccess] = useState('');
   const [complaintError, setComplaintError] = useState('');
+  const [pushSaving, setPushSaving] = useState(false);
   const [faqQuestion, setFaqQuestion] = useState('');
   const [faqQuestionLoading, setFaqQuestionLoading] = useState(false);
   const [faqQuestionSuccess, setFaqQuestionSuccess] = useState('');
@@ -336,6 +338,30 @@ export default function ProfileView({
     }
   };
 
+  const handleCustomerPushToggle = async () => {
+    if (!activeUser) {
+      showToast?.('Login first to enable order and offer notifications.', 'warning');
+      setIsAuthOpen(true);
+      return;
+    }
+    setPushSaving(true);
+    try {
+      if (enableLocalAlerts) {
+        await disablePushNotifications('customer');
+        setEnableLocalAlerts(false);
+        showToast?.('Push notifications disabled on this device.', 'info');
+      } else {
+        await enablePushNotifications('customer');
+        setEnableLocalAlerts(true);
+        showToast?.('Push notifications enabled on this device.', 'success');
+      }
+    } catch (err: any) {
+      showToast?.(err?.message || 'Unable to update push notifications.', 'error');
+    } finally {
+      setPushSaving(false);
+    }
+  };
+
   // Mobile bottom nav items
   const mobileNavItems = [
     { id: 'home', label: 'Home', icon: Compass },
@@ -429,14 +455,14 @@ export default function ProfileView({
             </div>
           </div>
 
-          <section className={`rounded-2xl border p-3 shadow-sm sm:p-4 ${isDarkMode ? 'border-slate-800 bg-slate-900/70' : 'border-slate-100 bg-white'}`}>
+          <section className={`rounded-2xl border p-3 shadow-sm sm:p-4 ${isDarkMode ? 'border-slate-700 bg-slate-900/95 shadow-[0_12px_28px_rgba(0,0,0,0.22)]' : 'border-slate-100 bg-white'}`}>
             <div className="grid gap-3">
-              <details className={`group min-w-0 rounded-xl border ${isDarkMode ? 'border-slate-800 bg-slate-950/40' : 'border-slate-100 bg-slate-50'}`}>
+              <details className={`group min-w-0 rounded-xl border ${isDarkMode ? 'border-slate-700 bg-slate-950/80' : 'border-slate-100 bg-slate-50'}`}>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3">
                   <div>
                     <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-indigo-500">Account</p>
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Registered details & savings rules</h3>
-                    <p className="mt-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                    <p className="mt-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-300">
                       Tap to view verified profile details and how Savings Points work.
                     </p>
                   </div>
@@ -602,7 +628,7 @@ export default function ProfileView({
             )}
           </section>
 
-          <div className="grid min-w-0 gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-4">
+            <div className="grid min-w-0 gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-4">
             <aside className={`sticky top-24 z-20 hidden rounded-2xl border p-3 backdrop-blur lg:block lg:self-start ${isDarkMode ? 'border-slate-800 bg-slate-900/95' : 'border-slate-100 bg-white/95'} shadow-sm`}>
               <div className="flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-1 lg:overflow-visible">
                 {quickMenuCards.map(card => {
@@ -625,7 +651,7 @@ export default function ProfileView({
                       </span>
                       <span className="min-w-0">
                         <span className="block whitespace-nowrap text-[11px] font-semibold lg:text-xs lg:whitespace-normal">{card.label}</span>
-                        <span className={`hidden text-[10px] lg:block ${active ? 'text-indigo-100' : 'text-slate-400'}`}>{card.desc}</span>
+                        <span className={`hidden text-[10px] lg:block ${active ? 'text-indigo-100' : isDarkMode ? 'text-slate-300' : 'text-slate-400'}`}>{card.desc}</span>
                       </span>
                     </button>
                   );
@@ -649,9 +675,9 @@ export default function ProfileView({
 
           {profileSubSection === 'menu' && (
             <div className="space-y-4 animate-fadeIn">
-              <div className={`rounded-2xl border p-4 sm:rounded-3xl sm:p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
+              <div className={`rounded-2xl border p-4 sm:rounded-3xl sm:p-6 ${isDarkMode ? 'border-slate-700 bg-slate-900/95 shadow-[0_12px_28px_rgba(0,0,0,0.24)]' : 'border-slate-100 bg-white'}`}>
                 <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Customer Profile</h3>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Choose what you want to manage.</p>
+                <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-300">Choose what you want to manage.</p>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
                 {quickMenuCards.map(card => {
@@ -662,14 +688,14 @@ export default function ProfileView({
                       type="button"
                       onClick={() => setProfileSubSection(card.id as any)}
                       className={`min-h-28 rounded-2xl border p-3 text-left transition active:scale-[0.98] sm:min-h-32 sm:p-4 ${
-                        isDarkMode ? 'border-slate-800 bg-slate-900 hover:bg-slate-800' : 'border-slate-100 bg-white hover:bg-slate-50'
+                        isDarkMode ? 'border-slate-700 bg-slate-900/95 hover:bg-slate-800 shadow-[0_10px_24px_rgba(0,0,0,0.20)]' : 'border-slate-100 bg-white hover:bg-slate-50'
                       }`}
                     >
                       <span className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${card.color} text-white shadow-sm`}>
                         <Icon className="h-5 w-5" />
                       </span>
                       <span className="block text-xs font-semibold text-slate-900 dark:text-white">{card.label}</span>
-                      <span className="mt-1 block text-[10px] leading-snug text-slate-500 dark:text-slate-400">{card.desc}</span>
+                      <span className="mt-1 block text-[10px] font-medium leading-snug text-slate-500 dark:text-slate-300">{card.desc}</span>
                     </button>
                   );
                 })}
@@ -1301,7 +1327,12 @@ export default function ProfileView({
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Push Notifications</p>
                     <p className="text-[10px] text-slate-400">Order updates & offers</p>
                   </div>
-                  <button onClick={() => setEnableLocalAlerts(!enableLocalAlerts)} className={`w-12 h-6 rounded-full transition ${enableLocalAlerts ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                  <button
+                    type="button"
+                    onClick={handleCustomerPushToggle}
+                    disabled={pushSaving}
+                    className={`w-12 h-6 rounded-full transition disabled:opacity-60 ${enableLocalAlerts ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                  >
                     <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${enableLocalAlerts ? 'translate-x-7' : 'translate-x-1'}`} />
                   </button>
                 </div>

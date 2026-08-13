@@ -434,8 +434,8 @@ export default function CustomerHeader({
                 <span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 ${isDarkMode ? 'border-[#0f172a]' : 'border-[#fefff3]'} ${logoDotClass}`} />
               </div>
               <div>
-                <h1 className="font-semibold text-lg tracking-tight font-serif text-indigo-600 dark:text-indigo-400">{shop.name}</h1>
-                <p className="text-xs opacity-70 italic font-mono hidden sm:block">{shop.tagline}</p>
+                <h1 className="font-serif text-lg font-semibold tracking-tight text-indigo-700 dark:text-indigo-200">{shop.name}</h1>
+                <p className="hidden text-xs font-mono italic text-slate-500 dark:text-slate-300 sm:block">{shop.tagline}</p>
               </div>
             </div>
 

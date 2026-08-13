@@ -6,6 +6,7 @@
 import 'dotenv/config';
 import express from 'express';
 import compression from 'compression';
+import * as webPush from 'web-push';
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import net from 'net';
@@ -30,14 +31,80 @@ import {
 import type { CheckoutBagInfo } from './src/types';
 
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(compression());
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+function securityHeaders(req: express.Request, res: express.Response, next: express.NextFunction) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  return next();
+}
+
+app.use(securityHeaders);
+
+type RateLimitRecord = {
+  resetAt: number;
+  count: number;
+};
+
+const rateLimitBuckets = new Map<string, RateLimitRecord>();
+
+function getClientIp(req: express.Request) {
+  const forwardedFor = String(req.headers['x-forwarded-for'] || '')
+    .split(',')[0]
+    .trim();
+  return forwardedFor || req.ip || req.socket.remoteAddress || 'unknown';
+}
+
+function rateLimit(options: { name: string; windowMs: number; max: number; message?: string }) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const now = Date.now();
+    const key = `${options.name}:${getClientIp(req)}`;
+    const existing = rateLimitBuckets.get(key);
+    if (!existing || existing.resetAt <= now) {
+      rateLimitBuckets.set(key, { count: 1, resetAt: now + options.windowMs });
+      return next();
+    }
+
+    existing.count += 1;
+    if (existing.count > options.max) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
+      res.setHeader('Retry-After', String(retryAfterSeconds));
+      return res.status(429).json({
+        error: options.message || 'Too many requests. Please wait and try again.',
+        retryAfterSeconds
+      });
+    }
+
+    return next();
+  };
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of rateLimitBuckets.entries()) {
+    if (record.resetAt <= now) rateLimitBuckets.delete(key);
+  }
+}, 10 * 60 * 1000).unref();
+
 function configuredCorsOrigins() {
-  const defaults = [
+  const productionDefaults = [
     process.env.APP_PUBLIC_URL,
     process.env.PUBLIC_APP_URL,
     process.env.VITE_PUBLIC_APP_URL,
-    process.env.VITE_ADMIN_APP_URL,
+    process.env.VITE_ADMIN_APP_URL
+  ];
+  const developmentDefaults = [
+    ...productionDefaults,
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:5173'
@@ -46,6 +113,7 @@ function configuredCorsOrigins() {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const defaults = isProduction ? productionDefaults : developmentDefaults;
   return new Set([...defaults, ...explicit].filter(Boolean).map((origin) => String(origin).replace(/\/$/, '')));
 }
 
@@ -63,6 +131,42 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '10mb' }));
+
+const authLimiter = rateLimit({
+  name: 'auth',
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_AUTH_MAX || 25),
+  message: 'Too many login or OTP attempts. Please wait before trying again.'
+});
+
+const publicFormLimiter = rateLimit({
+  name: 'public-form',
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_PUBLIC_FORM_MAX || 30),
+  message: 'Too many form submissions. Please wait before trying again.'
+});
+
+const orderLimiter = rateLimit({
+  name: 'order',
+  windowMs: 10 * 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_ORDER_MAX || 20),
+  message: 'Too many order attempts. Please wait before placing another order.'
+});
+
+const searchLimiter = rateLimit({
+  name: 'search',
+  windowMs: 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_SEARCH_MAX || 120),
+  message: 'Too many searches. Please slow down.'
+});
+
+app.use('/api/auth', authLimiter);
+app.use('/api/orders', orderLimiter);
+app.use('/api/products', searchLimiter);
+app.use('/api/customer-feedback', publicFormLimiter);
+app.use('/api/complaints', publicFormLimiter);
+app.use('/api/advance-requests', publicFormLimiter);
+app.use('/api/reviews', publicFormLimiter);
 
 type CacheEntry<T = any> = {
   expiresAt: number;
@@ -115,6 +219,76 @@ class HttpError extends Error {
     super(message);
     this.statusCode = statusCode;
   }
+}
+
+const VAPID_PUBLIC_KEY = String(process.env.VAPID_PUBLIC_KEY || '').trim();
+const VAPID_PRIVATE_KEY = String(process.env.VAPID_PRIVATE_KEY || '').trim();
+const VAPID_SUBJECT = String(process.env.VAPID_SUBJECT || process.env.APP_PUBLIC_URL || 'mailto:support@svayiro.co.in').trim();
+const isWebPushConfigured = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
+
+if (isWebPushConfigured) {
+  webPush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
+
+type PushAudience = 'customer' | 'admin';
+
+function normalizePushAudience(value: any): PushAudience {
+  return String(value || '').toLowerCase() === 'admin' ? 'admin' : 'customer';
+}
+
+function buildPushPayload(input: { title: string; body: string; type?: string; url?: string; tag?: string; data?: Record<string, any> }) {
+  return {
+    title: input.title,
+    body: input.body,
+    type: input.type || 'system',
+    url: input.url || '/',
+    tag: input.tag || `svayiro-${input.type || 'notice'}`,
+    data: input.data || {},
+    sentAt: new Date().toISOString()
+  };
+}
+
+async function sendPushToWhere(whereSql: string, params: any[], payload: ReturnType<typeof buildPushPayload>) {
+  if (!isWebPushConfigured) return;
+  const { rows } = await pgQuery(
+    `SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE ${whereSql}`,
+    params
+  );
+  await Promise.allSettled(rows.map(async (subscription) => {
+    try {
+      await webPush.sendNotification(
+        {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: subscription.p256dh,
+            auth: subscription.auth
+          }
+        },
+        JSON.stringify(payload)
+      );
+    } catch (err: any) {
+      if (err?.statusCode === 404 || err?.statusCode === 410) {
+        await pgQuery('DELETE FROM push_subscriptions WHERE id = $1', [subscription.id]);
+      } else {
+        console.error('Web push send failed', err?.message || err);
+      }
+    }
+  }));
+}
+
+function notifyPushAudience(audience: PushAudience, input: Parameters<typeof buildPushPayload>[0]) {
+  const payload = buildPushPayload(input);
+  void sendPushToWhere('audience = $1', [audience], payload).catch((err) => {
+    console.error('Web push audience notification failed', err);
+  });
+}
+
+function notifyPushUser(userId: string | null | undefined, input: Parameters<typeof buildPushPayload>[0]) {
+  if (!userId) return;
+  const payload = buildPushPayload(input);
+  void sendPushToWhere('user_id = $1', [userId], payload).catch((err) => {
+    console.error('Web push user notification failed', err);
+  });
 }
 
 // health check for test and deployment readiness
@@ -247,7 +421,7 @@ async function createAdminAlertRecord(
   }
 ) {
   const db = runner || { query: pgQuery };
-  return db.query(
+  const result = await db.query(
     `INSERT INTO admin_alerts(title, body, type, source, severity, status, payload, created_at, updated_at)
      VALUES($1,$2,$3,$4,$5,$6,$7,now(),now())
      RETURNING *`,
@@ -261,6 +435,18 @@ async function createAdminAlertRecord(
       input.payload || {}
     ]
   );
+  const alert = result.rows[0];
+  if (alert) {
+    notifyPushAudience('admin', {
+      title: alert.title,
+      body: alert.body,
+      type: alert.type,
+      tag: `admin-alert-${alert.id}`,
+      url: '/',
+      data: { alertId: alert.id, source: alert.source || null, severity: alert.severity || 'info' }
+    });
+  }
+  return result;
 }
 
 function hashPassword(password: string) {
@@ -1699,7 +1885,30 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
       return { order: orderRes.rows[0] };
     });
 
-    return res.json({ success: true, order: normalizeOrder(result.order) });
+    const normalizedOrder = normalizeOrder(result.order);
+    await createAdminAlertRecord(null, {
+      title: 'New Order Placed',
+      body: `Order #${normalizedOrder.orderRef || normalizedOrder.id} placed by ${normalizedOrder.customerName || 'Customer'} for Rs ${normalizedOrder.finalAmount}.`,
+      type: 'order',
+      source: 'order_checkout',
+      severity: normalizedOrder.paymentMethod === 'upi' && normalizedOrder.paymentStatus !== 'paid' ? 'warning' : 'info',
+      payload: {
+        orderId: normalizedOrder.id,
+        orderRef: normalizedOrder.orderRef || null,
+        customerPhone: normalizedOrder.customerPhone || null,
+        paymentMethod: normalizedOrder.paymentMethod,
+        paymentStatus: normalizedOrder.paymentStatus
+      }
+    });
+    notifyPushUser(result.order.user_id, {
+      title: 'Order received',
+      body: `Your order #${normalizedOrder.orderRef || normalizedOrder.id} is ${normalizedOrder.status}.`,
+      type: 'order',
+      tag: `order-${normalizedOrder.id}`,
+      url: '/',
+      data: { orderId: normalizedOrder.id, orderRef: normalizedOrder.orderRef || null, status: normalizedOrder.status }
+    });
+    return res.json({ success: true, order: normalizedOrder });
   } catch (err: any) {
     console.error('POST /api/orders error', err);
     return res.status(400).json({ error: err.message || 'Order placement failed' });
@@ -2057,6 +2266,61 @@ function hasAnyRole(req: any, roles: string[]) {
   const currentRoles = getRequestRoles(req);
   return roles.some((role) => currentRoles.includes(role));
 }
+
+app.get('/api/push/public-key', (req, res) => {
+  return res.json({ enabled: isWebPushConfigured, publicKey: isWebPushConfigured ? VAPID_PUBLIC_KEY : '' });
+});
+
+app.post('/api/push/subscribe', authMiddleware, async (req: any, res) => {
+  if (!isWebPushConfigured) {
+    return res.status(503).json({ error: 'Browser push is not configured. Add VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY.' });
+  }
+  const currentUser = req.currentUser;
+  const subscription = req.body?.subscription || req.body;
+  const endpoint = typeof subscription?.endpoint === 'string' ? subscription.endpoint.trim() : '';
+  const p256dh = typeof subscription?.keys?.p256dh === 'string' ? subscription.keys.p256dh.trim() : '';
+  const auth = typeof subscription?.keys?.auth === 'string' ? subscription.keys.auth.trim() : '';
+  if (!currentUser?.id || !endpoint || !p256dh || !auth) {
+    return res.status(400).json({ error: 'A valid push subscription is required.' });
+  }
+  const requestedAudience = normalizePushAudience(req.body?.audience);
+  const roles = Array.isArray(currentUser.roles) ? currentUser.roles : [];
+  const canUseAdminAudience = roles.some((role: string) => ['admin', 'inventory_manager', 'delivery_partner', 'customer_care'].includes(role));
+  const audience: PushAudience = requestedAudience === 'admin' && canUseAdminAudience ? 'admin' : 'customer';
+  const primaryRole = audience === 'admin' ? (roles.find((role: string) => role !== 'customer') || 'admin') : 'customer';
+  try {
+    await pgQuery(
+      `INSERT INTO push_subscriptions(user_id, role, audience, endpoint, p256dh, auth, user_agent, created_at, updated_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,now(),now())
+       ON CONFLICT (endpoint) DO UPDATE SET
+         user_id = EXCLUDED.user_id,
+         role = EXCLUDED.role,
+         audience = EXCLUDED.audience,
+         p256dh = EXCLUDED.p256dh,
+         auth = EXCLUDED.auth,
+         user_agent = EXCLUDED.user_agent,
+         updated_at = now()`,
+      [currentUser.id, primaryRole, audience, endpoint, p256dh, auth, req.headers['user-agent'] || null]
+    );
+    return res.json({ success: true, audience });
+  } catch (err) {
+    console.error('POST /api/push/subscribe error', err);
+    return res.status(500).json({ error: 'Failed to save push subscription' });
+  }
+});
+
+app.post('/api/push/unsubscribe', authMiddleware, async (req: any, res) => {
+  const currentUser = req.currentUser;
+  const endpoint = typeof req.body?.endpoint === 'string' ? req.body.endpoint.trim() : '';
+  if (!currentUser?.id || !endpoint) return res.status(400).json({ error: 'Subscription endpoint is required.' });
+  try {
+    await pgQuery('DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2', [currentUser.id, endpoint]);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('POST /api/push/unsubscribe error', err);
+    return res.status(500).json({ error: 'Failed to remove push subscription' });
+  }
+});
 
 const CLOUDINARY_FOLDERS: Record<string, string> = {
   products: 'svayiro/products',
@@ -5193,6 +5457,14 @@ app.post('/api/notifications', authMiddleware, isAdminMiddleware, async (req, re
       [title, message, type || 'announcement', { audience: 'customer', publishedBy: 'admin' }, 'customer', true]
     );
     invalidatePublicCache('notifications');
+    notifyPushAudience('customer', {
+      title,
+      body: message,
+      type: type || 'announcement',
+      tag: `customer-notification-${ins.rows[0].id}`,
+      url: '/',
+      data: { notificationId: ins.rows[0].id }
+    });
     return res.json({ success: true, data: ins.rows[0] });
   } catch (err) {
     console.error('POST /api/notifications error', err);
@@ -5909,7 +6181,21 @@ app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
       const finalOrder = await client.query('SELECT * FROM orders WHERE id = $1', [id]);
       return { order: finalOrder.rows[0], sideEffectError };
     });
-    return res.json({ success: true, order: normalizeOrder(result.order), warning: result.sideEffectError || undefined });
+    const normalizedOrder = normalizeOrder(result.order);
+    notifyPushUser(result.order.user_id, {
+      title: 'Order status updated',
+      body: `Order #${normalizedOrder.orderRef || normalizedOrder.id} is now ${String(normalizedOrder.status || '').replace(/_/g, ' ')}.`,
+      type: 'order',
+      tag: `order-${normalizedOrder.id}`,
+      url: '/',
+      data: {
+        orderId: normalizedOrder.id,
+        orderRef: normalizedOrder.orderRef || null,
+        status: normalizedOrder.status,
+        paymentStatus: normalizedOrder.paymentStatus
+      }
+    });
+    return res.json({ success: true, order: normalizedOrder, warning: result.sideEffectError || undefined });
   } catch (err: any) {
     console.error('PUT /api/orders/:id/status error', err);
     if (err.statusCode) {
@@ -5930,9 +6216,23 @@ app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
       const rewardError = fallback.rows[0]?.payment_method === 'upi' && fallback.rows[0]?.payment_status === 'paid'
         ? await applyOrderRewardsBestEffort({ query: pgQuery }, fallback.rows[0])
         : '';
+      const normalizedFallbackOrder = normalizeOrder(fallback.rows[0]);
+      notifyPushUser(fallback.rows[0].user_id, {
+        title: 'Order status updated',
+        body: `Order #${normalizedFallbackOrder.orderRef || normalizedFallbackOrder.id} is now ${String(normalizedFallbackOrder.status || '').replace(/_/g, ' ')}.`,
+        type: 'order',
+        tag: `order-${normalizedFallbackOrder.id}`,
+        url: '/',
+        data: {
+          orderId: normalizedFallbackOrder.id,
+          orderRef: normalizedFallbackOrder.orderRef || null,
+          status: normalizedFallbackOrder.status,
+          paymentStatus: normalizedFallbackOrder.paymentStatus
+        }
+      });
       return res.json({
         success: true,
-        order: normalizeOrder(fallback.rows[0]),
+        order: normalizedFallbackOrder,
         warning: [err.message || 'Order status was saved, but follow-up processing failed.', rewardError].filter(Boolean).join('; ')
       });
     } catch (fallbackErr: any) {
@@ -6465,6 +6765,22 @@ async function ensureRuntimeSchemaCompatibility() {
   await pgQuery('ALTER TABLE complaints ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()');
   await pgQuery('ALTER TABLE complaints ADD COLUMN IF NOT EXISTS admin_answer text');
   await pgQuery('ALTER TABLE complaints ADD COLUMN IF NOT EXISTS answered_at timestamptz');
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+      role varchar(40) NOT NULL DEFAULT 'customer',
+      audience varchar(40) NOT NULL DEFAULT 'customer',
+      endpoint text NOT NULL UNIQUE,
+      p256dh text NOT NULL,
+      auth text NOT NULL,
+      user_agent text,
+      created_at timestamptz DEFAULT now(),
+      updated_at timestamptz DEFAULT now()
+    )
+  `);
+  await pgQuery('CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id)');
+  await pgQuery('CREATE INDEX IF NOT EXISTS idx_push_subscriptions_audience ON push_subscriptions(audience)');
   await pgQuery(`
     CREATE TABLE IF NOT EXISTS admin_alerts (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -57,3 +57,42 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { title: 'Svayiro', body: event.data ? event.data.text() : 'New update available.' };
+  }
+
+  const title = payload.title || 'Svayiro';
+  const options = {
+    body: payload.body || 'New update available.',
+    icon: '/icons/icon-192.png',
+    badge: '/favicon.png',
+    tag: payload.tag || 'svayiro-update',
+    data: {
+      url: payload.url || '/',
+      ...(payload.data || {})
+    }
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((client) => client.url.startsWith(self.location.origin));
+      if (existing) {
+        existing.focus();
+        existing.navigate(targetUrl);
+        return;
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});

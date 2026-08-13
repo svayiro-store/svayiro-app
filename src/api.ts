@@ -877,6 +877,21 @@ export const api = {
         yearly: { label: string; total: number; orders: number }[];
       }; upcomingBirthdays?: { id: string; name: string; phone: string; email: string; roles?: string[]; roleLabel?: string; dateOfBirth: string; birthdayDayMonth?: string; nextBirthday: string; daysUntil: number; isToday: boolean }[];
     }>('/admin/reports'),
+
+  getPushPublicKey: () =>
+    apiRequest<{ enabled: boolean; publicKey: string }>('/push/public-key'),
+
+  subscribePush: (subscription: PushSubscriptionJSON, audience: 'customer' | 'admin') =>
+    apiRequest<{ success: boolean; audience: 'customer' | 'admin' }>('/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ subscription, audience })
+    }),
+
+  unsubscribePush: (endpoint: string) =>
+    apiRequest<{ success: boolean }>('/push/unsubscribe', {
+      method: 'POST',
+      body: JSON.stringify({ endpoint })
+    }),
     
    // 🟢 ADD THIS FUNCTION AT THE END OF THE api OBJECT:
   getPublicOrderInvoice: async (orderId: string) => {

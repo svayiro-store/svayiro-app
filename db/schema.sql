@@ -337,6 +337,22 @@ CREATE TABLE admin_alerts (
 CREATE INDEX IF NOT EXISTS idx_admin_alerts_status ON admin_alerts(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_admin_alerts_type ON admin_alerts(type, created_at DESC);
 
+CREATE TABLE push_subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  role varchar(40) NOT NULL DEFAULT 'customer',
+  audience varchar(40) NOT NULL DEFAULT 'customer',
+  endpoint text NOT NULL UNIQUE,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  user_agent text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_audience ON push_subscriptions(audience);
+
 -- Advance requests
 CREATE TABLE advance_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

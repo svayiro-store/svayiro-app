@@ -145,9 +145,16 @@ export default function HomeView({
   const featuredProducts = products
     .filter((product) => product.isEnabled && !isLooseProduct(product) && product.isFeatured)
     .slice(0, 6);
-  const recommendedProducts = products
-    .filter((product) => product.isEnabled && !isLooseProduct(product) && !featuredProducts.some((item) => item.id === product.id) && !bestOfferProducts.some((item) => item.id === product.id))
-    .slice(0, 6);
+  const excludedShowcaseIds = new Set([...featuredProducts, ...bestOfferProducts].map((product) => product.id));
+  const personalizedRecommendedProducts = products
+    .filter((product) => {
+      const rank = Number(product.metadata?.personalizedRecommendationRank || 0);
+      return product.isEnabled && !isLooseProduct(product) && rank > 0 && !excludedShowcaseIds.has(product.id);
+    })
+    .sort((a, b) => Number(a.metadata?.personalizedRecommendationRank || 999) - Number(b.metadata?.personalizedRecommendationRank || 999));
+  const fallbackRecommendedProducts = products
+    .filter((product) => product.isEnabled && !isLooseProduct(product) && !excludedShowcaseIds.has(product.id) && !personalizedRecommendedProducts.some((item) => item.id === product.id));
+  const recommendedProducts = [...personalizedRecommendedProducts, ...fallbackRecommendedProducts].slice(0, 6);
 
   useEffect(() => {
     if (!selectedCategory) {
@@ -805,10 +812,14 @@ export default function HomeView({
                 return (
                   <div
                     key={prod.id}
-                    className={`w-full rounded-lg border overflow-hidden shadow-xs flex flex-col justify-between group transition-all duration-300 transform hover:-translate-y-0.5 ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/30' : 'border-slate-200 bg-white hover:shadow-md'}`}
+                    className={`w-full rounded-lg border overflow-hidden shadow-xs flex flex-col justify-between group transition-all duration-300 transform hover:-translate-y-0.5 ${
+                      isDarkMode
+                        ? 'border-slate-700 bg-slate-900/95 shadow-[0_12px_28px_rgba(0,0,0,0.30)]'
+                        : 'border-slate-200 bg-white hover:shadow-md'
+                    }`}
                   >
                     {/* Top Banner aspect */}
-                    <div className="relative aspect-square overflow-hidden cursor-pointer bg-slate-50 animate-fadeIn" onClick={() => setSelectedProduct(prod)}>
+                    <div className={`relative aspect-square overflow-hidden cursor-pointer animate-fadeIn ${isDarkMode ? 'bg-white' : 'bg-slate-50'}`} onClick={() => setSelectedProduct(prod)}>
                       <img
                         src={prod.images?.[0] || productImageFallback}
                         alt={prod.name}
@@ -854,17 +865,17 @@ export default function HomeView({
                     <div className="p-1.5 sm:p-2 flex-1 flex flex-col justify-between gap-1 text-left">
                       <div className="space-y-0.5">
                         <div className="flex items-center justify-between gap-1">
-                          <span className="text-[8px] sm:text-[9px] opacity-75 font-mono uppercase truncate max-w-[70%]">
+                          <span className="max-w-[70%] truncate font-mono text-[8px] font-semibold uppercase text-slate-500 dark:text-slate-400 sm:text-[9px]">
                             {categories.find(c => c.id === prod.categoryId)?.name || 'Grocery'}
                           </span>
                           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                             <Star className="h-2.5 w-2.5 text-amber-500 fill-amber-500" />
-                            <span className="text-[9px] sm:text-[10px] font-semibold">{prod.ratingAverage || 'New'}</span>
+                            <span className="text-[9px] font-semibold text-slate-700 dark:text-slate-200 sm:text-[10px]">{prod.ratingAverage || 'New'}</span>
                           </div>
                         </div>
                         <h4
                           onClick={() => setSelectedProduct(prod)}
-                          className="font-semibold text-[11px] sm:text-xs leading-snug tracking-tight line-clamp-1 hover:text-indigo-500 cursor-pointer text-left"
+                          className="cursor-pointer text-left text-[11px] font-semibold leading-snug tracking-tight text-slate-950 line-clamp-1 hover:text-indigo-500 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-xs"
                         >
                           {prod.name}
                         </h4>
@@ -872,7 +883,7 @@ export default function HomeView({
                           <button
                             type="button"
                             onClick={() => setSelectedProduct(prod)}
-                            className="block text-left text-[9px] leading-tight opacity-70 hover:text-indigo-500 hover:opacity-100 line-clamp-1"
+                            className="block text-left text-[9px] leading-tight text-slate-500 line-clamp-1 hover:text-indigo-500 dark:text-slate-400 dark:hover:text-indigo-300"
                           >
                             {prod.description.length > 40 ? `${prod.description.slice(0, 40)}... ` : prod.description}
                             {prod.description.length > 40 && <span className="font-semibold text-indigo-600 dark:text-indigo-400">more...</span>}

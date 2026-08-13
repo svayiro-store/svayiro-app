@@ -126,7 +126,7 @@ export default function CategoriesView({
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] space-y-2 px-2 sm:px-4 lg:px-6">
+    <div className="mx-auto w-full max-w-[1440px] space-y-2 px-2 text-slate-950 dark:text-slate-100 sm:px-4 lg:px-6">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="font-serif text-xl font-semibold text-slate-950 dark:text-white sm:text-2xl">Categories</h2>
@@ -141,16 +141,16 @@ export default function CategoriesView({
         </button>
       </div>
 
-      <div className={`overflow-hidden rounded-2xl border shadow-sm ${isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'}`}>
+      <div className={`overflow-hidden rounded-2xl border shadow-sm ${isDarkMode ? 'border-slate-700 bg-slate-950 shadow-[0_14px_34px_rgba(0,0,0,0.30)]' : 'border-slate-200 bg-white'}`}>
         <div className="grid min-h-[calc(100dvh-128px)] grid-cols-[84px_minmax(0,1fr)] sm:grid-cols-[132px_minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)]">
-          <aside className={`max-h-[calc(100dvh-190px)] overflow-y-auto border-r ${isDarkMode ? 'border-slate-800 bg-slate-900/40' : 'border-slate-100 bg-slate-50/70'}`}>
+          <aside className={`max-h-[calc(100dvh-190px)] overflow-y-auto border-r ${isDarkMode ? 'border-slate-700 bg-slate-900/80' : 'border-slate-100 bg-slate-50/70'}`}>
             <button
               type="button"
               onClick={() => {
                 setActiveParentId(null);
                 showCategoryResults(null);
               }}
-              className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-semibold transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:gap-3 md:px-3 md:text-left ${showResults && !resultCategoryId ? 'border-l-4 border-l-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300' : isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-900' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
+              className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-semibold transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:gap-3 md:px-3 md:text-left ${showResults && !resultCategoryId ? 'border-l-4 border-l-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-200' : isDarkMode ? 'border-slate-800 text-slate-200 hover:bg-slate-800' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
             >
               <CategoryThumb category={null} className="h-9 w-9 rounded-lg sm:h-11 sm:w-11 md:h-12 md:w-12 md:rounded-xl" />
               <span className="line-clamp-2 md:line-clamp-1">All Items</span>
@@ -167,7 +167,7 @@ export default function CategoriesView({
                     setActiveParentId(cat.id);
                     setShowResults(false);
                   }}
-                  className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-semibold leading-tight transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:px-3 md:text-left ${active || showingResult ? 'border-l-4 border-l-rose-500 bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-300' : isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-900' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
+                  className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-semibold leading-tight transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:px-3 md:text-left ${active || showingResult ? 'border-l-4 border-l-rose-500 bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-200' : isDarkMode ? 'border-slate-800 text-slate-200 hover:bg-slate-800' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
                 >
                   <CategoryThumb category={cat} className="h-9 w-9 rounded-lg sm:h-11 sm:w-11 md:h-12 md:w-12 md:rounded-xl" />
                   <span className="line-clamp-2 md:line-clamp-1">{cat.name}</span>

@@ -1,6 +1,6 @@
 {
-  "name": "SVAYIRO",
-  "short_name": "SVAYIRO",
+  "name": "Svayiro",
+  "short_name": "Svayiro",
   "description": "Fresh groceries, natural food products, daily essentials, and trusted local delivery.",
   "id": "/",
   "start_url": "/",
@@ -20,6 +20,12 @@
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/logo-460.png",
+      "sizes": "460x460",
       "type": "image/png",
       "purpose": "any"
     },

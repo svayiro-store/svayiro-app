@@ -18,7 +18,8 @@ import UserManualView from './UserManualView';
 import { useAdminData } from './hooks/useAdminData';
 import { api } from '../../api';
 import { ShopProfile, Category, Product, Banner, Notification, User } from '../../types';
-import { PackageSearch, ShoppingBag, UserCircle } from 'lucide-react';
+import { Bell, PackageSearch, ShoppingBag, UserCircle } from 'lucide-react';
+import { enablePushNotifications, wasPushEnabled } from '../../utils/pushNotifications';
 
 type PosCartItem = {
   cartKey?: string;
@@ -98,6 +99,8 @@ export default function AdminApp({ shop, categories, products, banners, notifica
   const [activeRegisterId, setActiveRegisterId] = useState('register_1');
   const [adminCategories, setAdminCategories] = useState<Category[]>([]);
   const [focusedProductId, setFocusedProductId] = useState<string | null>(null);
+  const [adminPushEnabled, setAdminPushEnabled] = useState(() => wasPushEnabled('admin'));
+  const [adminPushSaving, setAdminPushSaving] = useState(false);
 
   const activeRegister = posRegisters.find((register) => register.id === activeRegisterId) || posRegisters[0];
   const offlineCart = activeRegister?.cart || [];
@@ -289,6 +292,19 @@ export default function AdminApp({ shop, categories, products, banners, notifica
     setActiveMenu('products');
   };
 
+  const handleEnableAdminPush = async () => {
+    setAdminPushSaving(true);
+    try {
+      await enablePushNotifications('admin');
+      setAdminPushEnabled(true);
+      showToast('Console notifications enabled on this device.', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Unable to enable console notifications.', 'error');
+    } finally {
+      setAdminPushSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (allowedMenus.length > 0 && !allowedMenus.includes(activeMenu)) {
       setActiveMenu(allowedMenus[0]);
@@ -315,6 +331,17 @@ export default function AdminApp({ shop, categories, products, banners, notifica
             </div>
 
             <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
+              {!adminPushEnabled && (
+                <button
+                  type="button"
+                  onClick={handleEnableAdminPush}
+                  disabled={adminPushSaving}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-60 ${isDarkMode ? 'border-slate-800 bg-slate-900/70 text-slate-200 hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                >
+                  <Bell className="h-3.5 w-3.5 text-indigo-600" />
+                  {adminPushSaving ? 'Enabling...' : 'Enable Alerts'}
+                </button>
+              )}
               <div className={`flex flex-wrap items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold ${isDarkMode ? 'border-slate-800 bg-slate-900/70 text-slate-200' : 'border-slate-200 bg-slate-50/80 text-slate-700'}`}>
                 <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                   <ShoppingBag className="h-3.5 w-3.5 text-indigo-600" />

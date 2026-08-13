@@ -36,6 +36,7 @@ async function run() {
   const pool = new pg.Pool({ connectionString: DATABASE_URL });
   const client = await pool.connect();
   const applyCompatibilityMigrations = async () => {
+    await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto');
     await client.query('ALTER TABLE users ALTER COLUMN phone TYPE varchar(32)');
     await client.query('ALTER TABLE users ALTER COLUMN phone DROP NOT NULL');
     await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active boolean DEFAULT true');
@@ -97,6 +98,22 @@ async function run() {
       )
     `);
     await client.query('ALTER TABLE complaints ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+        role varchar(40) NOT NULL DEFAULT 'customer',
+        audience varchar(40) NOT NULL DEFAULT 'customer',
+        endpoint text NOT NULL UNIQUE,
+        p256dh text NOT NULL,
+        auth text NOT NULL,
+        user_agent text,
+        created_at timestamptz DEFAULT now(),
+        updated_at timestamptz DEFAULT now()
+      )
+    `);
+    await client.query('CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_push_subscriptions_audience ON push_subscriptions(audience)');
     await client.query('UPDATE categories SET is_enabled = true WHERE is_enabled IS DISTINCT FROM true');
     await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto');
     await client.query(`
