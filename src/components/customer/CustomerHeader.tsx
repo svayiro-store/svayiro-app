@@ -6,6 +6,28 @@ import {
 import { Category, CustomerTab, Notification, Product, ShopProfile, User as UserType } from '../../types';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=120';
+const svayiroWordmarkStyle = {
+  fontFamily: '"Tw Cen MT", "Tw Cen MT Condensed", "Century Gothic", Arial, sans-serif',
+  fontWeight: 900,
+  letterSpacing: '-0.035em'
+} as const;
+
+function SvayiroWordmark({ name, className = '' }: { name: string; className?: string }) {
+  const displayName = String(name || 'SVAYIRO').trim().toUpperCase();
+  if (displayName === 'SVAYIRO') {
+    return (
+      <span className={className} style={svayiroWordmarkStyle}>
+        <span style={{ color: '#000d86', WebkitTextStroke: '0.5px #0c0059' }}>SVAYIR</span>
+        <span style={{ color: '#F3D300', WebkitTextStroke: '1px #C7AA00' }}>O</span>
+      </span>
+    );
+  }
+  return (
+    <span className={className} style={svayiroWordmarkStyle}>
+      {displayName}
+    </span>
+  );
+}
 
 interface CustomerHeaderProps {
   shop: ShopProfile;
@@ -31,6 +53,7 @@ interface CustomerHeaderProps {
   notifications?: Notification[];
   readNotificationIds?: string[];
   onMarkNotificationsRead?: (ids: string[]) => void;
+  hideCategoryRail?: boolean;
   isDarkMode: boolean;
   setIsAuthOpen: (open: boolean) => void;
   setIsRequestOpen: (open: boolean) => void;
@@ -60,6 +83,7 @@ export default function CustomerHeader({
   notifications = [],
   readNotificationIds = [],
   onMarkNotificationsRead,
+  hideCategoryRail = false,
   isDarkMode,
   setIsAuthOpen,
   setIsRequestOpen
@@ -98,7 +122,7 @@ export default function CustomerHeader({
   const selectedParentCategory = selectedCategoryDetails?.parentId
     ? categories.find((category) => category.id === selectedCategoryDetails.parentId) || null
     : selectedCategoryDetails;
-  const showCategoryRail = (activeTab === 'home' || activeTab === 'search') && topLevelCategories.length > 0;
+  const showCategoryRail = !hideCategoryRail && (activeTab === 'home' || activeTab === 'search') && topLevelCategories.length > 0;
 
   const notificationMeta: Record<Exclude<Notification['type'], 'order'>, { label: string; icon: React.ElementType; badgeClass: string; iconClass: string }> = {
     offer: {
@@ -187,16 +211,16 @@ export default function CustomerHeader({
     if (!showCategoryRail) return null;
 
     return (
-      <div className={`-mx-4 border-t px-4 transition-all ${isCategoryRailCompact ? 'pt-1' : 'pt-1.5'} ${isDarkMode ? 'border-slate-800' : 'border-slate-200/80'}`}>
-        <div className={`flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isCategoryRailCompact ? 'gap-1.5 pb-0.5' : 'gap-2.5 pb-0.5'}`}>
+      <div className={`-mx-4 border-t px-4 transition-all ${isCategoryRailCompact ? 'pt-0.5' : 'pt-1'} ${isDarkMode ? 'border-slate-800' : 'border-slate-200/80'}`}>
+        <div className={`flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isCategoryRailCompact ? 'gap-1.5 pb-0' : 'gap-2 pb-0'}`}>
           <button
             type="button"
             onClick={() => selectHeaderCategory(null)}
-            className={`group relative flex shrink-0 items-center text-center transition-all ${isCategoryRailCompact ? 'min-w-fit pb-0.5' : 'w-[58px] flex-col gap-0.5 pb-0.5'}`}
+            className={`group relative flex shrink-0 items-center text-center transition-all ${isCategoryRailCompact ? 'min-w-fit pb-0.5' : 'w-[54px] flex-col gap-0.5 pb-0.5'}`}
             aria-label="Show all products"
           >
             {!isCategoryRailCompact && (
-              <span className={`flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition ${
+              <span className={`flex h-8 w-8 items-center justify-center rounded-xl border shadow-sm transition ${
                 !selectedCategory
                   ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/10 dark:bg-indigo-950/40 dark:text-indigo-300'
                   : isDarkMode
@@ -221,11 +245,11 @@ export default function CustomerHeader({
                 key={category.id}
                 type="button"
                 onClick={() => selectHeaderCategory(category.id)}
-                className={`group relative flex shrink-0 items-center text-center transition-all ${isCategoryRailCompact ? 'min-w-fit pb-0.5' : 'w-[66px] flex-col gap-0.5 pb-0.5'}`}
+            className={`group relative flex shrink-0 items-center text-center transition-all ${isCategoryRailCompact ? 'min-w-fit pb-0.5' : 'w-[60px] flex-col gap-0.5 pb-0.5'}`}
                 title={category.name}
               >
                 {!isCategoryRailCompact && (
-                  <span className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border bg-white text-[9px] font-semibold uppercase text-indigo-700 shadow-sm transition group-hover:-translate-y-0.5 dark:bg-slate-900 dark:text-indigo-300 ${
+                  <span className={`relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl border bg-white text-[8px] font-semibold uppercase text-indigo-700 shadow-sm transition group-hover:-translate-y-0.5 dark:bg-slate-900 dark:text-indigo-300 ${
                     isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/10' : 'border-slate-200 group-hover:border-indigo-300 dark:border-slate-800'
                   }`}>
                     {category.name.substring(0, 2)}
@@ -434,7 +458,9 @@ export default function CustomerHeader({
                 <span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 ${isDarkMode ? 'border-[#0f172a]' : 'border-[#fefff3]'} ${logoDotClass}`} />
               </div>
               <div>
-                <h1 className="font-serif text-lg font-semibold tracking-tight text-indigo-700 dark:text-indigo-200">{shop.name}</h1>
+                <h1 className="leading-none">
+                  <SvayiroWordmark name={shop.name} className="text-2xl uppercase" />
+                </h1>
                 <p className="hidden text-xs font-mono italic text-slate-500 dark:text-slate-300 sm:block">{shop.tagline}</p>
               </div>
             </div>

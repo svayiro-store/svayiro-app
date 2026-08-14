@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, QrCode, Package, Layers, ShoppingBag, Calendar, Gift, MessageSquare, Bell, BellRing, Image, Settings, LogOut, AlertTriangle, BookOpen, ExternalLink, PanelLeftClose, PanelLeftOpen, Scale } from 'lucide-react';
+import { TrendingUp, QrCode, Package, Layers, ShoppingBag, Calendar, Gift, MessageSquare, Bell, BellRing, Image, Settings, LogOut, AlertTriangle, BookOpen, ExternalLink, PanelLeftClose, PanelLeftOpen, Scale, Sparkles } from 'lucide-react';
 
 interface Props {
   activeMenu: string;
@@ -22,6 +22,7 @@ const menuRoles: Record<string, string[]> = {
   orders: ['admin', 'delivery_partner', 'customer_care'],
   advances: ['admin'],
   coupons: ['admin'],
+  campaigns: ['admin'],
   reviews: ['admin', 'customer_care'],
   complaints: ['admin', 'customer_care'],
   adminAlerts: ['admin'],
@@ -51,6 +52,7 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
     { id: 'orders', label: 'Invoice & Orders', icon: ShoppingBag, badge: ordersCount },
     { id: 'advances', label: 'Advance Bookings', icon: Calendar, badge: advancesCount },
     { id: 'coupons', label: 'Offers Coupons', icon: Gift },
+    { id: 'campaigns', label: 'Campaigns', icon: Sparkles },
     { id: 'reviews', label: 'Quality Reviews', icon: MessageSquare, badge: reviewsCount },
     { id: 'complaints', label: 'Complaints & Tickets', icon: AlertTriangle },
     { id: 'adminAlerts', label: 'Admin Alerts', icon: BellRing },

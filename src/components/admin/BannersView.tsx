@@ -14,6 +14,7 @@ interface Props {
 }
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_IMAGE_MB = MAX_IMAGE_BYTES / (1024 * 1024);
 const MIN_BANNER_WIDTH = 640;
 const MIN_BANNER_HEIGHT = 360;
 
@@ -105,7 +106,7 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      showToast('Banner image must be 6 MB or smaller.', 'warning');
+      showToast(`Banner image must be ${MAX_IMAGE_MB} MB or smaller.`, 'warning');
       return;
     }
     try {
@@ -222,7 +223,7 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
                 </label>
               </div>
               <p className="mt-2 text-[11px] font-medium text-slate-500">
-                Use a JPG, PNG, WEBP, or GIF banner. Minimum {MIN_BANNER_WIDTH} x {MIN_BANNER_HEIGHT}px. Maximum {MAX_IMAGE_BYTES} MB.
+                Use a JPG, PNG, WEBP, or GIF banner. Minimum {MIN_BANNER_WIDTH} x {MIN_BANNER_HEIGHT}px. Maximum {MAX_IMAGE_MB} MB.
               </p>
             </label>
             <label className="block">
@@ -276,7 +277,7 @@ export default function BannersView({ isDarkMode, showToast, refresh, categories
                   This image will appear across the top of your customer home page.
                 </p>
                 <p className="mt-3 text-xs leading-5 text-slate-500">
-                  Banner display uses a 16:9 card. For best results on all devices, use an image that is at least {MIN_BANNER_WIDTH} x {MIN_BANNER_HEIGHT} pixels and {MAX_IMAGE_BYTES} MB or less.
+                  Banner display uses a 16:9 card. For best results on all devices, use an image that is at least {MIN_BANNER_WIDTH} x {MIN_BANNER_HEIGHT} pixels and {MAX_IMAGE_MB} MB or less.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-950 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700">

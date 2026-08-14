@@ -212,6 +212,19 @@ const STAFF_ROLE_PREFIX: Record<string, string> = {
   customer_care: 'CARE'
 };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function cleanUuidList(value: any, limit = 500) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .map((item) => String(item || '').trim())
+        .filter((item) => UUID_REGEX.test(item))
+    )
+  ).slice(0, limit);
+}
+
 class HttpError extends Error {
   statusCode: number;
 
@@ -665,6 +678,92 @@ function isWelcomeCoupon(coupon: any, couponCode?: string) {
   const type = String(metadata.couponType || metadata.type || '').toLowerCase();
   const code = String(couponCode || coupon?.code || '').toUpperCase();
   return type === 'welcome' || metadata.welcomeOnly === true || /(WELCOME|FIRSTORDER|FIRST_ORDER|NEWUSER|NEW_USER)/i.test(code);
+}
+
+function dateOnlyValue(value: any) {
+  const raw = String(value || '').trim();
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  const displayMatch = raw.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (displayMatch) return `${displayMatch[3]}-${displayMatch[2]}-${displayMatch[1]}`;
+  return '';
+}
+
+function productMatchesCampaignEligibility(product: any, eligibleProductIds: Set<string>, eligibleCategoryIds: Set<string>) {
+  if (!product) return false;
+  if (eligibleProductIds.has(String(product.id))) return true;
+  const categoryIds = [
+    product.category_id,
+    product.categoryId,
+    product.subcategory_id,
+    product.subcategoryId,
+    ...(Array.isArray(product.category_ids) ? product.category_ids : []),
+    ...(Array.isArray(product.categoryIds) ? product.categoryIds : [])
+  ].filter(Boolean).map((id) => String(id));
+  return categoryIds.some((categoryId) => eligibleCategoryIds.has(categoryId));
+}
+
+async function loadActiveCouponCampaignEligibility(client: any, couponId: string | null, couponCode: string) {
+  if (!couponId && !couponCode) return null;
+  const params: any[] = [];
+  const whereParts: string[] = ['c.is_active = true', 'current_date BETWEEN c.start_date AND c.end_date'];
+  if (couponId) {
+    params.push(couponId);
+    whereParts.push(`c.coupon_id = $${params.length}`);
+  } else {
+    params.push(couponCode);
+    whereParts.push(`upper(coupon.code) = upper($${params.length})`);
+  }
+  const { rows } = await client.query(
+    `SELECT
+       c.id,
+       c.title,
+       c.coupon_id,
+       coupon.code AS coupon_code,
+       COALESCE(array_remove(array_agg(DISTINCT cp.product_id), NULL), ARRAY[]::uuid[]) AS product_ids,
+       COALESCE(array_remove(array_agg(DISTINCT cc.category_id), NULL), ARRAY[]::uuid[]) AS category_ids
+     FROM campaigns c
+     LEFT JOIN coupons coupon ON coupon.id = c.coupon_id
+     LEFT JOIN campaign_products cp ON cp.campaign_id = c.id
+     LEFT JOIN campaign_categories cc ON cc.campaign_id = c.id
+     WHERE ${whereParts.join(' AND ')}
+     GROUP BY c.id, coupon.code
+     ORDER BY c.priority DESC, c.created_at DESC
+     LIMIT 1`,
+    params
+  );
+  if (!rows.length) return null;
+  return {
+    campaignId: rows[0].id,
+    campaignTitle: rows[0].title,
+    couponCode: rows[0].coupon_code,
+    productIds: Array.isArray(rows[0].product_ids) ? rows[0].product_ids.map(String) : [],
+    categoryIds: Array.isArray(rows[0].category_ids) ? rows[0].category_ids.map(String) : []
+  };
+}
+
+async function couponHasCampaignBinding(client: any, couponId: string | null, couponCode: string) {
+  if (!couponId && !couponCode) return false;
+  const params: any[] = [];
+  const whereParts: string[] = [];
+  if (couponId) {
+    params.push(couponId);
+    whereParts.push(`c.coupon_id = $${params.length}`);
+  }
+  if (couponCode) {
+    params.push(couponCode);
+    whereParts.push(`upper(coupon.code) = upper($${params.length})`);
+  }
+  if (whereParts.length === 0) return false;
+  const { rowCount } = await client.query(
+    `SELECT c.id
+     FROM campaigns c
+     LEFT JOIN coupons coupon ON coupon.id = c.coupon_id
+     WHERE ${whereParts.join(' OR ')}
+     LIMIT 1`,
+    params
+  );
+  return rowCount > 0;
 }
 
 const LOYALTY_EARN_AMOUNT = 200;
@@ -1623,6 +1722,32 @@ function normalizeCoupon(coupon: any) {
   };
 }
 
+function normalizeCampaign(campaign: any) {
+  if (!campaign) return null;
+  return {
+    ...campaign,
+    id: campaign.id,
+    name: campaign.name || '',
+    occasion: campaign.occasion || 'custom',
+    audience: campaign.audience || 'all',
+    title: campaign.title || campaign.name || '',
+    subtitle: campaign.subtitle || '',
+    startDate: dateOnlyValue(campaign.start_date || campaign.startDate),
+    endDate: dateOnlyValue(campaign.end_date || campaign.endDate),
+    bannerImageUrl: campaign.banner_image_url || campaign.bannerImageUrl || '',
+    couponId: campaign.coupon_id || campaign.couponId || null,
+    couponCode: campaign.coupon_code || campaign.couponCode || '',
+    priority: Number(campaign.priority || 0),
+    isActive: campaign.is_active !== undefined ? Boolean(campaign.is_active) : campaign.isActive !== undefined ? Boolean(campaign.isActive) : true,
+    productIds: Array.isArray(campaign.product_ids) ? campaign.product_ids : Array.isArray(campaign.productIds) ? campaign.productIds : [],
+    categoryIds: Array.isArray(campaign.category_ids) ? campaign.category_ids : Array.isArray(campaign.categoryIds) ? campaign.categoryIds : [],
+    products: Array.isArray(campaign.products) ? campaign.products : [],
+    metadata: campaign.metadata || {},
+    createdAt: campaign.created_at || campaign.createdAt,
+    updatedAt: campaign.updated_at || campaign.updatedAt
+  };
+}
+
 function normalizeAdvanceRequest(request: any) {
   if (!request) return null;
   return {
@@ -1737,10 +1862,18 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
       const placeholders = ids.map((_, idx) => `$${idx + 1}`).join(',');
       const prodQ = await client.query(`SELECT * FROM products WHERE id IN (${placeholders}) FOR UPDATE`, ids);
       if (prodQ.rowCount !== ids.length) throw new Error('One or more products not found');
+      const categoryRows = await client.query(
+        'SELECT product_id, array_agg(category_id ORDER BY is_primary DESC, created_at ASC) AS category_ids FROM product_categories WHERE product_id = ANY($1::uuid[]) GROUP BY product_id',
+        [ids]
+      );
+      const categoryMap = new Map<string, string[]>();
+      for (const row of categoryRows.rows) {
+        categoryMap.set(String(row.product_id), Array.isArray(row.category_ids) ? row.category_ids.map(String) : []);
+      }
 
       // Map products
       const prodMap = new Map<string, any>();
-      for (const r of prodQ.rows) prodMap.set(r.id, r);
+      for (const r of prodQ.rows) prodMap.set(r.id, { ...r, category_ids: categoryMap.get(String(r.id)) || [] });
 
       // Validate stock and compute totals
       let productTotal = 0;
@@ -1822,11 +1955,38 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
         await validateBirthdayCouponUse(client, (req as any).currentUser, coupon, couponCode, customerPhone);
         await validateWelcomeCouponUse(client, (req as any).currentUser, coupon, couponCode, customerPhone);
         await validateReferralCouponUse(client, (req as any).currentUser, coupon, couponCode);
-        if (productTotal < Number(coupon.min_order_value || 0)) throw new Error(`Minimum order value for this coupon is Rs ${coupon.min_order_value}`);
+        const campaignEligibility = await loadActiveCouponCampaignEligibility(client, coupon.id, couponCode);
+        const campaignBoundCoupon = Boolean(campaignEligibility) || await couponHasCampaignBinding(client, coupon.id, couponCode);
+        if (campaignBoundCoupon && !campaignEligibility) {
+          throw new Error('This special-offer coupon is not active right now.');
+        }
+        let couponDiscountBase = productTotal;
+        let couponCampaignMeta: any = null;
+        if (campaignEligibility) {
+          const eligibleProductIds = new Set<string>(campaignEligibility.productIds);
+          const eligibleCategoryIds = new Set<string>(campaignEligibility.categoryIds);
+          if (eligibleProductIds.size === 0 && eligibleCategoryIds.size === 0) {
+            throw new Error('This campaign coupon has no eligible products configured.');
+          }
+          couponDiscountBase = orderItems.reduce((sum, item) => {
+            const product = prodMap.get(item.product_id || '');
+            return productMatchesCampaignEligibility(product, eligibleProductIds, eligibleCategoryIds)
+              ? sum + Number(item.total_price || 0)
+              : sum;
+          }, 0);
+          if (couponDiscountBase <= 0) throw new Error('This coupon is valid only for selected special offer products.');
+          couponCampaignMeta = {
+            campaignId: campaignEligibility.campaignId,
+            campaignTitle: campaignEligibility.campaignTitle,
+            eligibleProductSubtotal: couponDiscountBase
+          };
+        }
+        if (couponDiscountBase < Number(coupon.min_order_value || 0)) throw new Error(`Minimum eligible order value for this coupon is Rs ${coupon.min_order_value}`);
         const rawDiscount = coupon.discount_type === 'percentage'
-          ? Math.round((productTotal * Number(coupon.discount_value || 0)) / 100)
+          ? Math.round((couponDiscountBase * Number(coupon.discount_value || 0)) / 100)
           : Number(coupon.discount_value || 0);
-        discountAmountValue = Math.min(productTotal, Math.max(0, rawDiscount));
+        discountAmountValue = Math.min(couponDiscountBase, Math.max(0, rawDiscount));
+        (payload as any).__couponCampaignMeta = couponCampaignMeta;
       }
       const itemDiscountValue = orderItems.reduce((sum, item) => sum + Number(item.item_discount || 0), 0);
       const baseProductSubtotal = orderItems.reduce((sum, item) => sum + Number(item.total_base_price || item.total_price || 0), 0);
@@ -1835,7 +1995,7 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
       const orderRef = generateId('ord');
       const totalDiscount = itemDiscountValue + discountAmountValue + loyaltyRedemption.discount;
       const finalAmountValue = Math.max(0, baseProductSubtotal + deliveryChargeValue + bagChargeValue - totalDiscount);
-      const orderRes = await client.query(`INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, meta, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now(),now()) RETURNING *`, [uid, orderRef, payload.customerName || null, customerPhone, orderStatus, paymentMethod, paymentStatus, paymentRef, deliveryMethodValue, payload.deliveryAddress || null, payload.selectedSlot || null, payload.bagOption || 'need', JSON.stringify(orderItems), baseProductSubtotal, deliveryChargeValue, bagChargeValue, totalDiscount, finalAmountValue, { couponCode: couponCode || null, itemDiscount: itemDiscountValue, couponDiscount: discountAmountValue, loyaltyRedeemPoints: loyaltyRedemption.points, loyaltyDiscount: loyaltyRedemption.discount, productSellingSubtotal: productTotal, deliveryRoute: deliveryRouteMeta }]);
+      const orderRes = await client.query(`INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, meta, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now(),now()) RETURNING *`, [uid, orderRef, payload.customerName || null, customerPhone, orderStatus, paymentMethod, paymentStatus, paymentRef, deliveryMethodValue, payload.deliveryAddress || null, payload.selectedSlot || null, payload.bagOption || 'need', JSON.stringify(orderItems), baseProductSubtotal, deliveryChargeValue, bagChargeValue, totalDiscount, finalAmountValue, { couponCode: couponCode || null, itemDiscount: itemDiscountValue, couponDiscount: discountAmountValue, couponCampaign: (payload as any).__couponCampaignMeta || null, loyaltyRedeemPoints: loyaltyRedemption.points, loyaltyDiscount: loyaltyRedemption.discount, productSellingSubtotal: productTotal, deliveryRoute: deliveryRouteMeta }]);
 
       const orderId = orderRes.rows[0].id;
       const shouldApplyOrderEffectsNow = !(paymentMethod === 'upi' && paymentStatus === 'pending');
@@ -3217,11 +3377,24 @@ app.put('/api/auth/wishlist', authMiddleware, attachUserMiddleware, async (req, 
   const currentUser = (req as any).currentUser;
   if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    const cleanWishlist = Array.isArray(wishlist) ? wishlist : [];
+    const requestedWishlist = cleanUuidList(wishlist);
     const updated = await runTransaction(async (client) => {
-      const res = await client.query('UPDATE users SET wishlist = $1, updated_at = now() WHERE id = $2 RETURNING *', [cleanWishlist, currentUser.id]);
+      let validWishlist = requestedWishlist;
+      if (requestedWishlist.length > 0) {
+        const existingProducts = await client.query(
+          'SELECT id FROM products WHERE id = ANY($1::uuid[])',
+          [requestedWishlist]
+        );
+        const existingIds = new Set(existingProducts.rows.map((row: any) => String(row.id)));
+        validWishlist = requestedWishlist.filter((productId) => existingIds.has(productId));
+      }
+
+      const res = await client.query(
+        'UPDATE users SET wishlist = $1::uuid[], updated_at = now() WHERE id = $2 RETURNING *',
+        [validWishlist, currentUser.id]
+      );
       await client.query('DELETE FROM wishlists WHERE user_id = $1', [currentUser.id]);
-      for (const productId of cleanWishlist) {
+      for (const productId of validWishlist) {
         await client.query('INSERT INTO wishlists(user_id, product_id) VALUES($1,$2) ON CONFLICT (user_id, product_id) DO NOTHING', [currentUser.id, productId]);
       }
       return res;
@@ -3230,6 +3403,59 @@ app.put('/api/auth/wishlist', authMiddleware, attachUserMiddleware, async (req, 
   } catch (err) {
     console.error('PUT /api/auth/wishlist error', err);
     return res.status(500).json({ error: 'Failed to update wishlist' });
+  }
+});
+
+app.get('/api/wishlist/products', authMiddleware, attachUserMiddleware, async (req, res) => {
+  const currentUser = (req as any).currentUser;
+  if (!currentUser) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const wishlistIds = cleanUuidList(currentUser.wishlist);
+    if (wishlistIds.length === 0) return res.json([]);
+
+    const { rows } = await pgQuery(`
+      SELECT
+        p.id,
+        p.category_id,
+        p.subcategory_id,
+        p.sku,
+        p.name,
+        p.slug,
+        p.description,
+        p.base_price,
+        p.offer_price,
+        p.stock_count,
+        p.weight_grams,
+        p.is_enabled,
+        p.low_stock_threshold,
+        p.metadata,
+        p.created_at,
+        p.updated_at,
+        wanted.sort_order,
+        COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+      FROM unnest($1::uuid[]) WITH ORDINALITY AS wanted(product_id, sort_order)
+      JOIN products p ON p.id = wanted.product_id
+      LEFT JOIN product_categories pc ON pc.product_id = p.id
+      WHERE p.is_enabled = true
+      GROUP BY p.id, wanted.sort_order
+      ORDER BY wanted.sort_order ASC
+    `, [wishlistIds]);
+
+    if (rows.length === 0) return res.json([]);
+
+    const productIds = rows.map((row: any) => row.id);
+    const imgs = await pgQuery('SELECT product_id, url, position FROM product_images WHERE product_id = ANY($1::uuid[]) ORDER BY position ASC', [productIds]);
+    const imagesByProduct = new Map<string, any[]>();
+    for (const image of imgs.rows) {
+      const list = imagesByProduct.get(image.product_id) || [];
+      list.push(image);
+      imagesByProduct.set(image.product_id, list);
+    }
+
+    return res.json(rows.map((row: any) => normalizeProduct(row, imagesByProduct.get(row.id) || [])));
+  } catch (err) {
+    console.error('GET /api/wishlist/products error', err);
+    return res.status(500).json({ error: 'Failed to load wishlist products' });
   }
 });
 
@@ -4209,10 +4435,17 @@ app.get('/api/products', async (req, res) => {
       where.push('p.offer_price > 0 AND p.base_price > p.offer_price');
       orderBy = '((p.base_price - p.offer_price) / NULLIF(p.base_price, 0)) DESC, p.updated_at DESC';
     } else if (sortMode === 'recommended') {
+      where.push(`(
+        COALESCE((p.metadata->>'isFeatured')::boolean, false) = true
+        OR COALESCE((p.metadata->>'isDailyEssential')::boolean, false) = true
+        OR (p.offer_price > 0 AND p.base_price > p.offer_price)
+        OR COALESCE((p.metadata->>'ratingAverage')::numeric, (p.metadata->>'rating_average')::numeric, 0) > 0
+      )`);
       orderBy = `
         (
           COALESCE((p.metadata->>'ratingAverage')::numeric, (p.metadata->>'rating_average')::numeric, 0) * 2
           + COALESCE((p.metadata->>'ratingCount')::numeric, (p.metadata->>'rating_count')::numeric, 0) * 0.1
+          + CASE WHEN COALESCE((p.metadata->>'isFeatured')::boolean, false) THEN 4 ELSE 0 END
           + CASE WHEN COALESCE((p.metadata->>'isDailyEssential')::boolean, false) THEN 3 ELSE 0 END
           + CASE WHEN p.offer_price > 0 AND p.base_price > p.offer_price THEN 2 ELSE 0 END
           + CASE WHEN p.stock_count > 0 THEN 1 ELSE 0 END
@@ -5242,7 +5475,21 @@ app.get('/api/coupons/validate/:code', async (req, res) => {
     }
     const parsedOrderValue = Number(orderValue) || 0;
     if (parsedOrderValue < (coupon.min_order_value || 0)) return res.status(400).json({ valid: false, error: `Minimum order value for this coupon is ₹${coupon.min_order_value}` });
-    return res.json({ valid: true, coupon: normalizeCoupon(coupon) });
+    const campaignEligibility = await loadActiveCouponCampaignEligibility({ query: pgQuery }, coupon.id, code.toUpperCase().trim());
+    const campaignBoundCoupon = Boolean(campaignEligibility) || await couponHasCampaignBinding({ query: pgQuery }, coupon.id, code.toUpperCase().trim());
+    if (campaignBoundCoupon && !campaignEligibility) {
+      return res.status(400).json({ valid: false, error: 'This special-offer coupon is not active right now.' });
+    }
+    return res.json({
+      valid: true,
+      coupon: normalizeCoupon({
+        ...coupon,
+        metadata: {
+          ...(coupon.metadata || {}),
+          campaignEligibility
+        }
+      })
+    });
   } catch (err) {
     console.error('GET /api/coupons/validate error', err);
     return res.status(500).json({ valid: false, error: 'Failed to validate coupon' });
@@ -5302,6 +5549,234 @@ app.delete('/api/banners/:id', authMiddleware, isAdminMiddleware, async (req, re
   } catch (err) {
     console.error('DELETE /api/banners/:id error', err);
     return res.status(500).json({ error: 'Failed to delete banner' });
+  }
+});
+
+async function loadCampaignRows(whereSql = 'TRUE', params: any[] = []) {
+  const { rows } = await pgQuery(`
+    SELECT
+      c.*,
+      coupon.code AS coupon_code,
+      COALESCE(array_remove(array_agg(DISTINCT cp.product_id), NULL), ARRAY[]::uuid[]) AS product_ids,
+      COALESCE(array_remove(array_agg(DISTINCT cc.category_id), NULL), ARRAY[]::uuid[]) AS category_ids
+    FROM campaigns c
+    LEFT JOIN coupons coupon ON coupon.id = c.coupon_id
+    LEFT JOIN campaign_products cp ON cp.campaign_id = c.id
+    LEFT JOIN campaign_categories cc ON cc.campaign_id = c.id
+    WHERE ${whereSql}
+    GROUP BY c.id, coupon.code
+    ORDER BY c.priority DESC, c.start_date ASC, c.created_at DESC
+  `, params);
+  return rows.map(normalizeCampaign);
+}
+
+async function attachCampaignProducts(campaigns: any[], productLimitPerCampaign = 80) {
+  const normalizedCampaigns = campaigns.filter(Boolean);
+  if (normalizedCampaigns.length === 0) return normalizedCampaigns;
+
+  const explicitProductIds = Array.from(new Set(normalizedCampaigns.flatMap((campaign) => campaign.productIds || [])));
+  const categoryIds = Array.from(new Set(normalizedCampaigns.flatMap((campaign) => campaign.categoryIds || [])));
+  if (explicitProductIds.length === 0 && categoryIds.length === 0) {
+    return normalizedCampaigns.map((campaign) => ({ ...campaign, products: [] }));
+  }
+
+  const { rows } = await pgQuery(`
+    SELECT
+      p.id,
+      p.category_id,
+      p.subcategory_id,
+      p.sku,
+      p.name,
+      p.slug,
+      p.description,
+      p.base_price,
+      p.offer_price,
+      p.stock_count,
+      p.weight_grams,
+      p.is_enabled,
+      p.low_stock_threshold,
+      p.metadata,
+      p.created_at,
+      p.updated_at,
+      first_image.url AS first_image_url,
+      COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+    FROM products p
+    LEFT JOIN product_categories pc ON pc.product_id = p.id
+    LEFT JOIN LATERAL (
+      SELECT url
+      FROM product_images
+      WHERE product_id = p.id
+      ORDER BY position ASC
+      LIMIT 1
+    ) first_image ON true
+    WHERE p.is_enabled = true
+      AND COALESCE((p.metadata->>'isLooseItem')::boolean, false) = false
+      AND (
+        p.id = ANY($1::uuid[])
+        OR p.category_id = ANY($2::uuid[])
+        OR p.subcategory_id = ANY($2::uuid[])
+        OR EXISTS (
+          SELECT 1 FROM product_categories pc_match
+          WHERE pc_match.product_id = p.id
+            AND pc_match.category_id = ANY($2::uuid[])
+        )
+      )
+    GROUP BY p.id, first_image.url
+    ORDER BY
+      CASE WHEN p.offer_price > 0 AND p.base_price > p.offer_price THEN 0 ELSE 1 END,
+      p.updated_at DESC,
+      p.name ASC
+  `, [explicitProductIds, categoryIds]);
+
+  const products = rows.map((row: any) => normalizeProductSummary(row)).filter(Boolean);
+  return normalizedCampaigns.map((campaign) => {
+    const campaignProductIds = new Set(campaign.productIds || []);
+    const campaignCategoryIds = new Set(campaign.categoryIds || []);
+    const matchedProducts = products.filter((product: any) => {
+      if (campaignProductIds.has(product.id)) return true;
+      const allCategoryIds = [
+        product.categoryId,
+        product.subcategoryId,
+        ...(Array.isArray(product.categoryIds) ? product.categoryIds : [])
+      ].filter(Boolean);
+      return allCategoryIds.some((categoryId) => campaignCategoryIds.has(categoryId));
+    });
+    return { ...campaign, products: matchedProducts.slice(0, productLimitPerCampaign) };
+  });
+}
+
+app.get('/api/campaigns/active', async (req, res) => {
+  try {
+    const cacheKey = 'campaigns:active';
+    const cached = getPublicCache(cacheKey);
+    if (cached) return sendCacheableJson(res, cached, 120);
+    const campaigns = await loadCampaignRows(
+      `c.is_active = true
+       AND c.start_date <= CURRENT_DATE
+       AND c.end_date >= CURRENT_DATE`,
+      []
+    );
+    const campaignsWithProducts = await attachCampaignProducts(campaigns);
+    setPublicCache(cacheKey, campaignsWithProducts, 120_000);
+    return sendCacheableJson(res, campaignsWithProducts, 120);
+  } catch (err) {
+    console.error('GET /api/campaigns/active error', err);
+    return res.status(500).json({ error: 'Failed to load active campaigns' });
+  }
+});
+
+app.get('/api/campaigns', authMiddleware, isAdminMiddleware, async (req, res) => {
+  try {
+    const campaigns = await loadCampaignRows();
+    return res.json(campaigns);
+  } catch (err) {
+    console.error('GET /api/campaigns error', err);
+    return res.status(500).json({ error: 'Failed to load campaigns' });
+  }
+});
+
+async function saveCampaignLinks(client: any, campaignId: string, productIds: string[], categoryIds: string[]) {
+  await client.query('DELETE FROM campaign_products WHERE campaign_id = $1', [campaignId]);
+  await client.query('DELETE FROM campaign_categories WHERE campaign_id = $1', [campaignId]);
+  for (const productId of cleanUuidList(productIds, 200)) {
+    await client.query('INSERT INTO campaign_products(campaign_id, product_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [campaignId, productId]);
+  }
+  for (const categoryId of cleanUuidList(categoryIds, 200)) {
+    await client.query('INSERT INTO campaign_categories(campaign_id, category_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [campaignId, categoryId]);
+  }
+}
+
+function normalizeCampaignPayload(body: any) {
+  const name = String(body?.name || '').trim();
+  const title = String(body?.title || name).trim();
+  const occasion = ['festival', 'weekend', 'fresh_stock', 'clearance', 'free_delivery', 'own_brand', 'custom'].includes(body?.occasion) ? body.occasion : 'custom';
+  const audience = ['all', 'new_customers', 'birthday_customers', 'returning_customers'].includes(body?.audience) ? body.audience : 'all';
+  const startDate = dateOnlyValue(body?.startDate || body?.start_date);
+  const endDate = dateOnlyValue(body?.endDate || body?.end_date);
+  const couponId = String(body?.couponId || body?.coupon_id || '').trim();
+  const productIds = cleanUuidList(body?.productIds || body?.product_ids, 200);
+  const categoryIds = cleanUuidList(body?.categoryIds || body?.category_ids, 200);
+  if (!name || !title) throw new HttpError(400, 'Campaign name and title are required.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    throw new HttpError(400, 'Campaign start and end dates are required.');
+  }
+  if (endDate < startDate) throw new HttpError(400, 'Campaign end date cannot be before start date.');
+  return {
+    name,
+    title,
+    occasion,
+    audience,
+    subtitle: String(body?.subtitle || '').trim(),
+    startDate,
+    endDate,
+    bannerImageUrl: String(body?.bannerImageUrl || body?.banner_image_url || '').trim(),
+    couponId: UUID_REGEX.test(couponId) ? couponId : null,
+    priority: Math.max(0, Math.floor(Number(body?.priority || 0))),
+    isActive: body?.isActive !== undefined ? Boolean(body.isActive) : body?.is_active !== undefined ? Boolean(body.is_active) : true,
+    metadata: body?.metadata && typeof body.metadata === 'object' ? body.metadata : {},
+    productIds,
+    categoryIds
+  };
+}
+
+app.post('/api/campaigns', authMiddleware, isAdminMiddleware, async (req, res) => {
+  try {
+    const payload = normalizeCampaignPayload(req.body);
+    const campaign = await runTransaction(async (client) => {
+      const inserted = await client.query(
+        `INSERT INTO campaigns(name, occasion, audience, title, subtitle, start_date, end_date, banner_image_url, coupon_id, priority, is_active, metadata, created_at, updated_at)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,now(),now())
+         RETURNING *`,
+        [payload.name, payload.occasion, payload.audience, payload.title, payload.subtitle || null, payload.startDate, payload.endDate, payload.bannerImageUrl || null, payload.couponId, payload.priority, payload.isActive, JSON.stringify(payload.metadata)]
+      );
+      await saveCampaignLinks(client, inserted.rows[0].id, payload.productIds, payload.categoryIds);
+      return inserted.rows[0];
+    });
+    invalidatePublicCache('campaigns');
+    const [normalized] = await loadCampaignRows('c.id = $1', [campaign.id]);
+    return res.json({ success: true, data: normalized });
+  } catch (err: any) {
+    console.error('POST /api/campaigns error', err);
+    return res.status(err.statusCode || 500).json({ error: err.message || 'Failed to create campaign' });
+  }
+});
+
+app.put('/api/campaigns/:id', authMiddleware, isAdminMiddleware, async (req, res) => {
+  const id = req.params.id;
+  if (!UUID_REGEX.test(id)) return res.status(400).json({ error: 'Invalid campaign id' });
+  try {
+    const payload = normalizeCampaignPayload(req.body);
+    await runTransaction(async (client) => {
+      const updated = await client.query(
+        `UPDATE campaigns
+         SET name=$1, occasion=$2, audience=$3, title=$4, subtitle=$5, start_date=$6, end_date=$7,
+             banner_image_url=$8, coupon_id=$9, priority=$10, is_active=$11, metadata=$12::jsonb, updated_at=now()
+         WHERE id=$13
+         RETURNING *`,
+        [payload.name, payload.occasion, payload.audience, payload.title, payload.subtitle || null, payload.startDate, payload.endDate, payload.bannerImageUrl || null, payload.couponId, payload.priority, payload.isActive, JSON.stringify(payload.metadata), id]
+      );
+      if (updated.rowCount === 0) throw new HttpError(404, 'Campaign not found.');
+      await saveCampaignLinks(client, id, payload.productIds, payload.categoryIds);
+    });
+    invalidatePublicCache('campaigns');
+    const [normalized] = await loadCampaignRows('c.id = $1', [id]);
+    return res.json({ success: true, data: normalized });
+  } catch (err: any) {
+    console.error('PUT /api/campaigns/:id error', err);
+    return res.status(err.statusCode || 500).json({ error: err.message || 'Failed to update campaign' });
+  }
+});
+
+app.delete('/api/campaigns/:id', authMiddleware, isAdminMiddleware, async (req, res) => {
+  const id = req.params.id;
+  if (!UUID_REGEX.test(id)) return res.status(400).json({ error: 'Invalid campaign id' });
+  try {
+    await pgQuery('DELETE FROM campaigns WHERE id = $1', [id]);
+    invalidatePublicCache('campaigns');
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /api/campaigns/:id error', err);
+    return res.status(500).json({ error: 'Failed to delete campaign' });
   }
 });
 
@@ -6739,6 +7214,45 @@ async function ensureRuntimeSchemaCompatibility() {
   await pgQuery("ALTER TABLE banners ADD COLUMN IF NOT EXISTS link_type varchar(50) DEFAULT 'none'");
   await pgQuery("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS audience varchar(30) DEFAULT 'customer'");
   await pgQuery("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()");
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS campaigns (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      name varchar(200) NOT NULL,
+      occasion varchar(50) NOT NULL DEFAULT 'custom',
+      audience varchar(50) NOT NULL DEFAULT 'all',
+      title varchar(240) NOT NULL,
+      subtitle text,
+      start_date date NOT NULL,
+      end_date date NOT NULL,
+      banner_image_url text,
+      coupon_id uuid REFERENCES coupons(id) ON DELETE SET NULL,
+      priority integer DEFAULT 0,
+      is_active boolean DEFAULT true,
+      metadata jsonb DEFAULT '{}',
+      created_at timestamptz DEFAULT now(),
+      updated_at timestamptz DEFAULT now(),
+      CONSTRAINT chk_campaign_dates CHECK (end_date >= start_date),
+      CONSTRAINT chk_campaign_occasion CHECK (occasion IN ('festival','weekend','fresh_stock','clearance','free_delivery','own_brand','custom')),
+      CONSTRAINT chk_campaign_audience CHECK (audience IN ('all','new_customers','birthday_customers','returning_customers'))
+    )
+  `);
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS campaign_products (
+      campaign_id uuid REFERENCES campaigns(id) ON DELETE CASCADE,
+      product_id uuid REFERENCES products(id) ON DELETE CASCADE,
+      created_at timestamptz DEFAULT now(),
+      PRIMARY KEY (campaign_id, product_id)
+    )
+  `);
+  await pgQuery(`
+    CREATE TABLE IF NOT EXISTS campaign_categories (
+      campaign_id uuid REFERENCES campaigns(id) ON DELETE CASCADE,
+      category_id uuid REFERENCES categories(id) ON DELETE CASCADE,
+      created_at timestamptz DEFAULT now(),
+      PRIMARY KEY (campaign_id, category_id)
+    )
+  `);
+  await pgQuery('CREATE INDEX IF NOT EXISTS idx_campaigns_active_dates ON campaigns(is_active, start_date, end_date, priority DESC)');
   await pgQuery('CREATE INDEX IF NOT EXISTS idx_inventory_created_at ON inventory_logs(created_at DESC)');
   const missingSkuProducts = await pgQuery("SELECT id, name FROM products WHERE sku IS NULL OR trim(sku) = '' LIMIT 500");
   for (const product of missingSkuProducts.rows) {

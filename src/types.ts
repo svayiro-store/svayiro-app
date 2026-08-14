@@ -280,6 +280,31 @@ export interface Coupon {
   updatedAt?: string;
 }
 
+export type CampaignOccasion = 'festival' | 'weekend' | 'fresh_stock' | 'clearance' | 'free_delivery' | 'own_brand' | 'custom';
+export type CampaignAudience = 'all' | 'new_customers' | 'birthday_customers' | 'returning_customers';
+
+export interface Campaign {
+  id: string;
+  name: string;
+  occasion: CampaignOccasion;
+  audience: CampaignAudience;
+  title: string;
+  subtitle?: string;
+  startDate: string;
+  endDate: string;
+  bannerImageUrl?: string;
+  couponId?: string | null;
+  couponCode?: string;
+  priority: number;
+  isActive: boolean;
+  productIds: string[];
+  categoryIds: string[];
+  products?: Product[];
+  metadata?: Record<string, any>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Banner {
   id: string;
   title: string;

@@ -5,7 +5,7 @@
 
 import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { api } from './api';
-import { ShopProfile, Category, Product, Banner, Notification, User } from './types';
+import { ShopProfile, Category, Product, Banner, Notification, User, Campaign } from './types';
 import { ShoppingBag, Settings, RefreshCw, AlertCircle, CheckCircle, AlertTriangle, XCircle, Info, X, Eye, EyeOff } from 'lucide-react';
 import PublicPrintBill from './components/PublicPrintBill';
 
@@ -13,6 +13,61 @@ type AppTarget = 'all' | 'customer' | 'admin';
 const BUILD_TARGET = (__SVAYIRO_APP_TARGET__ === 'customer' || __SVAYIRO_APP_TARGET__ === 'admin' ? __SVAYIRO_APP_TARGET__ : 'all') as AppTarget;
 const CustomerApp = __SVAYIRO_APP_TARGET__ === 'admin' ? null : lazy(() => import('./components/customer/CustomerApp'));
 const AdminApp = __SVAYIRO_APP_TARGET__ === 'customer' ? null : lazy(() => import('./components/admin'));
+const svayiroWordmarkStyle = {
+  fontFamily: '"Tw Cen MT", "Tw Cen MT Condensed", "Century Gothic", Arial, sans-serif',
+  fontWeight: 900,
+  letterSpacing: '-0.035em'
+} as const;
+
+function SvayiroWordmark({ name, className = '' }: { name: string; className?: string }) {
+  const displayName = String(name || 'SVAYIRO').trim().toUpperCase();
+  if (displayName === 'SVAYIRO') {
+    return (
+      <span className={className} style={svayiroWordmarkStyle}>
+        <span style={{ color: '#000d86',WebkitTextStroke: '0.5px #0c0059' }}>SVAYIR</span>
+        <span style={{ color: '#F3D300', WebkitTextStroke: '1px #C7AA00' }}>O</span>
+      </span>
+    );
+  }
+  return (
+    <span className={className} style={svayiroWordmarkStyle}>
+      {displayName}
+    </span>
+  );
+}
+
+function SplashLogo({ logoUrl, name }: { logoUrl?: string; name: string }) {
+  const [imageError, setImageError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const showFallback = !logoUrl || imageError;
+
+  return (
+    <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-white/30 bg-white shadow-2xl shadow-indigo-900/30">
+      {showFallback ? (
+        <ShoppingBag className="h-9 w-9 text-indigo-700" />
+      ) : (
+        <>
+          {isLoading && (
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+            </span>
+          )}
+          <img
+            src={logoUrl}
+            alt={name}
+            className={`h-full w-full rounded-full object-cover transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+            onError={() => {
+              setImageError(true);
+              setIsLoading(false);
+            }}
+            onLoad={() => setIsLoading(false)}
+          />
+        </>
+      )}
+    </div>
+  );
+}
 
 export interface ToastMessage {
   id: string;
@@ -82,6 +137,7 @@ export default function App() {
   const [customerHomeProductCategoryId, setCustomerHomeProductCategoryId] = useState<string | null>(null);
   const [customerHomeProductsLoading, setCustomerHomeProductsLoading] = useState(false);
   const [banners, setBanners] = useState<Banner[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeUser, setActiveUser] = useState<User | null>(null);
 
@@ -354,11 +410,12 @@ export default function App() {
       const customerProductSets = resourceMode === 'admin'
         ? null
         : await loadCustomerHomeProductSets();
-      const [shopRes, categoriesRes, productsRes, bannersRes, notificationsRes] = await Promise.all([
+      const [shopRes, categoriesRes, productsRes, bannersRes, campaignsRes, notificationsRes] = await Promise.all([
         api.getShopProfile(),
         api.getCategories(),
         resourceMode === 'admin' ? api.getProducts({ limit: 50, offset: 0 }) : Promise.resolve(customerProductSets?.products || []),
         api.getBanners(),
+        api.getActiveCampaigns(),
         api.getNotifications()
       ]);
       
@@ -374,6 +431,7 @@ export default function App() {
         setCustomerHomeProductCategoryId(null);
       }
       setBanners(bannersRes.map(normalizeBanner));
+      setCampaigns(campaignsRes);
       setNotifications(notificationsRes);
       stableResourcesLoadedRef.current = true;
     } catch (err: any) {
@@ -673,21 +731,17 @@ export default function App() {
     const splashName = shop?.name || 'SVAYIRO';
     const splashLogo = shop?.logoUrl || '';
     return (
-      <div className="min-h-screen bg-[#0f172a] text-white flex flex-col justify-center items-center gap-5 overflow-hidden">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_center,#ffffff_0%,#f8fbff_34%,#9aa8da_66%,#06115f_100%)] text-white flex flex-col justify-center items-center gap-5 overflow-hidden">
         <div className="relative flex h-28 w-28 items-center justify-center">
           <span className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" />
           <span className="absolute inset-3 rounded-full border border-emerald-400/40 animate-pulse" />
-          <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl border border-white/15 bg-white shadow-2xl shadow-indigo-900/40">
-            {splashLogo ? (
-              <img src={splashLogo} alt={splashName} className="h-full w-full object-cover" />
-            ) : (
-              <ShoppingBag className="h-9 w-9 text-indigo-700" />
-            )}
-          </div>
+          <SplashLogo logoUrl={splashLogo} name={splashName} />
         </div>
         <div className="text-center">
-          <p className="font-serif text-2xl font-semibold tracking-wide text-white animate-pulse">{splashName}</p>
-          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.35em] text-emerald-300">Fresh store loading</p>
+          <p className="animate-pulse">
+            <SvayiroWordmark name={splashName} className="text-4xl uppercase" />
+          </p>
+          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.35em] text-emerald-700">Fresh store loading</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-indigo-400 animate-bounce" />
@@ -703,8 +757,9 @@ export default function App() {
       <div className="flex flex-col items-center gap-3">
         <div className="relative h-12 w-12">
           <span className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 shadow-[0_0_22px_rgba(253,224,71,0.75)]" />
-          <span className="absolute inset-0 animate-spin rounded-full">
-            <span className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-full bg-blue-500 shadow-[0_0_14px_rgba(59,130,246,0.85)]" />
+          <span className="absolute inset-0 rounded-full border border-blue-300/35 shadow-[0_0_12px_rgba(147,197,253,0.20)]" />
+          <span className="absolute -inset-1 animate-spin rounded-full">
+            <span className="absolute left-1/2 top-0 h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-blue-800 shadow-[0_0_12px_rgba(30,64,175,0.9)] ring-1 ring-blue-200/70" />
           </span>
         </div>
         <p className="text-[11px] font-normal lowercase tracking-wide text-indigo-100">loading..</p>
@@ -834,6 +889,7 @@ export default function App() {
               isLoading: customerHomeProductsLoading
             }}
             banners={banners}
+            campaigns={campaigns}
             notifications={notifications}
             activeUser={activeCustomerUser}
             onLoginSuccess={handleLoginSuccess}

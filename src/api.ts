@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ShopProfile, Category, Product, Bag, Coupon, Banner, Review, Notification, Order, AdvanceRequest, InventoryLog, User, Address, Role, StaffUser, Invoice, PaymentRecord, RoleCode, AdminAlert } from './types';
+import { ShopProfile, Category, Product, Bag, Coupon, Banner, Review, Notification, Order, AdvanceRequest, InventoryLog, User, Address, Role, StaffUser, Invoice, PaymentRecord, RoleCode, AdminAlert, Campaign } from './types';
 
 const rawApiUrl = String(import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '').trim();
 const normalizedApiUrl = rawApiUrl.replace(/\/$/, '');
@@ -207,6 +207,40 @@ function normalizeCoupon(row: any): Coupon {
   };
 }
 
+function normalizeCampaign(row: any): Campaign {
+  const metadata = row?.metadata || {};
+  const dateOnly = (value: any) => {
+    const raw = String(value || '').trim();
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    const displayMatch = raw.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (displayMatch) return `${displayMatch[3]}-${displayMatch[2]}-${displayMatch[1]}`;
+    return '';
+  };
+  return {
+    ...row,
+    id: row.id,
+    name: row.name || '',
+    occasion: row.occasion || 'custom',
+    audience: row.audience || 'all',
+    title: row.title || row.name || '',
+    subtitle: row.subtitle || '',
+    startDate: dateOnly(row.startDate || row.start_date),
+    endDate: dateOnly(row.endDate || row.end_date),
+    bannerImageUrl: row.bannerImageUrl || row.banner_image_url || '',
+    couponId: row.couponId ?? row.coupon_id ?? null,
+    couponCode: row.couponCode || row.coupon_code || '',
+    priority: Number(row.priority || 0),
+    isActive: row.isActive ?? row.is_active ?? true,
+    productIds: Array.isArray(row.productIds) ? row.productIds : Array.isArray(row.product_ids) ? row.product_ids : [],
+    categoryIds: Array.isArray(row.categoryIds) ? row.categoryIds : Array.isArray(row.category_ids) ? row.category_ids : [],
+    products: Array.isArray(row.products) ? row.products : [],
+    metadata,
+    createdAt: row.createdAt || row.created_at,
+    updatedAt: row.updatedAt || row.updated_at
+  };
+}
+
 function normalizeNotification(row: any): Notification {
   return {
     ...row,
@@ -338,6 +372,9 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ phone, wishlist })
     }),
+
+  getWishlistProducts: () =>
+    apiRequest<Product[]>('/wishlist/products'),
 
   updateSaveLater: (phone: string, savedForLater: { productId: string; quantity: number }[]) =>
     apiRequest<{ success: boolean; user: User }>('/auth/save-later', {
@@ -548,6 +585,39 @@ export const api = {
       method: 'DELETE'
     }).then((res) => {
       invalidateApiCache('/banners');
+      return res;
+    }),
+
+  // Campaign / Occasion Offers APIs
+  getCampaigns: () =>
+    apiRequest<any[]>('/campaigns', undefined, 60_000).then((rows) => rows.map(normalizeCampaign)),
+
+  getActiveCampaigns: () =>
+    apiRequest<any[]>('/campaigns/active', undefined, 60_000).then((rows) => rows.map(normalizeCampaign)),
+
+  createCampaign: (campaign: Partial<Campaign>) =>
+    apiRequest<{ success: boolean; data: any }>('/campaigns', {
+      method: 'POST',
+      body: JSON.stringify(campaign)
+    }).then((res) => {
+      invalidateApiCache('/campaigns');
+      return { ...res, data: normalizeCampaign(res.data) };
+    }),
+
+  updateCampaign: (id: string, campaign: Partial<Campaign>) =>
+    apiRequest<{ success: boolean; data: any }>(`/campaigns/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(campaign)
+    }).then((res) => {
+      invalidateApiCache('/campaigns');
+      return { ...res, data: normalizeCampaign(res.data) };
+    }),
+
+  deleteCampaign: (id: string) =>
+    apiRequest<{ success: boolean }>(`/campaigns/${id}`, {
+      method: 'DELETE'
+    }).then((res) => {
+      invalidateApiCache('/campaigns');
       return res;
     }),
 

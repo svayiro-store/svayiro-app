@@ -77,6 +77,8 @@ export default function ProductDetailView({
   const productImages = selectedProduct.images?.length ? selectedProduct.images : [productImageFallback];
   const hasMultipleImages = productImages.length > 1;
   const activePrice = selectedProduct.offerPrice > 0 ? selectedProduct.offerPrice : selectedProduct.basePrice;
+  const hasDiscount = selectedProduct.offerPrice > 0 && selectedProduct.basePrice > selectedProduct.offerPrice;
+  const discountPercent = hasDiscount ? Math.round(((selectedProduct.basePrice - selectedProduct.offerPrice) / selectedProduct.basePrice) * 100) : 0;
   const looseOptions = isLooseProduct(selectedProduct) ? looseQuantityOptions(selectedProduct) : [];
   const detailPriceFactor = isLooseProduct(selectedProduct) ? loosePriceFactor(selectedProduct, detailQty) : detailQty;
   const detailTotal = activePrice * detailPriceFactor;
@@ -118,10 +120,10 @@ export default function ProductDetailView({
   };
 
   return (
-    <div className="mx-auto mb-6 flex w-full max-w-6xl flex-col rounded-2xl border border-slate-200/60 bg-white p-4 font-sans shadow-sm animate-fadeIn select-none dark:border-slate-800/60 dark:bg-slate-900 md:p-5">
+    <div className="mx-auto mb-6 flex w-full max-w-6xl flex-col rounded-2xl border border-slate-200/60 bg-white p-3 font-sans shadow-sm animate-fadeIn select-none dark:border-slate-800/60 dark:bg-slate-900 md:p-5">
       
       {/* Back Button and Actions Header */}
-      <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200 dark:border-slate-850">
+      <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-850">
         <button 
           onClick={() => setSelectedProduct(null)}
           className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
@@ -166,17 +168,25 @@ export default function ProductDetailView({
         </div>
 
       {/* Main Content Area */}
-      <div className="grid w-full flex-1 grid-cols-1 gap-6 py-3 md:py-5 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)] lg:items-start">
+      <div className="grid w-full flex-1 grid-cols-1 gap-5 py-2 md:py-4 lg:grid-cols-[minmax(280px,390px)_minmax(0,1fr)] lg:items-start">
         
         {/* Left Side: Gorgeous Image Presentation */}
-        <div className="flex w-full max-w-[420px] flex-col gap-3 justify-self-center lg:sticky lg:top-24">
-          <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200/50 bg-slate-100 shadow-sm group dark:border-slate-800/50 dark:bg-[#111827]">
+        <div className="flex w-full max-w-[390px] flex-col gap-3 justify-self-center lg:sticky lg:top-24">
+          <div className="relative aspect-[1/1.02] w-full overflow-hidden rounded-2xl border border-slate-200/50 bg-slate-100 shadow-sm group dark:border-slate-800/50 dark:bg-[#111827]">
             <img 
               src={productImages[activeImageIndex] || productImages[0]} 
               alt={selectedProduct.name} 
-              className="h-full w-full object-contain p-2 transition-all duration-500 group-hover:scale-[1.02]" 
+              className="h-full w-full object-contain p-1 transition-all duration-500 group-hover:scale-[1.02]" 
               referrerPolicy="no-referrer"
             />
+            {hasDiscount && (
+              <div className="absolute left-3 top-3 z-10 rounded-full bg-emerald-700 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-lg">
+                {discountPercent}% save
+              </div>
+            )}
+            <div className="absolute right-3 top-3 z-10 rounded-full bg-indigo-50 px-3 py-1.5 text-[10px] font-semibold text-indigo-700 shadow-lg ring-1 ring-indigo-100">
+              {formatProductMeasure(selectedProduct).toLowerCase()}
+            </div>
             {hasMultipleImages && (
               <>
                 <button
@@ -211,13 +221,13 @@ export default function ProductDetailView({
             
             {/* Dynamic tag */}
             {isLowStock && (
-              <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1.5 text-[10px] font-semibold uppercase text-white shadow-lg">
+              <div className={`absolute ${hasDiscount ? 'left-3 top-12' : 'left-3 top-3'} z-10 flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1.5 text-[10px] font-semibold uppercase text-white shadow-lg`}>
                 <AlertTriangle className="h-3 w-3" />
                 <span>Low Stock</span>
               </div>
             )}
             {selectedProduct.stockCount === 0 && (
-              <div className="absolute left-3 top-3 rounded-full bg-rose-500 px-3 py-1.5 text-[10px] font-semibold uppercase text-white shadow-lg">
+              <div className="absolute left-3 top-3 z-10 rounded-full bg-rose-500 px-3 py-1.5 text-[10px] font-semibold uppercase text-white shadow-lg">
                 <span>Out of stock</span>
               </div>
             )}
@@ -281,11 +291,11 @@ export default function ProductDetailView({
                   <span className="text-3xl font-black text-slate-900 dark:text-white">
                     {money(activePrice)}
                   </span>
-                  {selectedProduct.offerPrice > 0 && (
+                  {hasDiscount && (
                     <>
                       <span className="text-slate-400 line-through text-sm">{money(selectedProduct.basePrice)}</span>
                       <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 rounded-md">
-                        Save {Math.round(((selectedProduct.basePrice - selectedProduct.offerPrice) / selectedProduct.basePrice) * 100)}%
+                        Save {discountPercent}%
                       </span>
                     </>
                   )}

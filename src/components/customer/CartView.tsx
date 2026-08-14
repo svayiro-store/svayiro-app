@@ -11,7 +11,9 @@ interface CartViewProps {
   cart: { productId: string; quantity: number }[];
   products: Product[];
   totals: {
+    mrpTotal?: number;
     productTotal: number;
+    offerSavings?: number;
     totalWeightGrams: number;
     itemsList: { product: Product; quantity: number }[];
     computedBags: CheckoutBagInfo[];
@@ -20,6 +22,7 @@ interface CartViewProps {
     discount: number;
     loyaltyDiscount?: number;
     finalTotal: number;
+    totalSavings?: number;
     deliveryDistanceKm: number;
   };
   updateCartQty: (pId: string, qty: number) => void;
@@ -90,6 +93,7 @@ export default function CartView({
   loyaltyRedeemPoints = 0,
   setLoyaltyRedeemPoints
 }: CartViewProps) {
+  const formatMoney = (value: number | undefined) => `₹${Math.round(Number(value || 0))}`;
   const selectedAddress = (activeUser && activeUser.savedAddresses && activeUser.savedAddresses.length > 0)
     ? activeUser.savedAddresses[selectedAddressIndex]
     : null;
@@ -460,6 +464,46 @@ export default function CartView({
               </div>
             </div>
 
+            <div className="space-y-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Order Savings Review</span>
+                {(totals.totalSavings || 0) > 0 && (
+                  <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">
+                    Saved {formatMoney(totals.totalSavings)}
+                  </span>
+                )}
+              </div>
+              <div className="flex justify-between text-slate-700 dark:text-slate-200">
+                <span>MRP total</span>
+                <span>{formatMoney(totals.mrpTotal || totals.productTotal)}</span>
+              </div>
+              {(totals.offerSavings || 0) > 0 && (
+                <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
+                  <span>Product offer saving</span>
+                  <span>-{formatMoney(totals.offerSavings)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-slate-700 dark:text-slate-200">
+                <span>Offer price subtotal</span>
+                <span>{formatMoney(totals.productTotal)}</span>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
+                  <span>Coupon saving ({appliedCoupon.code})</span>
+                  <span>-{formatMoney(totals.discount)}</span>
+                </div>
+              )}
+              {(totals.loyaltyDiscount || 0) > 0 && (
+                <div className="flex justify-between text-indigo-700 dark:text-indigo-300">
+                  <span>Savings Points redeemed</span>
+                  <span>-{formatMoney(totals.loyaltyDiscount)}</span>
+                </div>
+              )}
+              <p className="border-t border-emerald-200 pt-2 text-[11px] font-medium text-emerald-800 dark:border-emerald-900 dark:text-emerald-200">
+                Final payable is shown below. UPI orders are submitted only for owner verification after you enter the UTR/reference.
+              </p>
+            </div>
+
             {/* Calculations */}
             <div className="space-y-2 text-sm border-t border-slate-200 dark:border-slate-800 pt-4">
               <div className="flex justify-between">
@@ -519,7 +563,7 @@ export default function CartView({
                     : 'bg-indigo-600 hover:bg-indigo-500 text-white'
                 }`}
               >
-                <span>Proceed To Secure Checkout</span>
+                <span>Review Order & Continue</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             )}

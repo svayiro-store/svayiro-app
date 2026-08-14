@@ -187,6 +187,44 @@ CREATE TABLE coupons (
   updated_at timestamptz DEFAULT now()
 );
 
+-- Campaigns / Occasion Offers
+CREATE TABLE campaigns (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name varchar(200) NOT NULL,
+  occasion varchar(50) NOT NULL DEFAULT 'custom',
+  audience varchar(50) NOT NULL DEFAULT 'all',
+  title varchar(240) NOT NULL,
+  subtitle text,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  banner_image_url text,
+  coupon_id uuid REFERENCES coupons(id) ON DELETE SET NULL,
+  priority integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  metadata jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  CONSTRAINT chk_campaign_dates CHECK (end_date >= start_date),
+  CONSTRAINT chk_campaign_occasion CHECK (occasion IN ('festival','weekend','fresh_stock','clearance','free_delivery','own_brand','custom')),
+  CONSTRAINT chk_campaign_audience CHECK (audience IN ('all','new_customers','birthday_customers','returning_customers'))
+);
+
+CREATE TABLE campaign_products (
+  campaign_id uuid REFERENCES campaigns(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES products(id) ON DELETE CASCADE,
+  created_at timestamptz DEFAULT now(),
+  PRIMARY KEY (campaign_id, product_id)
+);
+
+CREATE TABLE campaign_categories (
+  campaign_id uuid REFERENCES campaigns(id) ON DELETE CASCADE,
+  category_id uuid REFERENCES categories(id) ON DELETE CASCADE,
+  created_at timestamptz DEFAULT now(),
+  PRIMARY KEY (campaign_id, category_id)
+);
+
+CREATE INDEX idx_campaigns_active_dates ON campaigns(is_active, start_date, end_date, priority DESC);
+
 -- Bags (smart bag configs)
 CREATE TABLE bags (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

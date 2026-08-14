@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../api';
 import { 
-  ShopProfile, Category, Product, Banner, Notification, Order, Address, Coupon, User as UserType, CheckoutBagInfo, Bag, CustomerTab, Review
+  ShopProfile, Category, Product, Banner, Notification, Order, Address, Coupon, User as UserType, CheckoutBagInfo, Bag, CustomerTab, Review, Campaign
 } from '../../types';
 import { isValidDDMMYYYY, parseDDMMYYYYToISO } from '../../utils/date';
 import { formatLooseQuantity, isLooseProduct, loosePriceFactor, looseStockUnit } from '../../utils/productMeasure';
@@ -40,6 +40,7 @@ interface CustomerAppProps {
   homeProducts?: Product[];
   homeProductPage?: { page: number; pageSize: number; total: number; categoryId: string | null; isLoading: boolean };
   banners: Banner[];
+  campaigns?: Campaign[];
   notifications: Notification[];
   activeUser: UserType | null;
   onLoginSuccess: (user: UserType) => void;
@@ -77,7 +78,48 @@ function couponAppliedMessage(coupon: Coupon) {
   if (isBirthdayCouponCode(coupon)) return 'Yay! Your birthday coupon is applied. Celebrate the day with this special saving from SVAYIRO.';
   if (isWelcomeCouponCode(coupon)) return 'Yay! Your welcome coupon is applied. Enjoy your first special saving with SVAYIRO.';
   if (isReferralCouponCode(coupon)) return 'Yay! Your Refer & Win coupon is applied. Thanks for growing the SVAYIRO family.';
+  if (coupon.metadata?.campaignEligibility) return 'Special offer coupon applied. Your saving is calculated only on eligible campaign items.';
   return 'Yay! Your coupon is applied successfully. Enjoy your saving on this order.';
+}
+
+function couponCampaignEligibility(coupon: Coupon | null, campaigns: Campaign[]) {
+  if (!coupon) return null;
+  const metadataEligibility = coupon.metadata?.campaignEligibility;
+  if (metadataEligibility?.campaignId || metadataEligibility?.campaignTitle) {
+    return {
+      campaignId: String(metadataEligibility.campaignId || ''),
+      campaignTitle: String(metadataEligibility.campaignTitle || ''),
+      productIds: Array.isArray(metadataEligibility.productIds) ? metadataEligibility.productIds.map(String) : [],
+      categoryIds: Array.isArray(metadataEligibility.categoryIds) ? metadataEligibility.categoryIds.map(String) : []
+    };
+  }
+  const couponCode = String(coupon.code || '').toUpperCase();
+  const campaign = campaigns.find((entry) => {
+    if (!entry.isActive) return false;
+    if (entry.couponId && coupon.id && entry.couponId === coupon.id) return true;
+    return entry.couponCode && String(entry.couponCode).toUpperCase() === couponCode;
+  });
+  if (!campaign) return null;
+  return {
+    campaignId: campaign.id,
+    campaignTitle: campaign.title,
+    productIds: (campaign.productIds || []).map(String),
+    categoryIds: (campaign.categoryIds || []).map(String)
+  };
+}
+
+function productMatchesCouponCampaign(product: Product, eligibility: ReturnType<typeof couponCampaignEligibility>) {
+  if (!eligibility) return true;
+  const productIds = new Set(eligibility.productIds);
+  const categoryIds = new Set(eligibility.categoryIds);
+  if (productIds.size === 0 && categoryIds.size === 0) return false;
+  if (productIds.has(product.id)) return true;
+  const productCategoryIds = [
+    product.categoryId,
+    product.subcategoryId,
+    ...((product as any).categoryIds || [])
+  ].filter(Boolean).map(String);
+  return productCategoryIds.some((categoryId) => categoryIds.has(categoryId));
 }
 
 function CustomerViewLoader() {
@@ -212,6 +254,7 @@ export default function CustomerApp({
   homeProducts,
   homeProductPage,
   banners,
+  campaigns = [],
   notifications,
   activeUser: rawActiveUser,
   onLoginSuccess,
@@ -255,6 +298,7 @@ export default function CustomerApp({
   const [searchQuery, setSearchQuery] = useState('');
   const [submittedSearchQuery, setSubmittedSearchQuery] = useState('');
   const [serverFilteredProducts, setServerFilteredProducts] = useState<Product[] | null>(null);
+  const [campaignSearchContext, setCampaignSearchContext] = useState<{ title: string; products: Product[] } | null>(null);
   const [isSearchingProducts, setIsSearchingProducts] = useState(false);
   const [searchUseDelay, setSearchUseDelay] = useState(true);
   const [searchDelayMs, setSearchDelayMs] = useState(400);
@@ -289,6 +333,7 @@ export default function CustomerApp({
   // Modals & Details states
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const hydratedProductIdsRef = useRef<Set<string>>(new Set());
+  const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [detailQty, setDetailQty] = useState(1);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -334,6 +379,19 @@ export default function CustomerApp({
   // Cart operations (Stored in local state + persisted to cloud back for logged users)
   const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
   const homePageLoadKeyRef = useRef('all');
+
+  const refreshWishlistProducts = async (user: UserType | null = activeUser) => {
+    const wishlistIds = Array.isArray(user?.wishlist) ? user.wishlist : [];
+    if (!user || wishlistIds.length === 0) {
+      setWishlistProducts([]);
+      return [];
+    }
+    const items = await api.getWishlistProducts();
+    const wishlistOrder = new Map(wishlistIds.map((id, index) => [id, index]));
+    const sortedItems = [...items].sort((a, b) => (wishlistOrder.get(a.id) ?? 0) - (wishlistOrder.get(b.id) ?? 0));
+    setWishlistProducts(sortedItems);
+    return sortedItems;
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -382,6 +440,31 @@ export default function CustomerApp({
       window.clearTimeout(timer);
     };
   }, [searchQuery, searchUseDelay, searchDelayMs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeUser || activeUser.wishlist.length === 0) {
+      setWishlistProducts([]);
+      return;
+    }
+
+    api.getWishlistProducts()
+      .then((items) => {
+        if (cancelled) return;
+        const wishlistOrder = new Map(activeUser.wishlist.map((id, index) => [id, index]));
+        setWishlistProducts([...items].sort((a, b) => (wishlistOrder.get(a.id) ?? 0) - (wishlistOrder.get(b.id) ?? 0)));
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('Wishlist products load failed', err);
+          setWishlistProducts([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeUser?.id, activeUser?.wishlist.join('|')]);
 
   useEffect(() => {
     if (!onChangeHomeProductPage) return;
@@ -1080,6 +1163,7 @@ export default function CustomerApp({
       const res = await api.updateWishlist(activeUser.phone, nextWish);
       if (res.user) {
         onLoginSuccess(res.user);
+        await refreshWishlistProducts(res.user);
         const prod = products.find(p => p.id === productId);
         const prodName = prod ? prod.name : 'Product';
         if (isInside) {
@@ -1088,8 +1172,9 @@ export default function CustomerApp({
           showToast(`❤️ Added "${prodName}" to wishlist!`, 'success');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Wishlist saving error", err);
+      showToast(err?.message || 'Wishlist could not be updated. Please try again.', 'error');
     }
   };
 
@@ -1260,6 +1345,19 @@ export default function CustomerApp({
     }
   };
 
+  const calculateCouponEligibleSubtotal = (coupon: Coupon | null) => {
+    if (!coupon) return totals.productTotal;
+    const eligibility = couponCampaignEligibility(coupon, campaigns);
+    if (!eligibility) return totals.productTotal;
+    return cart.reduce((sum, cartItem) => {
+      const product = products.find((entry) => entry.id === cartItem.productId);
+      if (!product || !productMatchesCouponCampaign(product, eligibility)) return sum;
+      const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
+      const priceQty = isLooseProduct(product) ? loosePriceFactor(product, cartItem.quantity) : cartItem.quantity;
+      return sum + (activePrice * priceQty);
+    }, 0);
+  };
+
   // Coupon validation
   const handleApplyCoupon = async () => {
     setCouponError('');
@@ -1268,6 +1366,20 @@ export default function CustomerApp({
     try {
       const res = await api.validateCoupon(couponCode, totals.productTotal);
       if (res.valid) {
+        const eligibleSubtotal = calculateCouponEligibleSubtotal(res.coupon);
+        const eligibility = couponCampaignEligibility(res.coupon, campaigns);
+        if (eligibility && eligibleSubtotal <= 0) {
+          setCouponError('This coupon is valid only for selected special offer products.');
+          setAppliedCoupon(null);
+          setCouponSuccessMessage('');
+          return;
+        }
+        if (eligibleSubtotal < Number(res.coupon.minOrderValue || 0)) {
+          setCouponError(`Minimum eligible special-offer order value for this coupon is Rs ${res.coupon.minOrderValue}.`);
+          setAppliedCoupon(null);
+          setCouponSuccessMessage('');
+          return;
+        }
         setAppliedCoupon(res.coupon);
         setCouponSuccessMessage(couponAppliedMessage(res.coupon));
       }
@@ -1364,6 +1476,7 @@ export default function CustomerApp({
 
   // Checkout totals calculator
   const totals = useMemo(() => {
+    let mrpTotal = 0;
     let productTotal = 0;
     let totalWeightGrams = 0;
     const itemsList: { product: Product; quantity: number }[] = [];
@@ -1374,6 +1487,7 @@ export default function CustomerApp({
         const activePrice = prod.offerPrice > 0 ? prod.offerPrice : prod.basePrice;
         const loose = isLooseProduct(prod);
         const priceQty = loose ? loosePriceFactor(prod, cartItem.quantity) : cartItem.quantity;
+        mrpTotal += prod.basePrice * priceQty;
         productTotal += activePrice * priceQty;
         if (loose) {
           const stockUnit = looseStockUnit(prod);
@@ -1439,11 +1553,21 @@ export default function CustomerApp({
     // Discounts
     let discount = 0;
     if (appliedCoupon) {
+      const eligibility = couponCampaignEligibility(appliedCoupon, campaigns);
+      const discountBase = eligibility
+        ? itemsList.reduce((sum, item) => {
+            if (!productMatchesCouponCampaign(item.product, eligibility)) return sum;
+            const activePrice = item.product.offerPrice > 0 ? item.product.offerPrice : item.product.basePrice;
+            const priceQty = isLooseProduct(item.product) ? loosePriceFactor(item.product, item.quantity) : item.quantity;
+            return sum + (activePrice * priceQty);
+          }, 0)
+        : productTotal;
       if (appliedCoupon.discountType === 'percentage') {
-        discount = Math.round((productTotal * appliedCoupon.discountValue) / 100);
+        discount = Math.round((discountBase * appliedCoupon.discountValue) / 100);
       } else {
         discount = appliedCoupon.discountValue;
       }
+      discount = Math.min(discountBase, Math.max(0, discount));
     }
 
     const loyaltyBlockPoints = loyaltyAccount?.redeemBlockPoints || 10;
@@ -1458,9 +1582,13 @@ export default function CustomerApp({
       : 0;
 
     const finalTotal = Math.max(0, productTotal + bagCost + deliveryCost - discount - loyaltyDiscount);
+    const offerSavings = Math.max(0, mrpTotal - productTotal);
+    const totalSavings = offerSavings + discount + loyaltyDiscount;
 
     return {
+      mrpTotal,
       productTotal,
+      offerSavings,
       totalWeightGrams,
       bagCost,
       deliveryCost,
@@ -1468,11 +1596,12 @@ export default function CustomerApp({
       loyaltyDiscount,
       loyaltyRedeemPoints: loyaltyDiscount > 0 ? effectiveLoyaltyPoints : 0,
       finalTotal,
+      totalSavings,
       computedBags,
       itemsList,
       deliveryDistanceKm
     };
-  }, [cart, products, bags, bagOption, deliveryMethod, appliedCoupon, shop, activeUser, loyaltyAccount, loyaltyRedeemPoints, selectedAddressIndex, googleMapsDistanceKm]);
+  }, [cart, products, bags, bagOption, deliveryMethod, appliedCoupon, campaigns, shop, activeUser, loyaltyAccount, loyaltyRedeemPoints, selectedAddressIndex, googleMapsDistanceKm]);
 
   const buildOrderItemsPayload = () => cart.map((item) => {
     const product = products.find((prod) => prod.id === item.productId);
@@ -1814,9 +1943,10 @@ export default function CustomerApp({
 
   const searchResultsProducts = useMemo(() => {
     const query = submittedSearchQuery.trim().toLowerCase();
-    let list = query && serverFilteredProducts ? [...serverFilteredProducts] : [...products];
+    const campaignProducts = campaignSearchContext?.products || null;
+    let list = campaignProducts ? [...campaignProducts] : query && serverFilteredProducts ? [...serverFilteredProducts] : [...products];
 
-    if (query && !serverFilteredProducts) {
+    if (query && !serverFilteredProducts && !campaignProducts) {
       list = list.filter((p) => {
         const categoryName = Array.from(new Set([p.categoryId, (p as any).subcategoryId, ...(p.categoryIds || [])].filter(Boolean) as string[]))
           .map((categoryId) => categories.find((cat) => cat.id === categoryId)?.name)
@@ -1840,13 +1970,13 @@ export default function CustomerApp({
     if (searchSort === 'price_high') return [...enabled].sort((a, b) => priceOf(b) - priceOf(a));
     if (searchSort === 'newest') return [...enabled].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     return enabled;
-  }, [products, categories, submittedSearchQuery, serverFilteredProducts, searchSort]);
+  }, [products, categories, submittedSearchQuery, serverFilteredProducts, campaignSearchContext, searchSort]);
 
-  // Wishlisted products subset
   const wishlistedProducts = useMemo(() => {
     if (!activeUser) return [];
-    return products.filter(p => activeUser.wishlist.includes(p.id));
-  }, [products, activeUser]);
+    const wishlistIds = new Set(activeUser.wishlist);
+    return wishlistProducts.filter(p => wishlistIds.has(p.id));
+  }, [wishlistProducts, activeUser]);
 
   const searchSuggestions = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -2036,12 +2166,14 @@ export default function CustomerApp({
         onSubmitSearch={(term) => {
           const cleanTerm = term.trim();
           if (!cleanTerm) return;
+          setCampaignSearchContext(null);
           setSearchQuery(cleanTerm);
           setSubmittedSearchQuery(cleanTerm);
           saveSearchHistory(cleanTerm);
           setProtectedActiveTab('search');
         }}
         onClearSearch={() => {
+          setCampaignSearchContext(null);
           setSubmittedSearchQuery('');
           if (activeTab === 'search') {
             setActiveTab('home');
@@ -2051,6 +2183,7 @@ export default function CustomerApp({
         notifications={notifications}
         readNotificationIds={readNotificationIds}
         onMarkNotificationsRead={markNotificationsRead}
+        hideCategoryRail={Boolean(selectedProduct)}
         onSelectSuggestion={(product) => {
           saveSearchHistory(searchQuery || product.name);
           setSelectedProduct(product);
@@ -2061,7 +2194,7 @@ export default function CustomerApp({
       />
       <div
         aria-hidden="true"
-        className={`${activeTab === 'home' || activeTab === 'search' ? 'h-[166px] md:h-[178px]' : 'h-[72px] md:h-[126px]'} shrink-0`}
+        className={`${selectedProduct ? 'h-[132px] md:h-[126px]' : activeTab === 'home' || activeTab === 'search' ? 'h-[174px] md:h-[182px]' : 'h-[72px] md:h-[126px]'} shrink-0`}
       />
 
       {/* Main Container */}
@@ -2098,6 +2231,7 @@ export default function CustomerApp({
                 shop={shop}
                 isShopClosed={isShopClosed}
                 banners={banners}
+                campaigns={campaigns}
                 currentBannerIndex={currentBannerIndex}
                 setCurrentBannerIndex={setCurrentBannerIndex}
                 categories={categories}
@@ -2119,6 +2253,14 @@ export default function CustomerApp({
                 loyaltySummary={loyaltySummary}
                 suggestedCoupons={suggestedCoupons}
                 onUseCoupon={handleUseCoupon}
+                onOpenCampaignProducts={(campaign, campaignProducts) => {
+                  setCampaignSearchContext({ title: campaign.title, products: campaignProducts });
+                  setSearchSort('relevance');
+                  setSearchQuery(campaign.title);
+                  setSubmittedSearchQuery(campaign.title);
+                  setProtectedActiveTab('search');
+                  window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+                }}
               />
             )}
 

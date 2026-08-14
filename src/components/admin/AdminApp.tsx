@@ -8,6 +8,7 @@ import OrdersView from './OrdersView';
 import CategoriesView from './CategoriesView';
 import AdvanceRequestsView from './AdvanceRequestsView';
 import CouponsView from './CouponsView';
+import CampaignsView from './CampaignsView';
 import ReviewsView from './ReviewsView';
 import BroadcastingView from './BroadcastingView';
 import BannersView from './BannersView';
@@ -50,7 +51,7 @@ interface AdminAppProps {
   onLogout?: () => void;
 }
 
-type AdminMenu = 'dashboard'|'pos'|'looseLabels'|'products'|'categories'|'orders'|'advances'|'coupons'|'reviews'|'broadcasting'|'banners'|'settings'|'complaints'|'adminAlerts'|'manual';
+type AdminMenu = 'dashboard'|'pos'|'looseLabels'|'products'|'categories'|'orders'|'advances'|'coupons'|'campaigns'|'reviews'|'broadcasting'|'banners'|'settings'|'complaints'|'adminAlerts'|'manual';
 
 const menuTitles: Record<AdminMenu, string> = {
   dashboard: 'Dashboard Control',
@@ -61,6 +62,7 @@ const menuTitles: Record<AdminMenu, string> = {
   orders: 'Invoice & Orders',
   advances: 'Advance Bookings',
   coupons: 'Offers & Coupons',
+  campaigns: 'Campaigns & Occasion Offers',
   reviews: 'Quality Reviews',
   broadcasting: 'Alert Bulletins',
   banners: 'Homepage Banners',
@@ -78,7 +80,7 @@ const roleLabels: Record<string, string> = {
 };
 
 const roleMenus: Record<string, AdminMenu[]> = {
-  admin: ['dashboard', 'pos', 'looseLabels', 'products', 'categories', 'orders', 'advances', 'coupons', 'reviews', 'complaints', 'adminAlerts', 'banners', 'broadcasting', 'settings', 'manual'],
+  admin: ['dashboard', 'pos', 'looseLabels', 'products', 'categories', 'orders', 'advances', 'coupons', 'campaigns', 'reviews', 'complaints', 'adminAlerts', 'banners', 'broadcasting', 'settings', 'manual'],
   inventory_manager: ['pos', 'looseLabels', 'products', 'categories', 'manual'],
   delivery_partner: ['orders', 'manual'],
   customer_care: ['orders', 'reviews', 'complaints', 'manual']
@@ -374,6 +376,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
         {activeMenu === 'categories' && <CategoriesView categories={adminCategories} isDarkMode={isDarkMode} showToast={showToast} refresh={() => { refreshAdminCategories(); onRefreshData(); }} />}
         {activeMenu === 'advances' && <AdvanceRequestsView advanceRequests={admin.advRequests} isDarkMode={isDarkMode} refresh={admin.refresh} showToast={showToast} />}
         {activeMenu === 'coupons' && <CouponsView isDarkMode={isDarkMode} showToast={showToast} />}
+        {activeMenu === 'campaigns' && <CampaignsView isDarkMode={isDarkMode} showToast={showToast} products={products} categories={categories} refresh={onRefreshData} />}
         {activeMenu === 'reviews' && <ReviewsView reviews={admin.reviews} isDarkMode={isDarkMode} refresh={admin.refresh} showToast={showToast} />}
         {activeMenu === 'broadcasting' && <BroadcastingView isDarkMode={isDarkMode} showToast={showToast} />}
         {activeMenu === 'banners' && <BannersView isDarkMode={isDarkMode} showToast={showToast} refresh={onRefreshData} categories={categories} products={products} />}

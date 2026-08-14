@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Compass, Heart, Plus, Minus,
-  ShoppingCart, Star, AlertTriangle, Share2, Gift
+  ShoppingCart, Star, AlertTriangle, Share2, Gift, ArrowRight
 } from 'lucide-react';
-import { Banner, Category, Product, User as UserType, ShopProfile, Coupon } from '../../types';
+import { Banner, Campaign, Category, Product, User as UserType, ShopProfile, Coupon } from '../../types';
 import { cartQuantityLabel, formatProductMeasure, isLooseProduct, looseQuantityOptions } from '../../utils/productMeasure';
 
 const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
 const bannerImageFallback = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1400';
 const PRODUCT_PAGE_SIZE = 20;
+const SHOWCASE_BATCH_SIZE = 20;
 
 const birthdayStars = [
   { left: '10%', top: '18%', x: '-80px', y: '-95px', color: 'text-amber-300', size: 'h-6 w-6', delay: '0ms' },
@@ -44,6 +45,22 @@ function couponValueText(coupon: Coupon) {
     : `Rs ${coupon.discountValue} off`;
 }
 
+function campaignShowcaseBackground(colors: string[], imageUrl = '') {
+  const safeColors = colors.filter(Boolean).slice(0, 3);
+  const activeColors = safeColors.length ? safeColors : ['#ef4444'];
+  const colorStops = activeColors
+    .map((color, index) => `${color}${imageUrl ? 'F2' : 'F5'} ${Math.round((index / Math.max(1, activeColors.length - 1)) * (imageUrl ? 50 : 100))}%`)
+    .join(', ');
+  const colorLayer = imageUrl
+    ? `linear-gradient(90deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.26) 50%, transparent 88%), linear-gradient(90deg, ${colorStops} 0%, ${activeColors[activeColors.length - 1]}D9 50%, ${activeColors[activeColors.length - 1]}A6 68%, transparent 100%)`
+    : activeColors.length === 1
+      ? `linear-gradient(90deg, ${activeColors[0]}F2, ${activeColors[0]}F2)`
+      : `linear-gradient(90deg, ${colorStops})`;
+  return imageUrl
+    ? `${colorLayer}, url(${imageUrl})`
+    : colorLayer;
+}
+
 interface HomeViewProps {
   shop: ShopProfile;
   isShopClosed: boolean;
@@ -57,6 +74,7 @@ interface HomeViewProps {
   filteredProducts: Product[];
   productPage?: { page: number; pageSize: number; total: number; categoryId: string | null; isLoading: boolean };
   onChangeProductPage?: (params?: { categoryId?: string | null; page?: number; pageSize?: number }) => Promise<number>;
+  campaigns?: Campaign[];
   cart: { productId: string; quantity: number }[];
   updateCartQty: (pId: string, qty: number) => void;
   addToCart: (pId: string, qty?: number) => void;
@@ -74,6 +92,7 @@ interface HomeViewProps {
   };
   suggestedCoupons?: Coupon[];
   onUseCoupon?: (code: string) => void;
+  onOpenCampaignProducts?: (campaign: Campaign, products: Product[]) => void;
 }
 
 export default function HomeView({
@@ -89,6 +108,7 @@ export default function HomeView({
   filteredProducts,
   productPage,
   onChangeProductPage,
+  campaigns = [],
   cart,
   updateCartQty,
   addToCart,
@@ -98,14 +118,17 @@ export default function HomeView({
   isDarkMode,
   onShareProduct,
   isBirthdayToday = false,
+  loyaltySummary,
   suggestedCoupons = [],
-  onUseCoupon
+  onUseCoupon,
+  onOpenCampaignProducts
 }: HomeViewProps) {
   const [birthdayCouponOpen, setBirthdayCouponOpen] = useState(false);
   const [birthdayRedeemMessage, setBirthdayRedeemMessage] = useState('');
   const [birthdayCouponApplied, setBirthdayCouponApplied] = useState(false);
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
   const [selectedLooseQtyByProduct, setSelectedLooseQtyByProduct] = useState<Record<string, number>>({});
+  const [showcaseVisibleCounts, setShowcaseVisibleCounts] = useState<Record<string, number>>({});
 
   const holidayBroadcastMessage = (shop?.holidayMessage || '').trim();
   const closedBroadcastText = shop?.isHolidayMode && holidayBroadcastMessage
@@ -141,10 +164,9 @@ export default function HomeView({
   const discountedProducts = products
     .filter((product) => product.isEnabled && !isLooseProduct(product) && product.offerPrice > 0 && product.basePrice > product.offerPrice)
     .sort((a, b) => ((b.basePrice - b.offerPrice) / Math.max(1, b.basePrice)) - ((a.basePrice - a.offerPrice) / Math.max(1, a.basePrice)));
-  const bestOfferProducts = discountedProducts.slice(0, 6);
+  const bestOfferProducts = discountedProducts;
   const featuredProducts = products
-    .filter((product) => product.isEnabled && !isLooseProduct(product) && product.isFeatured)
-    .slice(0, 6);
+    .filter((product) => product.isEnabled && !isLooseProduct(product) && product.isFeatured);
   const excludedShowcaseIds = new Set([...featuredProducts, ...bestOfferProducts].map((product) => product.id));
   const personalizedRecommendedProducts = products
     .filter((product) => {
@@ -153,8 +175,67 @@ export default function HomeView({
     })
     .sort((a, b) => Number(a.metadata?.personalizedRecommendationRank || 999) - Number(b.metadata?.personalizedRecommendationRank || 999));
   const fallbackRecommendedProducts = products
-    .filter((product) => product.isEnabled && !isLooseProduct(product) && !excludedShowcaseIds.has(product.id) && !personalizedRecommendedProducts.some((item) => item.id === product.id));
-  const recommendedProducts = [...personalizedRecommendedProducts, ...fallbackRecommendedProducts].slice(0, 6);
+    .filter((product) => {
+      if (!product.isEnabled || isLooseProduct(product) || excludedShowcaseIds.has(product.id) || personalizedRecommendedProducts.some((item) => item.id === product.id)) return false;
+      const hasDiscount = product.offerPrice > 0 && product.basePrice > product.offerPrice;
+      const hasRating = Number(product.ratingAverage || product.metadata?.ratingAverage || product.metadata?.rating_average || 0) > 0;
+      return Boolean(product.isFeatured || product.isDailyEssential || hasDiscount || hasRating);
+    })
+    .sort((a, b) => {
+      const score = (product: Product) => {
+        const discountScore = product.offerPrice > 0 && product.basePrice > product.offerPrice
+          ? ((product.basePrice - product.offerPrice) / Math.max(1, product.basePrice)) * 10
+          : 0;
+        return (
+          Number(product.ratingAverage || product.metadata?.ratingAverage || product.metadata?.rating_average || 0) * 2
+          + Number(product.ratingCount || product.metadata?.ratingCount || product.metadata?.rating_count || 0) * 0.05
+          + (product.isFeatured ? 4 : 0)
+          + (product.isDailyEssential ? 2 : 0)
+          + discountScore
+        );
+      };
+      return score(b) - score(a);
+    });
+  const recommendedSeedProducts = [...personalizedRecommendedProducts, ...fallbackRecommendedProducts];
+  const recommendedProducts = recommendedSeedProducts.length > 0
+    ? recommendedSeedProducts
+    : products
+      .filter((product) => product.isEnabled && !isLooseProduct(product))
+      .sort((a, b) => Number(b.isDailyEssential) - Number(a.isDailyEssential));
+  const visibleCampaigns = campaigns
+    .filter((campaign) => {
+      if (!campaign.isActive) return false;
+      if (campaign.audience === 'all') return true;
+      if (campaign.audience === 'birthday_customers') return Boolean(activeUser && isBirthdayToday);
+      if (campaign.audience === 'new_customers') return !activeUser || Number(loyaltySummary?.totalOrders || 0) === 0;
+      if (campaign.audience === 'returning_customers') return Boolean(activeUser && Number(loyaltySummary?.totalOrders || 0) > 0);
+      return true;
+    })
+    .sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0))
+    .slice(0, 4);
+  const campaignProductSections = visibleCampaigns
+    .map((campaign) => {
+      const productIds = new Set(campaign.productIds || []);
+      const categoryIds = new Set(campaign.categoryIds || []);
+      const campaignProducts = Array.isArray(campaign.products) && campaign.products.length > 0 ? campaign.products : products;
+      const hasCampaignCoupon = Boolean(campaign.couponCode || campaign.couponId);
+      const items = campaignProducts
+        .filter((product) => {
+          if (!product.isEnabled || isLooseProduct(product)) return false;
+          const hasProductOffer = product.offerPrice > 0 && product.basePrice > product.offerPrice;
+          if (!hasCampaignCoupon && !hasProductOffer) return false;
+          if (productIds.has(product.id)) return true;
+          const allCategoryIds = [
+            product.categoryId,
+            product.subcategoryId,
+            ...(Array.isArray(product.categoryIds) ? product.categoryIds : [])
+          ].filter(Boolean) as string[];
+          return allCategoryIds.some((categoryId) => categoryIds.has(categoryId));
+        });
+      return { campaign, items };
+    })
+    .filter((section) => section.items.length > 0);
+  const productsByCampaignId = new Map(campaignProductSections.map((section) => [section.campaign.id, section.items]));
 
   useEffect(() => {
     if (!selectedCategory) {
@@ -278,31 +359,47 @@ export default function HomeView({
     }
   };
 
-  const renderShowcaseSection = (title: string, subtitle: string, items: Product[]) => {
-    if (items.length === 0 || selectedCategory) return null;
+  const renderShowcaseSection = (title: string, subtitle: string, items: Product[], options: { id?: string; hideWhenCategorySelected?: boolean; backgroundColor?: string; backgroundImageUrl?: string } = {}) => {
+    if (items.length === 0 || (options.hideWhenCategorySelected && selectedCategory)) return null;
+    const sectionId = options.id || title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const visibleCount = showcaseVisibleCounts[sectionId] || SHOWCASE_BATCH_SIZE;
+    const visibleItems = items.slice(0, Math.min(visibleCount, items.length));
+    if (visibleItems.length === 0) return null;
+    const hasMore = items.length > visibleItems.length;
+    const useTwoRows = visibleItems.length > 10;
+    const isElasticBand = visibleItems.length <= 10 && !hasMore;
+    const backgroundColor = options.backgroundColor || '#f8fafc';
+    const backgroundImageUrl = options.backgroundImageUrl || '';
 
     return (
-      <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3 text-left">
+      <section
+        className={`relative overflow-hidden rounded-2xl border border-white/70 p-3 shadow-sm ${isElasticBand ? 'w-fit max-w-full' : 'w-full'}`}
+        style={{
+          backgroundColor,
+          backgroundImage: backgroundImageUrl
+            ? `linear-gradient(180deg, ${backgroundColor}F2 0%, ${backgroundColor}CC 54%, ${backgroundColor}F5 100%), url(${backgroundImageUrl})`
+            : `linear-gradient(180deg, ${backgroundColor} 0%, #ffffff 100%)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
+        <div className="mb-3 flex items-end justify-between gap-3 text-left">
           <div>
             <h3 className="font-serif text-base font-semibold tracking-tight text-slate-950 dark:text-white md:text-lg">{title}</h3>
           </div>
-          <span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
-            {items.length} items
-          </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
-          {items.map((prod) => {
+        <div className={`grid w-max max-w-full auto-cols-[116px] grid-flow-col gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:auto-cols-[124px] lg:auto-cols-[136px] [&::-webkit-scrollbar]:hidden ${useTwoRows ? 'grid-rows-2' : 'grid-rows-1'}`}>
+          {visibleItems.map((prod) => {
             const hasDiscount = prod.offerPrice > 0 && prod.basePrice > prod.offerPrice;
             const itemInCart = cart.find(c => c.productId === prod.id);
             const isWishlisted = activeUser?.wishlist.includes(prod.id);
             return (
               <article
                 key={prod.id}
-                className={`group overflow-hidden rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'}`}
+                className={`group relative flex h-[198px] w-[116px] flex-col overflow-hidden rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:h-[208px] sm:w-[124px] lg:h-[218px] lg:w-[136px] ${isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'}`}
               >
-                <div className="relative aspect-square cursor-pointer bg-white" onClick={() => setSelectedProduct(prod)}>
+                <div className="relative h-[100px] shrink-0 cursor-pointer bg-white sm:h-[108px] lg:h-[116px]" onClick={() => setSelectedProduct(prod)}>
                   <img
                     src={prod.images?.[0] || productImageFallback}
                     alt={prod.name}
@@ -327,24 +424,24 @@ export default function HomeView({
                   </button>
                 </div>
 
-                <div className="space-y-1 p-2 text-left">
+                <div className="min-h-0 flex-1 space-y-1 p-1.5 pb-2 text-left">
                   <h4
                     onClick={() => setSelectedProduct(prod)}
-                    className="line-clamp-1 cursor-pointer text-[11px] font-semibold leading-tight text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-300"
+                    className="line-clamp-2 min-h-[24px] cursor-pointer text-[10px] font-semibold leading-tight text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-[11px]"
                   >
                     {prod.name}
                   </h4>
-                  <div className="min-h-4">{productQtyBadge(prod)}</div>
-                  <div className="flex flex-wrap items-baseline gap-1">
+                  <div className="min-h-4 origin-left scale-90">{productQtyBadge(prod)}</div>
+                  <div className="flex min-h-7 flex-wrap items-baseline gap-1 pr-8">
                     <span className="text-sm font-black text-indigo-700 dark:text-indigo-300">₹{hasDiscount ? prod.offerPrice : prod.basePrice}</span>
                     {hasDiscount && <span className="text-[9px] font-mono text-slate-400 line-through">₹{prod.basePrice}</span>}
                   </div>
                   {itemInCart ? (
-                    <div className="flex items-center justify-between rounded-full border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+                    <div className="absolute bottom-1.5 right-1.5 flex items-center justify-between rounded-full border border-indigo-100 bg-indigo-50 px-1 py-0.5 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
                       <button type="button" onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)}>
                         <Minus className="h-3 w-3" />
                       </button>
-                      <span className="min-w-5 text-center text-[10px] font-semibold">{itemInCart.quantity}</span>
+                      <span className="min-w-4 text-center text-[9px] font-semibold">{itemInCart.quantity}</span>
                       <button type="button" onClick={() => updateCartQty(prod.id, itemInCart.quantity + 1)}>
                         <Plus className="h-3 w-3" />
                       </button>
@@ -354,16 +451,33 @@ export default function HomeView({
                       type="button"
                       disabled={prod.stockCount === 0}
                       onClick={() => addToCart(prod.id, 1)}
-                      className="flex w-full items-center justify-center gap-1 rounded-full bg-indigo-700 px-2 py-1.5 text-[10px] font-semibold text-white shadow-sm hover:bg-indigo-600 disabled:opacity-40"
+                      className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-700 text-white shadow-sm hover:bg-indigo-600 disabled:opacity-40"
+                      aria-label={`Add ${prod.name} to bag`}
                     >
                       <Plus className="h-3 w-3" />
-                      Add
                     </button>
                   )}
                 </div>
               </article>
             );
           })}
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setShowcaseVisibleCounts((prev) => ({ ...prev, [sectionId]: Math.min(items.length, visibleCount + SHOWCASE_BATCH_SIZE) }))}
+              className={`flex h-[198px] w-[116px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-3 text-center text-xs font-semibold transition hover:-translate-y-0.5 sm:h-[208px] sm:w-[124px] lg:h-[218px] lg:w-[136px] ${
+                isDarkMode
+                  ? 'border-indigo-800 bg-slate-950/80 text-indigo-300 hover:bg-slate-900'
+                  : 'border-indigo-200 bg-white/80 text-indigo-700 hover:bg-white'
+              }`}
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-700 text-white shadow-sm">
+                <Plus className="h-4 w-4" />
+              </span>
+              View more
+              <span className="text-[10px] font-semibold text-slate-500">{items.length - visibleItems.length} left</span>
+            </button>
+          )}
         </div>
       </section>
     );
@@ -748,6 +862,182 @@ export default function HomeView({
         </div>
       </div>
 
+      {campaignProductSections.length > 0 && (
+        <section className="space-y-3">
+          <div className="space-y-4">
+            {campaignProductSections.map(({ campaign, items: offerItems }) => {
+              const campaignColor = String(campaign.metadata?.backgroundColor || '#ef4444');
+              const campaignColors = Array.isArray(campaign.metadata?.backgroundColors)
+                ? campaign.metadata.backgroundColors.map(String).filter(Boolean).slice(0, 3)
+                : [campaignColor];
+              const campaignBg = String(campaign.metadata?.backgroundImageUrl || campaign.bannerImageUrl || '');
+              const heroItems = offerItems.slice(0, 3);
+              return (
+                <article
+                  key={campaign.id}
+                  className="relative overflow-hidden rounded-[28px] border border-white/80 p-3 shadow-[0_16px_34px_rgba(15,23,42,0.14)] sm:p-4"
+                  style={{
+                    backgroundColor: campaignColor,
+                    backgroundImage: campaignShowcaseBackground(campaignColors, campaignBg),
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
+                >
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.10),rgba(255,255,255,0.03))]" />
+                  <div className="relative mb-2 flex items-center justify-between gap-3 text-left">
+                    <h3
+                      className="font-serif text-lg font-semibold tracking-tight text-[#000d86] md:text-xl"
+                      style={{ textShadow: '0 2px 14px rgba(255,255,255,0.95), 0 1px 0 rgba(255,255,255,0.85)' }}
+                    >
+                      Special Occasion Offers
+                    </h3>
+                    <span className="rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#000d86] shadow-sm">
+                      Limited time
+                    </span>
+                  </div>
+                  <div className="relative mb-3 flex min-h-[118px] items-center justify-between gap-3 overflow-hidden rounded-2xl px-3 py-3 sm:min-h-[150px] sm:px-6">
+                    <div className="relative z-10 max-w-[64%] text-left">
+                      <span className="inline-flex rounded-full bg-white/92 px-2.5 py-1 text-[8px] font-semibold uppercase tracking-wide text-[#000d86] shadow-sm sm:text-[9px]">
+                        {campaign.occasion.replace(/_/g, ' ')}
+                      </span>
+                      <h4
+                        className="mt-3 line-clamp-2 text-2xl font-normal leading-none tracking-tight text-[#000d86] sm:text-4xl"
+                        style={{ fontFamily: '"Agbalumo", "Tw Cen MT", Georgia, serif', textShadow: '0 3px 20px rgba(255,255,255,0.98), 0 1px 0 rgba(255,255,255,0.95)' }}
+                      >
+                        {campaign.title}
+                      </h4>
+                      {campaign.subtitle && (
+                        <p
+                          className="mt-2 line-clamp-2 max-w-xl text-[11px] font-semibold text-[#000d86] sm:text-sm"
+                          style={{ textShadow: '0 2px 12px rgba(255,255,255,0.95)' }}
+                        >
+                          {campaign.subtitle}
+                        </p>
+                      )}
+                      {campaign.couponCode && (
+                        <button
+                          type="button"
+                          onClick={() => onUseCoupon?.(campaign.couponCode || '')}
+                          className="mt-3 inline-flex rounded-full bg-[#000d86] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-md transition hover:-translate-y-0.5 hover:bg-indigo-800 hover:shadow-lg"
+                        >
+                          Use {campaign.couponCode}
+                        </button>
+                      )}
+                    </div>
+                    <div className="absolute right-14 top-1/2 hidden -translate-y-1/2 items-end gap-2 opacity-95 sm:flex">
+                      {heroItems.map((product, index) => (
+                        <img
+                          key={product.id}
+                          src={product.images?.[0] || productImageFallback}
+                          alt={product.name}
+                          className={`rounded-2xl border border-white/70 bg-white object-contain p-2 shadow-2xl ${index === 1 ? 'h-32 w-28' : 'h-24 w-20 opacity-90'}`}
+                          referrerPolicy="no-referrer"
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onOpenCampaignProducts?.(campaign, offerItems)}
+                      className="relative z-20 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-xl transition hover:-translate-y-0.5 hover:bg-slate-900 sm:h-16 sm:w-20 sm:rounded-[24px]"
+                      aria-label={`View all products in ${campaign.title}`}
+                    >
+                      <ArrowRight className="h-6 w-6 sm:h-8 sm:w-8" />
+                    </button>
+                  </div>
+
+                  <div className="relative grid w-max max-w-full auto-cols-[118px] grid-flow-col grid-rows-2 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:auto-cols-[132px] lg:auto-cols-[148px] [&::-webkit-scrollbar]:hidden">
+                    {offerItems.map((prod) => {
+                      const hasDiscount = prod.offerPrice > 0 && prod.basePrice > prod.offerPrice;
+                      const isWishlisted = activeUser?.wishlist.includes(prod.id);
+                      const itemInCart = cart.find(c => c.productId === prod.id);
+                      return (
+                        <article key={prod.id} className="group relative flex h-[172px] flex-col overflow-hidden rounded-xl bg-white text-left shadow-md ring-1 ring-white/70 transition hover:-translate-y-0.5 sm:h-[184px]">
+                          <div className="relative h-[98px] shrink-0 bg-white sm:h-[108px]" onClick={() => setSelectedProduct(prod)}>
+                            <img
+                              src={prod.images?.[0] || productImageFallback}
+                              alt={prod.name}
+                              className="h-full w-full cursor-pointer object-contain p-0.5 transition group-hover:scale-105"
+                              referrerPolicy="no-referrer"
+                            />
+                            {hasDiscount && (
+                              <span className="absolute left-1 top-1 z-10 rounded-md bg-emerald-700 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow">
+                                {Math.round(100 - (prod.offerPrice / prod.basePrice) * 100)}%
+                              </span>
+                            )}
+                            <div className="absolute bottom-1 left-1 z-10 scale-90 origin-bottom-left">
+                              {productQtyBadge(prod)}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleWishlist(prod.id);
+                              }}
+                              className={`absolute right-1 top-1 rounded-full border p-1 shadow-sm ${isWishlisted ? 'border-rose-200 bg-rose-50 text-rose-500' : 'border-slate-200 bg-white/90 text-slate-500'}`}
+                              aria-label="Toggle wishlist"
+                            >
+                              <Heart className="h-3 w-3" fill={isWishlisted ? 'currentColor' : 'none'} />
+                            </button>
+                          </div>
+                          <div className="flex min-h-0 flex-1 flex-col justify-between gap-0 p-1.5 pt-0.5">
+                            <div>
+                              <h5 onClick={() => setSelectedProduct(prod)} className="line-clamp-2 min-h-0 cursor-pointer text-[10px] font-semibold leading-[1.05] text-slate-950 hover:text-indigo-700 sm:text-[10.5px]">
+                                {prod.name}
+                              </h5>
+                            </div>
+                            <div className="flex items-center justify-between gap-1">
+                              <div className="flex min-w-0 items-baseline gap-1">
+                                <span className="text-[13px] font-black text-slate-950 sm:text-sm">₹{hasDiscount ? prod.offerPrice : prod.basePrice}</span>
+                                {hasDiscount && <span className="text-[9px] text-slate-500 line-through">₹{prod.basePrice}</span>}
+                              </div>
+                              {itemInCart ? (
+                                <div className="flex items-center rounded-lg bg-indigo-700 text-white">
+                                  <button type="button" className="p-1" onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)}><Minus className="h-3 w-3" /></button>
+                                  <span className="min-w-4 text-center text-[9px] font-semibold">{itemInCart.quantity}</span>
+                                  <button type="button" className="p-1" onClick={() => updateCartQty(prod.id, itemInCart.quantity + 1)}><Plus className="h-3 w-3" /></button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={prod.stockCount === 0}
+                                  onClick={() => addToCart(prod.id, 1)}
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#000d86] text-white shadow-sm transition hover:bg-indigo-800 disabled:opacity-40"
+                                  aria-label={`Add ${prod.name} to bag`}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => onOpenCampaignProducts?.(campaign, offerItems)}
+                      className="flex h-[172px] w-[118px] flex-col items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 text-center text-xs font-semibold text-white shadow-md transition hover:-translate-y-0.5 sm:h-[184px] sm:w-[132px] lg:w-[148px]"
+                    >
+                      <ArrowRight className="h-7 w-7" />
+                      View all offers
+                    </button>
+                  </div>
+                  <div className="relative mt-2 flex flex-wrap items-center gap-2 text-left">
+                    <span className="rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wide text-slate-700 shadow-sm">
+                      {offerItems.length} offer items
+                    </span>
+                    {campaign.couponCode && (
+                      <span className="rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-semibold text-slate-700 shadow-sm">
+                        Coupon applies only inside this offer.
+                      </span>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Filtered category active banner */}
       {selectedCategory && (
         <div className={`p-4 rounded-xl flex items-center justify-between border ${isDarkMode ? 'border-indigo-900 bg-indigo-950/20' : 'border-indigo-100 bg-indigo-50/50'} text-xs font-semibold`}>
@@ -767,9 +1057,9 @@ export default function HomeView({
         </div>
       )}
 
-      {renderShowcaseSection('Featured Today', 'Owner-picked products to highlight right now.', featuredProducts)}
-      {renderShowcaseSection('Best Offers', 'Discounted products customers should not miss.', bestOfferProducts)}
-      {renderShowcaseSection('Recommended for You', 'Useful picks based on available storefront products.', recommendedProducts)}
+      {renderShowcaseSection('Featured Today', 'Owner-picked products to highlight right now.', featuredProducts, { id: 'featured-today', hideWhenCategorySelected: true, backgroundColor: '#dbe4ff' })}
+      {renderShowcaseSection('Best Offers', 'Discounted products customers should not miss.', bestOfferProducts, { id: 'best-offers', hideWhenCategorySelected: true, backgroundColor: '#d7f5df' })}
+      {recommendedProducts.length > 0 && renderShowcaseSection('Recommended for You', 'Useful picks based on your activity and stronger product signals.', recommendedProducts, { id: 'recommended-for-you', hideWhenCategorySelected: true, backgroundColor: '#f7dceb' })}
 
       {/* Main Products Grid */}
       <div id="catalog-products-list-anchor" className="scroll-mt-24">
@@ -1012,4 +1302,3 @@ export default function HomeView({
     </div>
   );
 }
-

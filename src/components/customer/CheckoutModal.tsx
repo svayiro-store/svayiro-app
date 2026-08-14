@@ -44,12 +44,15 @@ interface CheckoutModalProps {
   isDarkMode: boolean;
   shop: ShopProfile;
   totals: {
+    mrpTotal?: number;
     productTotal: number;
+    offerSavings?: number;
     bagCost: number;
     deliveryCost: number;
     discount: number;
     loyaltyDiscount?: number;
     finalTotal: number;
+    totalSavings?: number;
     deliveryDistanceKm?: number;
   };
   activeUser: UserType | null;
@@ -149,6 +152,7 @@ export default function CheckoutModal({
 }: CheckoutModalProps) {
   const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
   const [slotDay, setSlotDay] = useState<SlotDay>(selectedSlot.toLowerCase().includes('tomorrow') ? 'tomorrow' : 'today');
+  const formatMoney = (value: number | undefined) => `₹${Math.round(Number(value || 0))}`;
   const deliverySlotsKey = useMemo(() => (shop.deliverySlots || []).join('|'), [shop.deliverySlots]);
   const configuredSlots = useMemo(
     () => deliverySlotsKey
@@ -1059,6 +1063,11 @@ export default function CheckoutModal({
                 <p className="mt-1 text-[11px] font-bold leading-relaxed">
                   {couponSuccessMessage || 'Yay! Your coupon is applied successfully. Enjoy your saving on this order.'}
                 </p>
+                {appliedCoupon.metadata?.campaignEligibility && (
+                  <p className="mt-1 text-[10px] font-semibold leading-relaxed text-emerald-700/80 dark:text-emerald-200/80">
+                    Special-offer coupon: discount is calculated only on eligible campaign items in your bag.
+                  </p>
+                )}
               </div>
             )}
 
@@ -1072,6 +1081,7 @@ export default function CheckoutModal({
                     className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
                   >
                     Use {coupon.code}
+                    {coupon.metadata?.campaignEligibility && <span className="ml-1 opacity-70">offer only</span>}
                   </button>
                 ))}
               </div>
@@ -1119,6 +1129,64 @@ export default function CheckoutModal({
                 </p>
               </div>
             )}
+          </div>
+
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4 text-xs shadow-sm dark:border-emerald-900 dark:bg-emerald-950/30">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                Savings & Payment Review
+              </span>
+              {(totals.totalSavings || 0) > 0 && (
+                <span className="rounded-full bg-emerald-600 px-3 py-1 font-semibold text-white">
+                  Saved {formatMoney(totals.totalSavings)}
+                </span>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-slate-700 dark:text-slate-200">
+                <span>MRP total</span>
+                <span>{formatMoney(totals.mrpTotal || totals.productTotal)}</span>
+              </div>
+              {(totals.offerSavings || 0) > 0 && (
+                <div className="flex justify-between font-semibold text-emerald-700 dark:text-emerald-300">
+                  <span>Product offer saving</span>
+                  <span>-{formatMoney(totals.offerSavings)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-slate-700 dark:text-slate-200">
+                <span>Offer price subtotal</span>
+                <span>{formatMoney(totals.productTotal)}</span>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between font-semibold text-emerald-700 dark:text-emerald-300">
+                  <span>Coupon saving ({appliedCoupon.code})</span>
+                  <span>-{formatMoney(totals.discount)}</span>
+                </div>
+              )}
+              {(totals.loyaltyDiscount || 0) > 0 && (
+                <div className="flex justify-between font-semibold text-indigo-700 dark:text-indigo-300">
+                  <span>Savings Points redeemed</span>
+                  <span>-{formatMoney(totals.loyaltyDiscount)}</span>
+                </div>
+              )}
+              {bagOption === 'need' && (
+                <div className="flex justify-between text-slate-700 dark:text-slate-200">
+                  <span>Smart bags</span>
+                  <span>{formatMoney(totals.bagCost)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-slate-700 dark:text-slate-200">
+                <span>Delivery</span>
+                <span>{deliveryMethod === 'pickup' ? '₹0' : totals.deliveryCost === 0 ? 'FREE' : formatMoney(totals.deliveryCost)}</span>
+              </div>
+              <div className="mt-2 flex justify-between border-t border-emerald-200 pt-2 text-sm font-semibold text-indigo-700 dark:border-emerald-900 dark:text-indigo-300">
+                <span>Final payable</span>
+                <span>{formatMoney(totals.finalTotal)}</span>
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] font-medium leading-relaxed text-emerald-800 dark:text-emerald-200">
+              This is the final review. For UPI, your order is submitted only for owner verification after you enter the payment UTR/reference.
+            </p>
           </div>
 
           {/* Checkout Bill calculation summary */}
@@ -1177,7 +1245,9 @@ export default function CheckoutModal({
               ? 'Please Save or Cancel Address Form First'
               : isOutOfRange 
               ? 'Cannot Deliver: Address Out of Range'
-              : `Submit Order (Pay ₹${totals.finalTotal})`
+              : paymentMethod === 'upi'
+                ? `Submit for UPI Verification (${formatMoney(totals.finalTotal)})`
+                : `Place Order (${formatMoney(totals.finalTotal)})`
             }
           </button>
           
