@@ -485,7 +485,7 @@ export default function ProductDetailView({
                         />
                       </div>
                       <div className="space-y-1 p-2">
-                        <p className="line-clamp-2 text-[11px] font-semibold text-slate-900 dark:text-white">{product.name}</p>
+                        <p className="line-clamp-2 text-[11px] font-medium text-slate-900 dark:text-white">{product.name}</p>
                         <div className="flex items-baseline gap-1">
                           <span className="text-xs font-black text-indigo-600 dark:text-indigo-300">{money(price)}</span>
                           {hasDiscount && <span className="text-[9px] text-slate-400 line-through">{money(product.basePrice)}</span>}

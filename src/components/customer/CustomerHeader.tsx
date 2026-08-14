@@ -230,7 +230,7 @@ export default function CustomerHeader({
                 <Store className="h-4 w-4" />
               </span>
             )}
-            <span className={`block max-w-full truncate rounded-full px-1 py-0.5 text-[9px] font-semibold leading-tight ${
+            <span className={`block max-w-full truncate rounded-full px-1 py-0.5 text-[9px] font-normal leading-tight ${
               !selectedCategory ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'
             }`}>
               All
@@ -266,7 +266,7 @@ export default function CustomerHeader({
                     )}
                   </span>
                 )}
-                <span className={`block max-w-full truncate rounded-full px-1 py-0.5 text-[9px] font-semibold leading-tight ${
+                <span className={`block max-w-full truncate rounded-full px-1 py-0.5 text-[9px] font-normal leading-tight ${
                   isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'
                 }`}>
                   {category.name}

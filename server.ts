@@ -1587,6 +1587,13 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
 function normalizeProductSummary(product: any) {
   const normalized = normalizeProduct(product, product.first_image_url ? [{ url: product.first_image_url }] : []);
   if (!normalized) return null;
+  const metadata = { ...(normalized.metadata || {}) };
+  if (product.recommendation_score !== undefined) {
+    metadata.recommendationScore = Number(product.recommendation_score || 0);
+  }
+  if (product.recommendation_reason) {
+    metadata.recommendationReason = product.recommendation_reason;
+  }
   return {
     id: normalized.id,
     categoryId: normalized.categoryId,
@@ -1605,7 +1612,7 @@ function normalizeProductSummary(product: any) {
     packageLabel: normalized.packageLabel,
     isEnabled: normalized.isEnabled,
     lowStockAlertThreshold: normalized.lowStockAlertThreshold,
-    metadata: normalized.metadata || {},
+    metadata,
     images: normalized.images?.slice(0, 1) || [],
     ratingAverage: normalized.ratingAverage,
     ratingCount: normalized.ratingCount,
@@ -4594,6 +4601,15 @@ app.get('/api/products/recommended', authMiddleware, async (req: any, res) => {
         INNER JOIN customer_orders co ON co.id = oi.order_id
         WHERE oi.product_id IS NOT NULL
       ),
+      ordered_product_stats AS (
+        SELECT
+          oi.product_id,
+          COUNT(*)::numeric AS order_count
+        FROM order_items oi
+        INNER JOIN customer_orders co ON co.id = oi.order_id
+        WHERE oi.product_id IS NOT NULL
+        GROUP BY oi.product_id
+      ),
       ordered_category_ids AS (
         SELECT DISTINCT pc.category_id
         FROM ordered_product_ids op
@@ -4613,6 +4629,32 @@ app.get('/api/products/recommended', authMiddleware, async (req: any, res) => {
         FROM wishlist_product_ids wp
         INNER JOIN products p ON p.id = wp.product_id
         WHERE p.category_id IS NOT NULL
+      ),
+      recent_search_patterns AS (
+        SELECT '%' || lower(term) || '%' AS term
+        FROM customer_search_history
+        WHERE user_id = $1::uuid
+        ORDER BY searched_at DESC
+        LIMIT 12
+      ),
+      search_patterns AS (
+        SELECT DISTINCT term
+        FROM (
+          SELECT unnest($3::text[]) AS term
+          UNION ALL
+          SELECT term FROM recent_search_patterns
+        ) source_terms
+        WHERE term IS NOT NULL AND term <> ''
+      ),
+      popular_product_stats AS (
+        SELECT
+          oi.product_id,
+          COUNT(*)::numeric AS global_order_count
+        FROM order_items oi
+        INNER JOIN orders o ON o.id = oi.order_id
+        WHERE oi.product_id IS NOT NULL
+          AND o.status <> 'cancelled'
+        GROUP BY oi.product_id
       )
       SELECT
         p.id,
@@ -4632,35 +4674,63 @@ app.get('/api/products/recommended', authMiddleware, async (req: any, res) => {
         p.created_at,
         p.updated_at,
         first_image.url AS first_image_url,
-        COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids,
+        COALESCE(pc_summary.category_ids, ARRAY[]::uuid[]) AS category_ids,
         (
-          CASE WHEN EXISTS (SELECT 1 FROM wishlist_product_ids wp WHERE wp.product_id = p.id) THEN 8 ELSE 0 END
-          + CASE WHEN EXISTS (SELECT 1 FROM ordered_product_ids op WHERE op.product_id = p.id) THEN 3 ELSE 0 END
+          CASE WHEN EXISTS (SELECT 1 FROM wishlist_product_ids wp WHERE wp.product_id = p.id) THEN 12 ELSE 0 END
+          + CASE WHEN EXISTS (SELECT 1 FROM ordered_product_ids op WHERE op.product_id = p.id) THEN 9 ELSE 0 END
           + CASE WHEN EXISTS (
               SELECT 1
               FROM product_categories pc_match
               WHERE pc_match.product_id = p.id
                 AND pc_match.category_id IN (SELECT category_id FROM ordered_category_ids)
-            ) OR p.category_id IN (SELECT category_id FROM ordered_category_ids) THEN 5 ELSE 0 END
+            ) OR p.category_id IN (SELECT category_id FROM ordered_category_ids) THEN 6 ELSE 0 END
           + CASE WHEN EXISTS (
               SELECT 1
               FROM product_categories pc_match
               WHERE pc_match.product_id = p.id
                 AND pc_match.category_id IN (SELECT category_id FROM wishlist_category_ids)
-            ) OR p.category_id IN (SELECT category_id FROM wishlist_category_ids) THEN 4 ELSE 0 END
+            ) OR p.category_id IN (SELECT category_id FROM wishlist_category_ids) THEN 5 ELSE 0 END
           + CASE WHEN EXISTS (
-              SELECT 1
-              FROM unnest($3::text[]) AS term
-              WHERE lower(COALESCE(p.name, '')) LIKE term
-                 OR lower(COALESCE(p.description, '')) LIKE term
-                 OR lower(COALESCE(p.sku, '')) LIKE term
-            ) THEN 4 ELSE 0 END
-          + CASE WHEN p.offer_price > 0 AND p.base_price > p.offer_price THEN 2 ELSE 0 END
-          + COALESCE((p.metadata->>'ratingAverage')::numeric, (p.metadata->>'rating_average')::numeric, 0) * 1.5
+              SELECT 1 FROM search_patterns sp
+              WHERE lower(COALESCE(p.name, '')) LIKE sp.term
+                 OR lower(COALESCE(p.description, '')) LIKE sp.term
+                 OR lower(COALESCE(p.sku, '')) LIKE sp.term
+            ) THEN 6 ELSE 0 END
+          + LEAST(COALESCE(ops.order_count, 0), 5) * 1.5
+          + LEAST(COALESCE(pps.global_order_count, 0), 20) * 0.2
+          + CASE WHEN p.offer_price > 0 AND p.base_price > p.offer_price THEN 3 ELSE 0 END
+          + CASE WHEN COALESCE((p.metadata->>'isDailyEssential')::boolean, false) THEN 1.5 ELSE 0 END
+          + CASE WHEN COALESCE((p.metadata->>'isFeatured')::boolean, false) THEN 1 ELSE 0 END
+          + COALESCE((p.metadata->>'ratingAverage')::numeric, (p.metadata->>'rating_average')::numeric, 0) * 1.2
           + LEAST(COALESCE((p.metadata->>'ratingCount')::numeric, (p.metadata->>'rating_count')::numeric, 0), 50) * 0.05
-        ) AS recommendation_score
+        ) AS recommendation_score,
+        CASE
+          WHEN EXISTS (SELECT 1 FROM wishlist_product_ids wp WHERE wp.product_id = p.id) THEN 'From your wishlist'
+          WHEN EXISTS (SELECT 1 FROM ordered_product_ids op WHERE op.product_id = p.id) THEN 'Buy again'
+          WHEN EXISTS (
+            SELECT 1
+            FROM product_categories pc_match
+            WHERE pc_match.product_id = p.id
+              AND pc_match.category_id IN (SELECT category_id FROM ordered_category_ids)
+          ) OR p.category_id IN (SELECT category_id FROM ordered_category_ids) THEN 'Similar to your orders'
+          WHEN EXISTS (
+            SELECT 1 FROM search_patterns sp
+            WHERE lower(COALESCE(p.name, '')) LIKE sp.term
+               OR lower(COALESCE(p.description, '')) LIKE sp.term
+               OR lower(COALESCE(p.sku, '')) LIKE sp.term
+          ) THEN 'Based on your searches'
+          WHEN p.offer_price > 0 AND p.base_price > p.offer_price THEN 'Good offer'
+          WHEN COALESCE(pps.global_order_count, 0) > 0 THEN 'Popular with customers'
+          ELSE 'Recommended pick'
+        END AS recommendation_reason
       FROM products p
-      LEFT JOIN product_categories pc ON pc.product_id = p.id
+      LEFT JOIN ordered_product_stats ops ON ops.product_id = p.id
+      LEFT JOIN popular_product_stats pps ON pps.product_id = p.id
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(array_remove(array_agg(pc.category_id ORDER BY pc.is_primary DESC, pc.created_at ASC), NULL), ARRAY[]::uuid[]) AS category_ids
+        FROM product_categories pc
+        WHERE pc.product_id = p.id
+      ) pc_summary ON true
       LEFT JOIN LATERAL (
         SELECT url
         FROM product_images
@@ -4671,7 +4741,6 @@ app.get('/api/products/recommended', authMiddleware, async (req: any, res) => {
       WHERE p.is_enabled = true
         AND p.stock_count > 0
         AND COALESCE((p.metadata->>'isLooseItem')::boolean, false) = false
-      GROUP BY p.id, first_image.url
       ORDER BY recommendation_score DESC, p.updated_at DESC, p.created_at DESC
       LIMIT $4::int
     `, [user.id, phoneDigits, searchPatterns, limit]);

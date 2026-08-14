@@ -167,7 +167,7 @@ export default function CategoriesView({
                     setActiveParentId(cat.id);
                     setShowResults(false);
                   }}
-                  className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-semibold leading-tight transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:px-3 md:text-left ${active || showingResult ? 'border-l-4 border-l-rose-500 bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-200' : isDarkMode ? 'border-slate-800 text-slate-200 hover:bg-slate-800' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
+                  className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-normal leading-tight transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:px-3 md:text-left ${active || showingResult ? 'border-l-4 border-l-rose-500 bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-200' : isDarkMode ? 'border-slate-800 text-slate-200 hover:bg-slate-800' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
                 >
                   <CategoryThumb category={cat} className="h-9 w-9 rounded-lg sm:h-11 sm:w-11 md:h-12 md:w-12 md:rounded-xl" />
                   <span className="line-clamp-2 md:line-clamp-1">{cat.name}</span>
@@ -246,7 +246,7 @@ export default function CategoriesView({
                         category={sub}
                         className={`h-10 w-10 rounded-xl border-0 shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${selectedCategory === sub.id ? 'ring-2 ring-indigo-500/40' : ''}`}
                       />
-                      <span className="line-clamp-2 max-w-[76px] text-[10px] font-semibold leading-tight sm:text-xs">{sub.name}</span>
+                      <span className="line-clamp-2 max-w-[76px] text-[10px] font-normal leading-tight sm:text-xs">{sub.name}</span>
                       {selectedCategory === sub.id && <span className="absolute -bottom-1 h-0.5 w-8 rounded-full bg-indigo-600" />}
                     </button>
                   ))}

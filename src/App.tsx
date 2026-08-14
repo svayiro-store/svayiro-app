@@ -449,7 +449,7 @@ export default function App() {
       }
     };
     const personalizedRecommended = isCustomerOnlyUser(activeUser)
-      ? api.getRecommendedProducts({ limit: 8, searchTerms: getRecentSearchTerms() })
+      ? api.getRecommendedProducts({ limit: 20, searchTerms: getRecentSearchTerms() })
           .then((res) => ({
             items: (res.items || []).map((product, index) => ({
               ...product,
@@ -459,11 +459,11 @@ export default function App() {
               }
             })),
             total: res.items?.length || 0,
-            limit: res.limit || 8,
+            limit: res.limit || 20,
             offset: 0
           }))
-          .catch(() => api.getProductPage({ limit: 8, offset: 0, summary: true, sort: 'recommended' }))
-      : api.getProductPage({ limit: 8, offset: 0, summary: true, sort: 'recommended' });
+          .catch(() => api.getProductPage({ limit: 20, offset: 0, summary: true, sort: 'recommended' }))
+      : api.getProductPage({ limit: 20, offset: 0, summary: true, sort: 'recommended' });
     const [page, featured, offers, recommended] = await Promise.all([
       api.getProductPage({ limit: CUSTOMER_PRODUCT_PAGE_SIZE, offset: 0, summary: true }),
       api.getProductPage({ limit: 8, offset: 0, summary: true, sort: 'featured' }),

@@ -171,7 +171,7 @@ export default function HomeView({
   const personalizedRecommendedProducts = products
     .filter((product) => {
       const rank = Number(product.metadata?.personalizedRecommendationRank || 0);
-      return product.isEnabled && !isLooseProduct(product) && rank > 0 && !excludedShowcaseIds.has(product.id);
+      return product.isEnabled && !isLooseProduct(product) && rank > 0;
     })
     .sort((a, b) => Number(a.metadata?.personalizedRecommendationRank || 999) - Number(b.metadata?.personalizedRecommendationRank || 999));
   const fallbackRecommendedProducts = products
@@ -362,6 +362,7 @@ export default function HomeView({
   const renderShowcaseSection = (title: string, subtitle: string, items: Product[], options: { id?: string; hideWhenCategorySelected?: boolean; backgroundColor?: string; backgroundImageUrl?: string } = {}) => {
     if (items.length === 0 || (options.hideWhenCategorySelected && selectedCategory)) return null;
     const sectionId = options.id || title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const isRecommendedSection = sectionId === 'recommended-for-you';
     const visibleCount = showcaseVisibleCounts[sectionId] || SHOWCASE_BATCH_SIZE;
     const visibleItems = items.slice(0, Math.min(visibleCount, items.length));
     if (visibleItems.length === 0) return null;
@@ -394,6 +395,7 @@ export default function HomeView({
             const hasDiscount = prod.offerPrice > 0 && prod.basePrice > prod.offerPrice;
             const itemInCart = cart.find(c => c.productId === prod.id);
             const isWishlisted = activeUser?.wishlist.includes(prod.id);
+            const recommendationReason = String(prod.metadata?.recommendationReason || '').trim();
             return (
               <article
                 key={prod.id}
@@ -409,6 +411,11 @@ export default function HomeView({
                   {hasDiscount && (
                     <span className="absolute left-1 top-1 rounded-full bg-emerald-800 px-2 py-0.5 text-[8px] font-semibold text-white shadow-[0_3px_0_rgba(6,95,70,0.45)]">
                       {Math.round(100 - (prod.offerPrice / prod.basePrice) * 100)}%
+                    </span>
+                  )}
+                  {isRecommendedSection && recommendationReason && (
+                    <span className="absolute bottom-1 left-1 max-w-[calc(100%-0.5rem)] truncate rounded-full bg-white/95 px-1.5 py-0.5 text-[7px] font-semibold text-indigo-700 shadow-sm ring-1 ring-indigo-100">
+                      {recommendationReason}
                     </span>
                   )}
                   <button
@@ -427,7 +434,7 @@ export default function HomeView({
                 <div className="min-h-0 flex-1 space-y-1 p-1.5 pb-2 text-left">
                   <h4
                     onClick={() => setSelectedProduct(prod)}
-                    className="line-clamp-2 min-h-[24px] cursor-pointer text-[10px] font-semibold leading-tight text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-[11px]"
+                    className="line-clamp-2 min-h-[24px] cursor-pointer text-[10px] font-medium leading-tight text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-[11px]"
                   >
                     {prod.name}
                   </h4>
@@ -641,7 +648,7 @@ export default function HomeView({
                   setExpandedCategoryId(parentCat.id);
                   scrollToProducts();
                 }}
-                className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-semibold transition sm:min-w-[68px] ${selectedCategory === parentCat.id ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
+                className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-normal transition sm:min-w-[68px] ${selectedCategory === parentCat.id ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
               >
                 <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${selectedCategory === parentCat.id ? 'bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/40 dark:bg-indigo-950/40 dark:text-indigo-300' : isDarkMode ? 'bg-slate-900 text-slate-300' : 'bg-slate-50 text-slate-600'}`}>
                   <Compass className="h-5 w-5" />
@@ -661,7 +668,7 @@ export default function HomeView({
                       setExpandedCategoryId(parentCat.id);
                       scrollToProducts();
                     }}
-                    className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-semibold transition sm:min-w-[76px] ${isSubSelected ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
+                    className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-normal transition sm:min-w-[76px] ${isSubSelected ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
                   >
                     <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[8px] font-semibold uppercase shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${isSubSelected ? 'bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/40 dark:bg-indigo-950/40 dark:text-indigo-300' : isDarkMode ? 'bg-slate-900 text-indigo-300' : 'bg-slate-50 text-indigo-700'}`}>
                       {sub.name.substring(0, 2)}
@@ -806,7 +813,7 @@ export default function HomeView({
                   )}
                 </div>
                 <div className="mt-1.5 min-w-0 space-y-0.5 pr-7 text-left">
-                  <h4 className="line-clamp-1 text-[10px] font-semibold leading-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-slate-100 dark:group-hover:text-emerald-300">
+                  <h4 className="line-clamp-1 text-[10px] font-medium leading-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-slate-100 dark:group-hover:text-emerald-300">
                     {prod.name}
                   </h4>
                   <div className="min-h-4 scale-[0.88] origin-left">
@@ -918,7 +925,7 @@ export default function HomeView({
                         <button
                           type="button"
                           onClick={() => onUseCoupon?.(campaign.couponCode || '')}
-                          className="mt-3 inline-flex rounded-full bg-[#000d86] px-2.5 py-1.5 text-[6px] font-semibold uppercase tracking-normal text-white shadow-md transition hover:-translate-y-0.5 hover:bg-indigo-800 hover:shadow-lg"
+                          className="mt-2 inline-flex rounded-full bg-[#000d86] px-1.5 py-0.5 text-[6px] font-medium uppercase tracking-normal text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-800 sm:px-2 sm:text-[7px]"
                         >
                           Use {campaign.couponCode}
                         </button>
@@ -981,7 +988,7 @@ export default function HomeView({
                           </div>
                           <div className="flex min-h-0 flex-1 flex-col justify-between gap-0 p-1.5 pt-0.5">
                             <div>
-                              <h5 onClick={() => setSelectedProduct(prod)} className="line-clamp-2 min-h-0 cursor-pointer text-[10px] font-semibold leading-[1.05] text-slate-950 hover:text-indigo-700 sm:text-[10.5px]">
+                              <h5 onClick={() => setSelectedProduct(prod)} className="line-clamp-2 min-h-0 cursor-pointer text-[10px] font-medium leading-[1.05] text-slate-950 hover:text-indigo-700 sm:text-[10.5px]">
                                 {prod.name}
                               </h5>
                             </div>
@@ -1165,7 +1172,7 @@ export default function HomeView({
                         </div>
                         <h4
                           onClick={() => setSelectedProduct(prod)}
-                          className="cursor-pointer text-left text-[11px] font-semibold leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-xs"
+                          className="cursor-pointer text-left text-[11px] font-medium leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-xs"
                         >
                           {prod.name}
                         </h4>
