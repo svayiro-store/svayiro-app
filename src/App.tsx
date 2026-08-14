@@ -69,6 +69,86 @@ function SplashLogo({ logoUrl, name }: { logoUrl?: string; name: string }) {
   );
 }
 
+function hasComingSoonPreviewAccess(expectedKey: string) {
+  if (typeof window === 'undefined' || !expectedKey) return false;
+  const params = new URLSearchParams(window.location.search);
+  const previewKey = params.get('preview') || params.get('previewKey') || '';
+  if (previewKey && previewKey === expectedKey) {
+    localStorage.setItem('svayiro_coming_soon_preview', expectedKey);
+    params.delete('preview');
+    params.delete('previewKey');
+    const cleanQuery = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${window.location.hash}`);
+    return true;
+  }
+  return localStorage.getItem('svayiro_coming_soon_preview') === expectedKey;
+}
+
+function ComingSoonPage({ storefrontUrl }: { storefrontUrl: string }) {
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fff7d6_0%,#f8fafc_34%,#eef2ff_100%)] px-5 py-8 text-slate-950">
+      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-5xl flex-col items-center justify-center text-center">
+        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-white p-2 shadow-2xl shadow-indigo-950/15 ring-1 ring-indigo-100">
+          <img src="/icons/icon-512.png" alt="Svayiro" className="h-full w-full rounded-full object-cover" />
+        </div>
+        <SvayiroWordmark name="SVAYIRO" className="text-5xl sm:text-7xl" />
+        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.38em] text-emerald-600">Trust In Every Choice</p>
+        <div className="mt-8 max-w-2xl rounded-[28px] border border-white/80 bg-white/80 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur sm:p-8">
+          <span className="rounded-full bg-indigo-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
+            Coming Soon
+          </span>
+          <h1 className="mt-5 font-serif text-3xl font-semibold leading-tight text-slate-950 sm:text-5xl">
+            Online Store Opening Soon
+          </h1>
+          <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
+            We are preparing our online ordering service.
+          </p>
+          <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+            Soon you can order groceries, daily essentials, natural food products, fruits, and vegetables from SVAYIRO.
+          </p>
+          <div className="mt-6 grid gap-3 text-left text-sm sm:grid-cols-3">
+            {['Fresh groceries', 'Secure checkout', 'Local delivery'].map((item) => (
+              <div key={item} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 shadow-sm">
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+        <p className="mt-8 text-xs text-slate-500">Please visit again shortly.</p>
+        <p className="mt-2 text-[11px] text-slate-400">{storefrontUrl.replace(/^https?:\/\//, '')}</p>
+      </section>
+    </main>
+  );
+}
+
+function MaintenancePage({ storefrontUrl }: { storefrontUrl: string }) {
+  return (
+    <main className="min-h-screen bg-[linear-gradient(135deg,#f8fafc_0%,#fff7d6_52%,#eef2ff_100%)] px-5 py-8 text-slate-950">
+      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl flex-col items-center justify-center text-center">
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white p-2 shadow-xl shadow-indigo-950/10 ring-1 ring-indigo-100">
+          <img src="/icons/icon-512.png" alt="Svayiro" className="h-full w-full rounded-full object-cover" />
+        </div>
+        <SvayiroWordmark name="SVAYIRO" className="text-5xl sm:text-6xl" />
+        <div className="mt-8 max-w-xl rounded-[28px] border border-white/80 bg-white/85 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur sm:p-8">
+          <span className="rounded-full bg-amber-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+            Maintenance
+          </span>
+          <h1 className="mt-5 font-serif text-3xl font-semibold leading-tight text-slate-950 sm:text-4xl">
+            We will be back shortly
+          </h1>
+          <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
+            SVAYIRO is temporarily unavailable while we update the store.
+          </p>
+          <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+            Please try again after some time.
+          </p>
+        </div>
+        <p className="mt-8 text-[11px] text-slate-400">{storefrontUrl.replace(/^https?:\/\//, '')}</p>
+      </section>
+    </main>
+  );
+}
+
 export interface ToastMessage {
   id: string;
   message: string;
@@ -82,6 +162,26 @@ export default function App() {
   const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   if (params?.has('invoice') || (typeof window !== 'undefined' && window.location.pathname.startsWith('/invoice/'))) {
     return <PublicPrintBill websiteUrl="https://svayiro.co.in" />;
+  }
+  const maintenanceEnabled = String(import.meta.env.VITE_MAINTENANCE_MODE || '').toLowerCase() === 'true';
+  const comingSoonEnabled = String(import.meta.env.VITE_COMING_SOON || '').toLowerCase() === 'true';
+  const comingSoonPreviewKey = String(import.meta.env.VITE_COMING_SOON_PREVIEW_KEY || '').trim();
+  const requestedAdminMode = params?.get('mode') === 'admin';
+  if (
+    maintenanceEnabled
+    && BUILD_TARGET !== 'admin'
+    && !requestedAdminMode
+    && !hasComingSoonPreviewAccess(comingSoonPreviewKey)
+  ) {
+    return <MaintenancePage storefrontUrl={publicStorefrontUrl} />;
+  }
+  if (
+    comingSoonEnabled
+    && BUILD_TARGET !== 'admin'
+    && !requestedAdminMode
+    && !hasComingSoonPreviewAccess(comingSoonPreviewKey)
+  ) {
+    return <ComingSoonPage storefrontUrl={publicStorefrontUrl} />;
   }
   // 🟢 3. React hooks MUST be inside App()
   const [currentMode, setCurrentMode] = useState<'customer' | 'admin'>(() => {
