@@ -216,7 +216,7 @@ export default function QrScannerModal({
               <Camera className="w-4.5 h-4.5" />
             </div>
             <div>
-              <h3 className="font-serif font-semibold text-sm tracking-tight text-slate-900 dark:text-slate-100">
+              <h3 className="font-serif font-semibold text-sm tracking-normal text-slate-900 dark:text-slate-100">
                 SVAYIRO Scan & Pay
               </h3>
               <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-none">

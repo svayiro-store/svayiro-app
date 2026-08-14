@@ -65,7 +65,7 @@ export default function WishlistView({
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-1.5">
-                  <h4 className="font-bold text-sm tracking-tight line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{prod.name}</h4>
+                  <h4 className="font-bold text-sm tracking-normal line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{prod.name}</h4>
                   <p className="text-xs font-mono opacity-70">Price: ₹{prod.offerPrice > 0 ? prod.offerPrice : prod.basePrice}</p>
                 </div>
               </div>

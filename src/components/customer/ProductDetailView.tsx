@@ -271,7 +271,7 @@ export default function ProductDetailView({
 
             {/* Title & Stats */}
             <div className="space-y-2">
-              <h1 className="font-serif text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+              <h1 className="font-serif text-2xl font-semibold tracking-normal text-slate-900 dark:text-white sm:text-3xl">
                 {selectedProduct.name}
               </h1>
               

@@ -131,7 +131,7 @@ export default function CartView({
               >
                 <img src={product.images?.[0] || productImageFallback} alt={product.name} className="w-20 h-20 rounded-xl object-cover" referrerPolicy="no-referrer" />
                 <div className="flex-1 space-y-1.5 min-w-0 text-left">
-                  <h4 className="truncate pr-8 text-sm font-semibold tracking-tight text-slate-950 dark:text-slate-100">{product.name}</h4>
+                  <h4 className="truncate pr-8 text-sm font-semibold tracking-normal text-slate-950 dark:text-slate-100">{product.name}</h4>
                   <p className="text-xs opacity-70">Price: ₹{product.offerPrice > 0 ? product.offerPrice : product.basePrice} | Size: {formatProductMeasure(product)}</p>
                   
                   <div className="flex items-center gap-3 mt-2">

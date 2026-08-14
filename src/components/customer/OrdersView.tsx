@@ -253,7 +253,7 @@ export default function OrdersView({
                                   )}
                                   {isActive && <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />}
                                 </div>
-                                <span className={`text-[9px] font-bold mt-1 tracking-tight ${
+                                <span className={`text-[9px] font-bold mt-1 tracking-normal ${
                                   isActive 
                                     ? 'text-indigo-600 dark:text-indigo-400' 
                                     : isCompleted 

@@ -16,7 +16,7 @@ const AdminApp = __SVAYIRO_APP_TARGET__ === 'customer' ? null : lazy(() => impor
 const svayiroWordmarkStyle = {
   fontFamily: '"Tw Cen MT", "Tw Cen MT Condensed", "Century Gothic", Arial, sans-serif',
   fontWeight: 900,
-  letterSpacing: '-0.035em'
+  letterSpacing: '0.015em'
 } as const;
 
 function SvayiroWordmark({ name, className = '' }: { name: string; className?: string }) {

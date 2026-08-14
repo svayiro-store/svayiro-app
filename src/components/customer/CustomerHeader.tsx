@@ -9,7 +9,7 @@ const productImageFallback = 'https://images.unsplash.com/photo-1574323347407-f5
 const svayiroWordmarkStyle = {
   fontFamily: '"Tw Cen MT", "Tw Cen MT Condensed", "Century Gothic", Arial, sans-serif',
   fontWeight: 900,
-  letterSpacing: '-0.035em'
+  letterSpacing: '0.015em'
 } as const;
 
 function SvayiroWordmark({ name, className = '' }: { name: string; className?: string }) {
@@ -245,7 +245,7 @@ export default function CustomerHeader({
                 key={category.id}
                 type="button"
                 onClick={() => selectHeaderCategory(category.id)}
-            className={`group relative flex shrink-0 items-center text-center transition-all ${isCategoryRailCompact ? 'min-w-fit pb-0.5' : 'w-[60px] flex-col gap-0.5 pb-0.5'}`}
+            className={`group relative flex shrink-0 items-center text-center transition-all ${isCategoryRailCompact ? 'min-w-fit pb-0.5' : 'w-[64px] flex-col gap-0.5 pb-0.5'}`}
                 title={category.name}
               >
                 {!isCategoryRailCompact && (
@@ -546,9 +546,9 @@ export default function CustomerHeader({
               ) : (
                 <button 
                   onClick={() => setIsAuthOpen(true)}
-                  className="bg-indigo-600 text-white px-3 sm:px-4 py-2 rounded-full text-[10px] sm:text-xs font-semibold hover:bg-indigo-500 shadow flex items-center gap-1.5 sm:gap-2"
+                  className="bg-indigo-600 text-white px-3 py-2 rounded-full text-[9px] font-semibold hover:bg-indigo-500 shadow flex items-center gap-1.5"
                 >
-                  <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <User className="h-3.5 w-3.5" />
                   <span>Sign In</span>
                 </button>
               )}
@@ -619,13 +619,13 @@ export default function CustomerHeader({
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[9px] font-semibold transition-all ${
                       isActive
                         ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/60 shadow-sm'
                         : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    <Icon className={`h-4 w-4 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                    <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
                     <span>{tab.label}</span>
                     {tab.count && tab.count > 0 ? (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${tab.pulse ? 'bg-indigo-600 text-white animate-pulse' : 'bg-rose-600 text-white'}`}>

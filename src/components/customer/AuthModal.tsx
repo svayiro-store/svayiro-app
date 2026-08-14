@@ -81,7 +81,7 @@ export default function AuthModal({
       <div className={`flex max-h-[88vh] w-full ${modalWidthClass} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 text-left text-slate-900 shadow-2xl dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 sm:rounded-3xl`}>
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-150 px-4 py-3 dark:border-slate-800 sm:px-5">
           <div className="min-w-0">
-            <h3 className="font-bold text-base font-serif tracking-tight text-slate-900 dark:text-slate-100 sm:text-lg">
+            <h3 className="font-bold text-base font-serif tracking-normal text-slate-900 dark:text-slate-100 sm:text-lg">
             {authMode === 'register' ? 'Create Customer Account' : authMode === 'forgot' ? 'Reset Password' : 'Customer Login'}
             </h3>
             <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">

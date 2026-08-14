@@ -220,7 +220,7 @@ export default function CheckoutModal({
                 </div>
               </div>
               <div className="space-y-2">
-                <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white tracking-tight">Identifying UPI Application...</h3>
+                <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white tracking-normal">Identifying UPI Application...</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
                   Redirecting your device to your default secure payment app (Google Pay, PhonePe, Paytm, or BHIM) to pay <strong className="text-indigo-600 dark:text-indigo-400 font-sans">₹{totals.finalTotal}</strong>.
                 </p>
@@ -243,7 +243,7 @@ export default function CheckoutModal({
               </div>
               
               <div className="space-y-1.5 text-center">
-                <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white tracking-tight">Awaiting UPI Payment</h3>
+                <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white tracking-normal">Awaiting UPI Payment</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
                   Pay exactly <strong className="text-emerald-600 dark:text-emerald-400 font-sans text-sm font-bold">₹{totals.finalTotal}</strong> to complete your order.
                 </p>
@@ -367,7 +367,7 @@ export default function CheckoutModal({
                 ✓
               </div>
               <div className="space-y-1 text-center">
-                <h3 className="font-serif text-xl font-semibold text-emerald-600 dark:text-emerald-400 tracking-tight">UPI Reference Submitted</h3>
+                <h3 className="font-serif text-xl font-semibold text-emerald-600 dark:text-emerald-400 tracking-normal">UPI Reference Submitted</h3>
                 <p className="font-serif text-lg font-bold text-slate-950 dark:text-white">Order placed for owner verification</p>
                 <p className="text-slate-500 dark:text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
                   The owner will verify the payment in the bank or UPI app before accepting and preparing this order.

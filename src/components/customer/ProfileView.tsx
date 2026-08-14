@@ -409,7 +409,7 @@ export default function ProfileView({
             <div className="inline-flex p-4 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 mb-5">
               <User className="h-10 w-10" />
             </div>
-            <h2 className="font-serif text-2xl font-semibold text-slate-900 dark:text-white tracking-tight mb-2">Customer Hub</h2>
+            <h2 className="font-serif text-2xl font-semibold text-slate-900 dark:text-white tracking-normal mb-2">Customer Hub</h2>
             <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed max-w-sm mx-auto mb-6">
               Access your profile, addresses, orders, and support tickets.
             </p>

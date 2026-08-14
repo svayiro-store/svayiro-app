@@ -204,7 +204,7 @@ export default function SearchResultsView({
                     </div>
                     <h4
                       onClick={() => setSelectedProduct(prod)}
-                      className="cursor-pointer text-left text-[11px] font-semibold leading-snug tracking-tight text-slate-950 line-clamp-1 hover:text-indigo-500 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-xs"
+                      className="cursor-pointer text-left text-[11px] font-semibold leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-xs"
                     >
                       {prod.name}
                     </h4>

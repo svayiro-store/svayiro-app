@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import {
   Compass, Heart, Plus, Minus,
   ShoppingCart, Star, AlertTriangle, Share2, Gift, ArrowRight
@@ -385,7 +385,7 @@ export default function HomeView({
       >
         <div className="mb-3 flex items-end justify-between gap-3 text-left">
           <div>
-            <h3 className="font-serif text-base font-semibold tracking-tight text-slate-950 dark:text-white md:text-lg">{title}</h3>
+            <h3 className="sv-heading text-[15px] font-bold tracking-normal text-slate-950 dark:text-white sm:text-base md:text-lg">{title}</h3>
           </div>
         </div>
 
@@ -770,9 +770,9 @@ export default function HomeView({
       <div>
         <div className="mb-3 flex items-end justify-between gap-3 text-left">
           <div>
-            <h3 className="font-serif text-base md:text-lg font-semibold tracking-tight text-emerald-700 dark:text-emerald-300">Daily Quick-Pick</h3>
+            <h3 className="sv-heading text-[16px] font-bold tracking-normal text-emerald-700 dark:text-emerald-300 sm:text-lg">Daily Quick-Pick</h3>
           </div>
-          <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 sm:inline-flex">
+          <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-[8px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 sm:inline-flex">
             Quick add
           </span>
         </div>
@@ -886,7 +886,7 @@ export default function HomeView({
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.10),rgba(255,255,255,0.03))]" />
                   <div className="relative mb-2 flex items-center justify-between gap-3 text-left">
                     <h3
-                      className="font-serif text-lg font-semibold tracking-tight text-[#000d86] md:text-xl"
+                      className="sv-heading text-base font-bold tracking-normal text-[#000d86] sm:text-lg md:text-xl"
                       style={{ textShadow: '0 2px 14px rgba(255,255,255,0.95), 0 1px 0 rgba(255,255,255,0.85)' }}
                     >
                       Special Occasion Offers
@@ -901,7 +901,7 @@ export default function HomeView({
                         {campaign.occasion.replace(/_/g, ' ')}
                       </span>
                       <h4
-                        className="mt-3 line-clamp-2 text-2xl font-normal leading-none tracking-tight text-[#000d86] sm:text-4xl"
+                        className="mt-3 line-clamp-2 text-[22px] font-normal leading-none tracking-normal text-[#000d86] sm:text-4xl"
                         style={{ fontFamily: '"Agbalumo", "Tw Cen MT", Georgia, serif', textShadow: '0 3px 20px rgba(255,255,255,0.98), 0 1px 0 rgba(255,255,255,0.95)' }}
                       >
                         {campaign.title}
@@ -918,7 +918,7 @@ export default function HomeView({
                         <button
                           type="button"
                           onClick={() => onUseCoupon?.(campaign.couponCode || '')}
-                          className="mt-3 inline-flex rounded-full bg-[#000d86] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-md transition hover:-translate-y-0.5 hover:bg-indigo-800 hover:shadow-lg"
+                          className="mt-3 inline-flex rounded-full bg-[#000d86] px-2.5 py-1.5 text-[6px] font-semibold uppercase tracking-normal text-white shadow-md transition hover:-translate-y-0.5 hover:bg-indigo-800 hover:shadow-lg"
                         >
                           Use {campaign.couponCode}
                         </button>
@@ -1064,10 +1064,10 @@ export default function HomeView({
       {/* Main Products Grid */}
       <div id="catalog-products-list-anchor" className="scroll-mt-24">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-serif text-lg md:text-xl font-semibold tracking-tight text-left">
+          <h3 className="sv-heading text-base font-bold tracking-normal text-left sm:text-lg md:text-xl">
             {selectedCategory ? `${categories.find(c => c.id === selectedCategory)?.name}` : 'Products Catalog'}
           </h3>
-          <span className="text-xs opacity-75 font-mono">
+          <span className="text-[10px] opacity-75 font-mono sm:text-xs">
             {totalProducts > 0 ? `Page ${currentPage} of ${totalPages} - ${pageStart}-${pageEnd} of ${totalProducts}` : 'No products'}
           </span>
         </div>
@@ -1165,7 +1165,7 @@ export default function HomeView({
                         </div>
                         <h4
                           onClick={() => setSelectedProduct(prod)}
-                          className="cursor-pointer text-left text-[11px] font-semibold leading-snug tracking-tight text-slate-950 line-clamp-1 hover:text-indigo-500 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-xs"
+                          className="cursor-pointer text-left text-[11px] font-semibold leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-xs"
                         >
                           {prod.name}
                         </h4>
@@ -1244,9 +1244,9 @@ export default function HomeView({
                               <button
                                 disabled={prod.stockCount === 0}
                                 onClick={() => addToCart(prod.id, isLooseProduct(prod) ? selectedLooseQty(prod) : 1)}
-                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-full text-[12px] font-semibold shadow flex items-center justify-center gap-2 disabled:opacity-50 transition"
+                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-full text-[9px] font-semibold shadow flex items-center justify-center gap-1 disabled:opacity-50 transition"
                               >
-                                <ShoppingCart className="h-3 w-3" />
+                                <ShoppingCart className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                 <span>{prod.stockCount === 0 ? 'Out of stock' : isLooseProduct(prod) ? `Add ${cartQuantityLabel(prod, selectedLooseQty(prod))}` : 'Add To Bag'}</span>
                               </button>
                             </>
