@@ -280,9 +280,9 @@ export default function SearchResultsView({
                           <button
                             disabled={prod.stockCount === 0}
                             onClick={() => addToCart(prod.id, isLooseProduct(prod) ? selectedLooseQty(prod) : 1)}
-                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-full text-[12px] font-semibold shadow flex items-center justify-center gap-2 disabled:opacity-50 transition"
+                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-full text-[8px] font-semibold shadow flex items-center justify-center gap-1 disabled:opacity-50 transition"
                           >
-                            <ShoppingCart className="h-3 w-3" />
+                            <ShoppingCart className="h-2.5 w-2.5" />
                             <span>{prod.stockCount === 0 ? 'Out of stock' : isLooseProduct(prod) ? `Add ${cartQuantityLabel(prod, selectedLooseQty(prod))}` : 'Add To Bag'}</span>
                           </button>
                         </>
