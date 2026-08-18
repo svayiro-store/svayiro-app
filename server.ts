@@ -11,7 +11,7 @@ import path from 'path';
 import jwt from 'jsonwebtoken';
 import net from 'net';
 import tls from 'tls';
-import { createHash, pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
+import { createHash, createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { query as pgQuery, runTransaction } from './server/db-pg.js';
 import {
@@ -129,6 +129,8 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   return next();
 });
+
+app.post('/api/payments/cashfree/webhook', express.raw({ type: 'application/json', limit: '2mb' }), cashfreeWebhookHandler);
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -361,6 +363,8 @@ function normalizeOrder(order: any) {
     discount: Number(order.discount_amount ?? order.discountAmount ?? order.discount ?? 0),
     finalTotal: Number(order.final_amount ?? order.finalAmount ?? order.finalTotal ?? 0),
     couponCode: order.meta?.couponCode || order.coupon_code || order.couponCode || null,
+    extendedDelivery: order.meta?.extendedDelivery || order.extendedDelivery || undefined,
+    cashfree: order.meta?.cashfree || order.cashfree || undefined,
     invoiceQueue: order.invoiceQueue || order.invoice_queue || undefined,
     invoiceType: order.delivery_method === 'pickup' && order.selected_slot === 'In-store Direct Purchase' ? 'offline_pos' : 'online_order',
     adminArchivedAt: order.admin_archived_at || order.adminArchivedAt || null,
@@ -930,7 +934,7 @@ async function qualifyReferralForOrder(client: any, order: any) {
 
 async function applyOrderRewards(client: any, order: any) {
   if (!order || order.status === 'cancelled') return;
-  if (order.payment_method === 'upi' && order.payment_status === 'paid') {
+  if (['upi', 'cashfree'].includes(order.payment_method) && order.payment_status === 'paid') {
     await awardLoyaltyForOrder(client, order);
     await qualifyReferralForOrder(client, order);
   }
@@ -1500,8 +1504,25 @@ const DEFAULT_SHOP_PROFILE = {
   upi_id: '',
   payment_qr_code_url: '',
   delivery_slots: [],
-  social_links: []
+  social_links: [],
+  allow_extended_delivery: false,
+  extended_delivery_message: 'Your address is outside our regular delivery area. You can choose Store Pickup or request extended delivery for owner approval.',
+  extended_delivery_note: '',
+  barcode_label_print_settings: { labelWidthMm: 50, labelHeightMm: 25, columnsPerRow: 2, horizontalGapMm: 0, verticalGapMm: 0 }
 };
+
+function normalizeBarcodeLabelPrintSettings(value: any) {
+  const source = value && typeof value === 'object' ? value : {};
+  const positive = (input: any, fallback: number) => Number.isFinite(Number(input)) && Number(input) > 0 ? Number(input) : fallback;
+  const gap = (input: any, fallback: number) => Number.isFinite(Number(input)) && Number(input) >= 0 ? Number(input) : fallback;
+  return {
+    labelWidthMm: positive(source.labelWidthMm ?? source.label_width_mm, 50),
+    labelHeightMm: positive(source.labelHeightMm ?? source.label_height_mm, 25),
+    columnsPerRow: Math.max(1, Math.round(positive(source.columnsPerRow ?? source.columns_per_row, 2))),
+    horizontalGapMm: gap(source.horizontalGapMm ?? source.horizontal_gap_mm, 0),
+    verticalGapMm: gap(source.verticalGapMm ?? source.vertical_gap_mm, 0)
+  };
+}
 
 function normalizeShopProfile(profile: any) {
   if (!profile) profile = DEFAULT_SHOP_PROFILE;
@@ -1534,6 +1555,10 @@ function normalizeShopProfile(profile: any) {
     deliverySlots: normalizeJsonArray(profile.delivery_slots || profile.deliverySlots),
     socialLinks: normalizeJsonArray(profile.social_links || profile.socialLinks),
     addresses: normalizeJsonArray(profile.addresses || addressValue?.branches),
+    allowExtendedDelivery: normalizeBoolean(profile.allow_extended_delivery ?? profile.allowExtendedDelivery, false),
+    extendedDeliveryMessage: profile.extended_delivery_message || profile.extendedDeliveryMessage || DEFAULT_SHOP_PROFILE.extended_delivery_message,
+    extendedDeliveryNote: profile.extended_delivery_note || profile.extendedDeliveryNote || '',
+    barcodeLabelPrintSettings: normalizeBarcodeLabelPrintSettings(profile.barcode_label_print_settings || profile.barcodeLabelPrintSettings),
     address: addressText
   };
 }
@@ -1787,6 +1812,12 @@ function normalizeBag(bag: any, index = 0) {
   };
 }
 
+function shouldDeferOrderEffects(paymentMethod: string, paymentStatus: string, orderStatus: string) {
+  if (orderStatus === 'pending_delivery_approval' || orderStatus === 'delivery_rejected') return true;
+  if (['upi', 'cashfree'].includes(String(paymentMethod || '').toLowerCase()) && paymentStatus !== 'paid') return true;
+  return false;
+}
+
 app.post('/api/orders', authMiddleware, async (req, res) => {
   const payload = req.body;
   const uid = (req as any).user?.id;
@@ -1800,6 +1831,8 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
     let deliveryChargeValue = 0;
     let deliveryRouteMeta: any = null;
     let selectedShopBranch: any = null;
+    let isOutOfRangeDelivery = false;
+    let normalizedShopProfile: any = null;
 
     if (deliveryMethodValue === 'delivery') {
       const address = payload.deliveryAddress || {};
@@ -1811,6 +1844,7 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
 
       const shopRes = await pgQuery('SELECT * FROM shop_profile ORDER BY created_at DESC LIMIT 1');
       const shopProfile = normalizeShopProfile(shopRes.rows?.[0] || null);
+      normalizedShopProfile = shopProfile;
       const branches = Array.isArray(shopProfile.addresses) ? shopProfile.addresses : [];
       selectedShopBranch = branches.find((branch: any) => branch.id && branch.id === payload.shopBranchId)
         || branches.find((branch: any) => branch.isDefault)
@@ -1840,12 +1874,16 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
         route.isEstimate = true;
         route.warning = 'Google Maps is not configured. Delivery distance is estimated using pinned coordinates.';
       }
-      if (route.distanceKm > Number(shopProfile.deliveryRadius || 10)) {
-        throw new Error(`Selected delivery address (${route.distanceKm} km) exceeds the maximum delivery radius of ${shopProfile.deliveryRadius || 10} km.`);
+      const maxDeliveryRadius = Number(shopProfile.deliveryRadius || 10);
+      if (route.distanceKm > maxDeliveryRadius) {
+        isOutOfRangeDelivery = true;
+        if (!shopProfile.allowExtendedDelivery || !payload.extendedDeliveryRequested) {
+          throw new Error(shopProfile.extendedDeliveryMessage || `Selected delivery address (${route.distanceKm} km) exceeds the maximum delivery radius of ${maxDeliveryRadius} km. Choose Store Pickup or request extended delivery approval.`);
+        }
       }
 
       const freeRadius = Math.max(0, Number(shopProfile.freeDeliveryRadiusKm || 0));
-      const billableDistanceKm = Math.max(0, route.distanceKm - freeRadius);
+      const billableDistanceKm = isOutOfRangeDelivery ? 0 : Math.max(0, route.distanceKm - freeRadius);
       deliveryChargeValue = billableDistanceKm > 0
         ? Math.round(Number(shopProfile.baseDeliveryCharge || 30) + (billableDistanceKm * Number(shopProfile.deliveryChargePerKm || 12)))
         : 0;
@@ -1859,7 +1897,12 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
         isEstimate: Boolean(route.isEstimate),
         warning: route.warning || null,
         freeRadiusKm: freeRadius,
-        billableDistanceKm
+        billableDistanceKm,
+        maxRadiusKm: maxDeliveryRadius,
+        outsideCoverage: isOutOfRangeDelivery,
+        extendedDeliveryRequested: Boolean(payload.extendedDeliveryRequested),
+        deliveryApprovalRequired: isOutOfRangeDelivery,
+        extendedDeliveryNote: isOutOfRangeDelivery ? (shopProfile.extendedDeliveryNote || null) : null
       };
     }
 
@@ -1923,10 +1966,14 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
         });
       }
 
-      const paymentMethod = payload.paymentMethod || 'cod';
-      const paymentStatus = payload.paymentStatus || 'pending';
-      const orderStatus = paymentMethod === 'upi' && paymentStatus === 'paid' ? 'accepted' : 'pending';
-      const paymentRef = paymentMethod === 'upi' ? (payload.upiReference || null) : null;
+      const paymentMethod = ['cod', 'upi', 'cashfree'].includes(String(payload.paymentMethod || '').toLowerCase())
+        ? String(payload.paymentMethod).toLowerCase()
+        : 'cod';
+      const paymentStatus = ['pending', 'paid', 'failed', 'submitted', 'user_dropped'].includes(String(payload.paymentStatus || '').toLowerCase())
+        ? String(payload.paymentStatus).toLowerCase()
+        : 'pending';
+      const orderStatus = isOutOfRangeDelivery ? 'pending_delivery_approval' : 'pending';
+      const paymentRef = ['upi', 'cashfree'].includes(paymentMethod) ? (payload.upiReference || payload.paymentRef || null) : null;
       let bagChargeValue = 0;
       if ((payload.bagOption || 'need') === 'need') {
         const bagRows = await client.query('SELECT * FROM bags WHERE is_enabled = true ORDER BY position ASC');
@@ -2002,10 +2049,10 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
       const orderRef = generateId('ord');
       const totalDiscount = itemDiscountValue + discountAmountValue + loyaltyRedemption.discount;
       const finalAmountValue = Math.max(0, baseProductSubtotal + deliveryChargeValue + bagChargeValue - totalDiscount);
-      const orderRes = await client.query(`INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, meta, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now(),now()) RETURNING *`, [uid, orderRef, payload.customerName || null, customerPhone, orderStatus, paymentMethod, paymentStatus, paymentRef, deliveryMethodValue, payload.deliveryAddress || null, payload.selectedSlot || null, payload.bagOption || 'need', JSON.stringify(orderItems), baseProductSubtotal, deliveryChargeValue, bagChargeValue, totalDiscount, finalAmountValue, { couponCode: couponCode || null, itemDiscount: itemDiscountValue, couponDiscount: discountAmountValue, couponCampaign: (payload as any).__couponCampaignMeta || null, loyaltyRedeemPoints: loyaltyRedemption.points, loyaltyDiscount: loyaltyRedemption.discount, productSellingSubtotal: productTotal, deliveryRoute: deliveryRouteMeta }]);
+      const orderRes = await client.query(`INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, meta, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now(),now()) RETURNING *`, [uid, orderRef, payload.customerName || null, customerPhone, orderStatus, paymentMethod, paymentStatus, paymentRef, deliveryMethodValue, payload.deliveryAddress || null, payload.selectedSlot || null, payload.bagOption || 'need', JSON.stringify(orderItems), baseProductSubtotal, deliveryChargeValue, bagChargeValue, totalDiscount, finalAmountValue, { couponCode: couponCode || null, itemDiscount: itemDiscountValue, couponDiscount: discountAmountValue, couponCampaign: (payload as any).__couponCampaignMeta || null, loyaltyRedeemPoints: loyaltyRedemption.points, loyaltyDiscount: loyaltyRedemption.discount, productSellingSubtotal: productTotal, deliveryRoute: deliveryRouteMeta, extendedDelivery: isOutOfRangeDelivery ? { requested: true, message: normalizedShopProfile?.extendedDeliveryMessage || null, note: normalizedShopProfile?.extendedDeliveryNote || null } : null }]);
 
       const orderId = orderRes.rows[0].id;
-      const shouldApplyOrderEffectsNow = !(paymentMethod === 'upi' && paymentStatus === 'pending');
+      const shouldApplyOrderEffectsNow = !shouldDeferOrderEffects(paymentMethod, paymentStatus, orderStatus);
       if (shouldApplyOrderEffectsNow && loyaltyRedemption.points > 0) {
         await addLoyaltyTransaction(client, {
           userId: uid,
@@ -2043,7 +2090,10 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
           [couponCode]
         );
       }
-      await createPaymentRecord(client, orderRes.rows[0]);
+      await createPaymentRecord(client, orderRes.rows[0], {
+        provider: paymentMethod === 'cashfree' ? 'cashfree' : paymentMethod === 'upi' ? 'upi' : 'manual',
+        method: paymentMethod
+      });
       if (shouldApplyOrderEffectsNow) {
         await createInvoiceRecord(client, orderRes.rows[0], 'online_order');
         await applyOrderRewards(client, orderRes.rows[0]);
@@ -2053,28 +2103,22 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
     });
 
     const normalizedOrder = normalizeOrder(result.order);
-    await createAdminAlertRecord(null, {
-      title: 'New Order Placed',
-      body: `Order #${normalizedOrder.orderRef || normalizedOrder.id} placed by ${normalizedOrder.customerName || 'Customer'} for Rs ${normalizedOrder.finalAmount}.`,
-      type: 'order',
-      source: 'order_checkout',
-      severity: normalizedOrder.paymentMethod === 'upi' && normalizedOrder.paymentStatus !== 'paid' ? 'warning' : 'info',
-      payload: {
-        orderId: normalizedOrder.id,
-        orderRef: normalizedOrder.orderRef || null,
-        customerPhone: normalizedOrder.customerPhone || null,
-        paymentMethod: normalizedOrder.paymentMethod,
-        paymentStatus: normalizedOrder.paymentStatus
-      }
-    });
-    notifyPushUser(result.order.user_id, {
-      title: 'Order received',
-      body: `Your order #${normalizedOrder.orderRef || normalizedOrder.id} is ${normalizedOrder.status}.`,
-      type: 'order',
-      tag: `order-${normalizedOrder.id}`,
-      url: '/',
-      data: { orderId: normalizedOrder.id, orderRef: normalizedOrder.orderRef || null, status: normalizedOrder.status }
-    });
+    // A Cashfree row is only a payment attempt until the gateway reports PAID.
+    // Do not expose or notify it as a placed order before that verification.
+    if (!(normalizedOrder.paymentMethod === 'cashfree' && normalizedOrder.paymentStatus !== 'paid')) {
+      await createAdminAlertRecord(null, {
+        title: 'New Order Placed',
+        body: `Order #${normalizedOrder.orderRef || normalizedOrder.id} placed by ${normalizedOrder.customerName || 'Customer'} for Rs ${normalizedOrder.finalAmount}.`,
+        type: 'order',
+        source: 'order_checkout',
+        severity: normalizedOrder.status === 'pending_delivery_approval' || (['upi', 'cashfree'].includes(normalizedOrder.paymentMethod) && normalizedOrder.paymentStatus !== 'paid') ? 'warning' : 'info',
+        payload: { orderId: normalizedOrder.id, orderRef: normalizedOrder.orderRef || null, customerPhone: normalizedOrder.customerPhone || null, paymentMethod: normalizedOrder.paymentMethod, paymentStatus: normalizedOrder.paymentStatus }
+      });
+      notifyPushUser(result.order.user_id, {
+        title: 'Order received', body: `Your order #${normalizedOrder.orderRef || normalizedOrder.id} is ${normalizedOrder.status}.`, type: 'order', tag: `order-${normalizedOrder.id}`, url: '/',
+        data: { orderId: normalizedOrder.id, orderRef: normalizedOrder.orderRef || null, status: normalizedOrder.status }
+      });
+    }
     return res.json({ success: true, order: normalizedOrder });
   } catch (err: any) {
     console.error('POST /api/orders error', err);
@@ -2225,6 +2269,218 @@ function getPublicBaseUrl(req?: any) {
   return 'http://localhost:3000';
 }
 
+function getApiBaseUrl(req?: any) {
+  const configured = process.env.API_PUBLIC_URL || process.env.APP_URL;
+  if (configured && configured !== 'MY_API_URL') return configured.replace(/\/+$/, '');
+  if (req) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    if (host) return `${protocol}://${host}`;
+  }
+  return 'http://localhost:3000';
+}
+
+const CASHFREE_APP_ID = String(process.env.CASHFREE_APP_ID || '').trim();
+const CASHFREE_SECRET_KEY = String(process.env.CASHFREE_SECRET_KEY || '').trim();
+const CASHFREE_ENV = String(process.env.CASHFREE_ENV || 'production').trim().toLowerCase();
+const CASHFREE_API_VERSION = String(process.env.CASHFREE_API_VERSION || '2025-01-01').trim();
+
+function isCashfreeConfigured() {
+  return Boolean(CASHFREE_APP_ID && CASHFREE_SECRET_KEY);
+}
+
+function cashfreeMode() {
+  return 'production';
+}
+
+function assertLiveCashfreeMode() {
+  if (!['production', 'prod'].includes(CASHFREE_ENV)) {
+    throw new HttpError(503, 'Live Cashfree checkout is required. Set CASHFREE_ENV=production; sandbox payments are disabled.');
+  }
+}
+
+function cashfreeBaseUrl() {
+  return cashfreeMode() === 'production'
+    ? 'https://api.cashfree.com/pg'
+    : 'https://sandbox.cashfree.com/pg';
+}
+
+function validateCashfreePublicUrl(value: string, name: string, mustIncludeOrderId = false) {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new HttpError(503, `${name} must be a valid public HTTPS URL.`);
+  }
+  if (parsed.protocol !== 'https:' || /^(localhost|127\.0\.0\.1|::1)$/i.test(parsed.hostname)) {
+    throw new HttpError(503, `${name} must use the deployed public HTTPS domain, not localhost.`);
+  }
+  if (mustIncludeOrderId && !value.includes('{order_id}')) {
+    throw new HttpError(503, `${name} must include {order_id} so the return can be verified.`);
+  }
+  return value;
+}
+
+function normalizeCashfreeStatus(value: any, eventType?: any) {
+  const raw = String(value || eventType || '').toUpperCase();
+  if (raw.includes('SUCCESS') || raw === 'PAID') return 'paid';
+  if (raw.includes('USER_DROPPED') || raw.includes('DROPPED') || raw.includes('CANCEL')) return 'user_dropped';
+  if (raw.includes('FAIL')) return 'failed';
+  if (raw.includes('REFUND')) return 'refunded';
+  return 'pending';
+}
+
+function buildCashfreeOrderId(order: any) {
+  const ref = String(order.order_ref || order.orderRef || order.id || randomBytes(8).toString('hex')).replace(/[^a-zA-Z0-9_-]/g, '');
+  return `SVY_${ref.slice(0, 36)}`;
+}
+
+async function cashfreeApiRequest(pathname: string, init: RequestInit = {}) {
+  assertLiveCashfreeMode();
+  if (!isCashfreeConfigured()) {
+    throw new HttpError(503, 'Cashfree payment gateway is not configured. Add CASHFREE_APP_ID and CASHFREE_SECRET_KEY in environment variables.');
+  }
+  const response = await fetch(`${cashfreeBaseUrl()}${pathname}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-client-id': CASHFREE_APP_ID,
+      'x-client-secret': CASHFREE_SECRET_KEY,
+      'x-api-version': CASHFREE_API_VERSION,
+      ...(init.headers || {})
+    }
+  });
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!response.ok) {
+    throw new HttpError(response.status, data?.message || data?.error || 'Cashfree request failed');
+  }
+  return data;
+}
+
+function verifyCashfreeWebhookSignature(rawBody: Buffer, signature: string, timestamp: string) {
+  if (!isCashfreeConfigured()) return false;
+  if (!signature || !timestamp) return false;
+  // Cashfree signs the exact raw body as "timestamp.payload". Do not parse or
+  // re-serialize the body before this check.
+  const signedPayload = `${timestamp}.${rawBody.toString('utf8')}`;
+  const expected = createHmac('sha256', CASHFREE_SECRET_KEY).update(signedPayload).digest('base64');
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+async function handleCashfreePaymentStatus(cashfreeOrderId: string, status: string, providerRef: string | null, payload: any) {
+  if (!cashfreeOrderId) throw new HttpError(400, 'Cashfree order id missing');
+  return runTransaction(async (client) => {
+    const orderRes = await client.query(
+      `SELECT o.*
+       FROM orders o
+       LEFT JOIN payment_records pr ON pr.order_id = o.id
+       WHERE (pr.provider = 'cashfree' AND pr.provider_ref = $1)
+          OR (o.meta->'cashfree'->>'orderId' = $1)
+       ORDER BY o.created_at DESC
+       LIMIT 1
+       FOR UPDATE OF o`,
+      [cashfreeOrderId]
+    );
+    if (orderRes.rowCount === 0) throw new HttpError(404, 'Linked SVAYIRO order not found');
+    const order = orderRes.rows[0];
+    await client.query(
+      `UPDATE payment_records
+       SET status = $1,
+           provider_ref = COALESCE(provider_ref, $2),
+           paid_at = CASE WHEN $1 = 'paid' THEN COALESCE(paid_at, now()) ELSE paid_at END,
+           payload = COALESCE(payload, '{}'::jsonb) || $3::jsonb,
+           updated_at = now()
+       WHERE order_id = $4 AND provider = 'cashfree'`,
+      [status, cashfreeOrderId, JSON.stringify({ latest: payload, providerRef }), order.id]
+    );
+    await client.query(
+      `UPDATE orders
+       SET payment_status = $1,
+           payment_ref = COALESCE($2, payment_ref),
+           meta = COALESCE(meta, '{}'::jsonb) || jsonb_build_object(
+             'cashfree', COALESCE(meta->'cashfree', '{}'::jsonb) || jsonb_build_object(
+               'orderId', $3::text,
+               'paymentId', $2::text,
+               'status', $1::text,
+               'lastPayload', $4::jsonb
+             )
+           ),
+           updated_at = now()
+       WHERE id = $5`,
+      [status, providerRef, cashfreeOrderId, JSON.stringify(payload || {}), order.id]
+    );
+    const fresh = await client.query('SELECT * FROM orders WHERE id = $1', [order.id]);
+    const current = fresh.rows[0];
+    if (status === 'paid' && current.status !== 'pending_delivery_approval' && current.status !== 'delivery_rejected') {
+      await finalizePaidOrderEffects(client, current);
+    }
+    return current;
+  });
+}
+
+// A Cashfree checkout creates a payment attempt first.  It is deliberately not
+// announced as an order until Cashfree has verified it as paid server-side.
+async function announceVerifiedCashfreeOrder(order: any) {
+  if (!order?.id || order.payment_status !== 'paid') return;
+  const shouldAnnounce = await runTransaction(async (client) => {
+    const result = await client.query('SELECT meta FROM orders WHERE id = $1 FOR UPDATE', [order.id]);
+    if (result.rowCount === 0 || result.rows[0]?.meta?.cashfreeOrderAnnounced) return false;
+    await client.query(
+      `UPDATE orders
+       SET meta = COALESCE(meta, '{}'::jsonb) || jsonb_build_object('cashfreeOrderAnnounced', true, 'cashfreeOrderAnnouncedAt', now()::text),
+           updated_at = now()
+       WHERE id = $1`,
+      [order.id]
+    );
+    return true;
+  });
+  if (!shouldAnnounce) return;
+
+  const normalized = normalizeOrder(order);
+  await createAdminAlertRecord(null, {
+    title: 'Paid Cashfree Order Received',
+    body: `Order #${normalized.orderRef || normalized.id} was verified as paid by Cashfree for Rs ${normalized.finalAmount}.`,
+    type: 'order',
+    source: 'cashfree_payment_verified',
+    severity: 'info',
+    payload: { orderId: normalized.id, orderRef: normalized.orderRef || null, paymentMethod: 'cashfree', paymentStatus: 'paid' }
+  });
+  notifyPushUser(order.user_id, {
+    title: 'Payment verified — order placed',
+    body: `Your payment for order #${normalized.orderRef || normalized.id} was verified successfully.`,
+    type: 'order',
+    tag: `order-${normalized.id}`,
+    url: '/',
+    data: { orderId: normalized.id, orderRef: normalized.orderRef || null, status: normalized.status }
+  });
+}
+
+async function cashfreeWebhookHandler(req: any, res: any) {
+  try {
+    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || '');
+    const signature = String(req.headers['x-webhook-signature'] || '');
+    const timestamp = String(req.headers['x-webhook-timestamp'] || '');
+    if (!verifyCashfreeWebhookSignature(rawBody, signature, timestamp)) {
+      return res.status(401).json({ error: 'Invalid Cashfree webhook signature' });
+    }
+    const event = JSON.parse(rawBody.toString('utf8') || '{}');
+    const data = event?.data || {};
+    const cashfreeOrderId = data?.order?.order_id || event?.order_id || data?.order_id || '';
+    const payment = data?.payment || {};
+    const status = normalizeCashfreeStatus(payment?.payment_status || data?.payment_status, event?.type);
+    const providerRef = payment?.cf_payment_id || payment?.bank_reference || event?.cf_payment_id || null;
+    const order = await handleCashfreePaymentStatus(cashfreeOrderId, status, providerRef ? String(providerRef) : null, event);
+    await announceVerifiedCashfreeOrder(order);
+    return res.json({ success: true });
+  } catch (err: any) {
+    console.error('POST /api/payments/cashfree/webhook error', err);
+    return res.status(err.statusCode || 500).json({ error: err.message || 'Cashfree webhook failed' });
+  }
+}
+
 async function ensureInvoicePublicToken(client: any, invoice: any) {
   if (invoice?.public_token) return invoice;
   const token = generateInvoiceToken();
@@ -2295,7 +2551,7 @@ async function createPaymentRecord(client: any, order: any, overrides: any = {})
     [
       normalized.id,
       normalized.userId || null,
-      overrides.provider || (normalized.paymentMethod === 'upi' ? 'upi' : 'manual'),
+      overrides.provider || (normalized.paymentMethod === 'upi' ? 'upi' : normalized.paymentMethod === 'cashfree' ? 'cashfree' : 'manual'),
       overrides.providerRef ?? normalized.paymentRef ?? null,
       overrides.method || normalized.paymentMethod || 'cod',
       overrides.amount ?? normalized.finalAmount ?? 0,
@@ -3520,6 +3776,7 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
   const requestedHolidayMode = req.body?.holiday_mode ?? req.body?.isHolidayMode;
   const requestedDeliverySlots = firstArray(req.body?.deliverySlots, req.body?.delivery_slots);
   const requestedSocialLinks = firstArray(req.body?.socialLinks, req.body?.social_links);
+  const barcodeLabelPrintSettings = req.body?.barcodeLabelPrintSettings ?? req.body?.barcode_label_print_settings;
   const profileDetails = {
     ...(req.body || {}),
     phone: firstDefined(req.body?.contactNumber, req.body?.phone, req.body?.personalPhoneNumber),
@@ -3542,6 +3799,10 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
     holiday_message: firstDefined(req.body?.holidayMessage, req.body?.holiday_message),
     delivery_slots: requestedDeliverySlots,
     social_links: requestedSocialLinks,
+    allow_extended_delivery: firstDefined(req.body?.allowExtendedDelivery, req.body?.allow_extended_delivery),
+    extended_delivery_message: firstDefined(req.body?.extendedDeliveryMessage, req.body?.extended_delivery_message),
+    extended_delivery_note: firstDefined(req.body?.extendedDeliveryNote, req.body?.extended_delivery_note),
+    barcode_label_print_settings: barcodeLabelPrintSettings,
     addresses,
     address: {
       physicalAddress: addressText,
@@ -3550,10 +3811,14 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
   };
   const validationErrors = validateShopProfileUpdate(profileDetails);
   if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join('; ') });
+  if (profileDetails.barcode_label_print_settings !== undefined) {
+    profileDetails.barcode_label_print_settings = normalizeBarcodeLabelPrintSettings(profileDetails.barcode_label_print_settings);
+  }
   const addressJson = JSON.stringify(profileDetails.address || {});
   const addressesJson = JSON.stringify(profileDetails.addresses || []);
   const deliverySlotsJson = profileDetails.delivery_slots === undefined ? null : JSON.stringify(profileDetails.delivery_slots || []);
   const socialLinksJson = profileDetails.social_links === undefined ? null : JSON.stringify(profileDetails.social_links || []);
+  const barcodeLabelPrintSettingsJson = profileDetails.barcode_label_print_settings === undefined ? null : JSON.stringify(profileDetails.barcode_label_print_settings);
   try {
     // try to update the first shop_profile row; if none exists insert
     const existing = await pgQuery('SELECT id FROM shop_profile ORDER BY created_at DESC LIMIT 1');
@@ -3563,8 +3828,9 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
           name, tagline, description, logo_url, banner_url, phone, whatsapp, personal_phone, support_phone, email,
           address, addresses, google_maps_link, delivery_radius_km, free_delivery_radius_km, base_delivery_charge, delivery_charge_per_km,
           is_open, holiday_mode, operational_timings, announcement, holiday_message, delivery_slots,
-          upi_id, payment_qr_code_url, social_links, created_at, updated_at
-        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23::jsonb,$24,$25,$26::jsonb,now(),now()) RETURNING *`,
+          upi_id, payment_qr_code_url, social_links, allow_extended_delivery, extended_delivery_message, extended_delivery_note, barcode_label_print_settings,
+          created_at, updated_at
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23::jsonb,$24,$25,$26::jsonb,$27::boolean,$28,$29,$30::jsonb,now(),now()) RETURNING *`,
         [
           profileDetails.name || 'SVAYIRO',
           profileDetails.tagline || null,
@@ -3591,7 +3857,11 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
           deliverySlotsJson,
           profileDetails.upi_id || null,
           profileDetails.payment_qr_code_url || null,
-          socialLinksJson || '[]'
+          socialLinksJson || '[]',
+          profileDetails.allow_extended_delivery === undefined ? false : normalizeBoolean(profileDetails.allow_extended_delivery, false),
+          profileDetails.extended_delivery_message || DEFAULT_SHOP_PROFILE.extended_delivery_message,
+          profileDetails.extended_delivery_note || null,
+          barcodeLabelPrintSettingsJson || JSON.stringify(DEFAULT_SHOP_PROFILE.barcode_label_print_settings)
         ]
       );
       invalidatePublicCache('shop-profile');
@@ -3626,8 +3896,12 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
         upi_id = COALESCE($24,upi_id),
         payment_qr_code_url = COALESCE($25,payment_qr_code_url),
         social_links = COALESCE($26::jsonb,social_links),
+        allow_extended_delivery = COALESCE($27::boolean,allow_extended_delivery),
+        extended_delivery_message = COALESCE($28,extended_delivery_message),
+        extended_delivery_note = COALESCE($29,extended_delivery_note),
+        barcode_label_print_settings = COALESCE($30::jsonb,barcode_label_print_settings),
         updated_at = now()
-      WHERE id = $27 RETURNING *`,
+      WHERE id = $31 RETURNING *`,
       [
         profileDetails.name,
         profileDetails.tagline,
@@ -3655,6 +3929,10 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
         profileDetails.upi_id,
         profileDetails.payment_qr_code_url,
         socialLinksJson,
+        profileDetails.allow_extended_delivery === undefined ? undefined : normalizeBoolean(profileDetails.allow_extended_delivery, false),
+        profileDetails.extended_delivery_message,
+        profileDetails.extended_delivery_note,
+        barcodeLabelPrintSettingsJson,
         id
       ]
     );
@@ -5310,6 +5588,143 @@ app.post('/api/payments/upi/confirm', authMiddleware, async (req, res) => {
   }
 });
 
+app.post('/api/payments/cashfree/create-order', authMiddleware, async (req, res) => {
+  const { orderId } = req.body || {};
+  const uid = (req as any).user?.id;
+  if (!uid || !orderId) return res.status(400).json({ error: 'orderId is required' });
+  try {
+    const orderRes = await pgQuery('SELECT * FROM orders WHERE id = $1 AND user_id = $2', [orderId, uid]);
+    if (orderRes.rowCount === 0) return res.status(404).json({ error: 'Order not found' });
+    const order = orderRes.rows[0];
+    if (order.payment_method !== 'cashfree') return res.status(400).json({ error: 'Order is not a Cashfree payment order' });
+    if (order.status === 'pending_delivery_approval') {
+      return res.status(409).json({ error: 'This order is waiting for owner delivery approval before online payment.' });
+    }
+    const amount = Number(order.final_amount || 0);
+    if (amount <= 0) return res.status(400).json({ error: 'Invalid order amount for Cashfree payment' });
+    const cashfreeOrderId = order.meta?.cashfree?.orderId || buildCashfreeOrderId(order);
+    const customerPhone = normalizePhone(order.customer_phone);
+    const customerRes = await pgQuery('SELECT email, name FROM users WHERE id = $1', [uid]);
+    const customer = customerRes.rows?.[0] || {};
+    const returnUrl = validateCashfreePublicUrl(
+      process.env.CASHFREE_RETURN_URL || `${getPublicBaseUrl(req)}/?payment=return&order_id={order_id}`,
+      'CASHFREE_RETURN_URL',
+      true
+    );
+    const notifyUrl = validateCashfreePublicUrl(
+      process.env.CASHFREE_NOTIFY_URL || `${getApiBaseUrl(req)}/api/payments/cashfree/webhook`,
+      'CASHFREE_NOTIFY_URL'
+    );
+    const cashfreeOrder = await cashfreeApiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        order_id: cashfreeOrderId,
+        order_amount: Number(amount.toFixed(2)),
+        order_currency: 'INR',
+        customer_details: {
+          customer_id: String(uid),
+          customer_name: order.customer_name || customer.name || 'SVAYIRO Customer',
+          customer_email: customer.email || `customer-${uid}@svayiro.local`,
+          customer_phone: customerPhone
+        },
+        order_meta: {
+          return_url: returnUrl,
+          notify_url: notifyUrl
+        },
+        order_note: `SVAYIRO order ${order.order_ref || order.id}`
+      })
+    });
+    const paymentSessionId = cashfreeOrder.payment_session_id || cashfreeOrder.paymentSessionId || null;
+    const paymentLink = cashfreeOrder.payment_link || cashfreeOrder.paymentLink || cashfreeOrder?.payments?.url || null;
+    await runTransaction(async (client) => {
+      await client.query(
+        `UPDATE orders
+         SET meta = COALESCE(meta, '{}'::jsonb) || jsonb_build_object(
+           'cashfree', COALESCE(meta->'cashfree', '{}'::jsonb) || jsonb_build_object(
+             'orderId', $1::text,
+             'paymentSessionId', $2::text,
+             'mode', $3::text,
+             'createdAt', now()::text
+           )
+         ),
+         updated_at = now()
+         WHERE id = $4`,
+        [cashfreeOrderId, paymentSessionId, cashfreeMode(), order.id]
+      );
+      await client.query(
+        `UPDATE payment_records
+         SET provider = 'cashfree',
+             provider_ref = $1,
+             method = 'cashfree',
+             status = 'pending',
+             amount = $2,
+             payload = COALESCE(payload, '{}'::jsonb) || $3::jsonb,
+             updated_at = now()
+         WHERE order_id = $4`,
+        [cashfreeOrderId, amount, JSON.stringify({ createOrder: cashfreeOrder }), order.id]
+      );
+    });
+    return res.json({
+      success: true,
+      orderId: order.id,
+      cashfreeOrderId,
+      paymentSessionId,
+      paymentLink,
+      mode: cashfreeMode()
+    });
+  } catch (err: any) {
+    console.error('POST /api/payments/cashfree/create-order error', err);
+    return res.status(err.statusCode || 500).json({ error: err.message || 'Failed to create Cashfree payment order' });
+  }
+});
+
+app.get('/api/payments/cashfree/order/:orderId/status', authMiddleware, async (req, res) => {
+  const { orderId } = req.params;
+  const uid = (req as any).user?.id;
+  try {
+    // Cashfree returns its own order_id to the return URL. Accept either that
+    // identifier or the internal UUID, while always scoping it to the user.
+    const orderRes = await pgQuery(
+      `SELECT * FROM orders
+       WHERE user_id = $2
+         AND (id::text = $1 OR meta->'cashfree'->>'orderId' = $1)
+       LIMIT 1`,
+      [orderId, uid]
+    );
+    if (orderRes.rowCount === 0) return res.status(404).json({ error: 'Order not found' });
+    const cashfreeOrderId = orderRes.rows[0].meta?.cashfree?.orderId;
+    if (!cashfreeOrderId) return res.status(404).json({ error: 'Cashfree order was not created yet' });
+    const statusRes = await cashfreeApiRequest(`/orders/${encodeURIComponent(cashfreeOrderId)}`, { method: 'GET' });
+    const status = normalizeCashfreeStatus(statusRes.order_status || statusRes.payment_status);
+    const updated = await handleCashfreePaymentStatus(cashfreeOrderId, status, statusRes.cf_payment_id || null, statusRes);
+    await announceVerifiedCashfreeOrder(updated);
+    return res.json({ success: true, order: normalizeOrder(updated), cashfree: statusRes });
+  } catch (err: any) {
+    console.error('GET /api/payments/cashfree/order/:orderId/status error', err);
+    return res.status(err.statusCode || 500).json({ error: err.message || 'Failed to refresh Cashfree payment status' });
+  }
+});
+
+app.post('/api/admin/orders/:id/refresh-cashfree', authMiddleware, isAdminMiddleware, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const orderRes = await pgQuery('SELECT * FROM orders WHERE id = $1', [id]);
+    if (orderRes.rowCount === 0) return res.status(404).json({ error: 'Order not found' });
+    const order = orderRes.rows[0];
+    if (order.payment_method !== 'cashfree') return res.status(400).json({ error: 'Order is not a Cashfree payment order' });
+    const cashfreeOrderId = order.meta?.cashfree?.orderId;
+    if (!cashfreeOrderId) return res.status(404).json({ error: 'Cashfree order was not created yet' });
+    const statusRes = await cashfreeApiRequest(`/orders/${encodeURIComponent(cashfreeOrderId)}`, { method: 'GET' });
+    const status = normalizeCashfreeStatus(statusRes.order_status || statusRes.payment_status);
+    const updated = await handleCashfreePaymentStatus(cashfreeOrderId, status, statusRes.cf_payment_id || null, statusRes);
+    await announceVerifiedCashfreeOrder(updated);
+    return res.json({ success: true, order: normalizeOrder(updated), cashfree: statusRes });
+  } catch (err: any) {
+    console.error('POST /api/admin/orders/:id/refresh-cashfree error', err);
+    return res.status(err.statusCode || 500).json({ error: err.message || 'Failed to refresh Cashfree payment status' });
+  }
+});
+
 app.get('/api/loyalty/summary', authMiddleware, attachUserMiddleware, async (req, res) => {
   const user = (req as any).currentUser;
   if (!user?.id) return res.status(401).json({ error: 'Not authenticated' });
@@ -6602,13 +7017,17 @@ app.get('/api/orders', async (req, res) => {
       const { rows } = await pgQuery(
         `SELECT * FROM orders
          WHERE customer_phone = $1
-           AND NOT (payment_method = 'upi' AND payment_status = 'pending' AND payment_ref IS NULL)
+           AND NOT ((payment_method IN ('upi', 'cashfree')) AND payment_status = 'pending' AND payment_ref IS NULL)
          ORDER BY created_at DESC`,
         [phone]
       );
       return res.json(rows.map(normalizeOrder));
     }
-    const { rows } = await pgQuery('SELECT * FROM orders ORDER BY created_at DESC');
+    const { rows } = await pgQuery(
+      `SELECT * FROM orders
+       WHERE NOT (payment_method = 'cashfree' AND payment_status = 'pending' AND payment_ref IS NULL)
+       ORDER BY created_at DESC`
+    );
     return res.json(rows.map(normalizeOrder));
   } catch (err) {
     console.error('GET /api/orders error', err);
@@ -6620,8 +7039,8 @@ app.get('/api/orders', async (req, res) => {
 app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { status, paymentStatus } = req.body;
-  const validStatuses = ['pending', 'accepted', 'packed', 'out_for_delivery', 'delivered', 'cancelled'];
-  const validPaymentStatuses = ['pending', 'submitted', 'paid', 'failed', 'refunded'];
+  const validStatuses = ['pending', 'pending_delivery_approval', 'accepted', 'packed', 'out_for_delivery', 'delivered', 'cancelled', 'delivery_rejected'];
+  const validPaymentStatuses = ['pending', 'submitted', 'paid', 'failed', 'refunded', 'user_dropped'];
   if (status !== undefined && !validStatuses.includes(status)) {
     return res.status(400).json({ error: 'Invalid order status' });
   }
@@ -6673,17 +7092,25 @@ app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
       if (isCustomerCare && !isAdmin && newStatus === 'cancelled') {
         throw new HttpError(403, 'Only owner can cancel orders');
       }
+      if (order.status === 'pending_delivery_approval' && !isAdmin) {
+        throw new HttpError(403, 'Only owner can approve or reject outside-coverage delivery requests');
+      }
       if (newPaymentStatus === 'paid' && order.payment_status !== 'paid' && newStatus !== 'cancelled') {
         await assertOrderItemsInStock(client, id);
       }
       await client.query('UPDATE orders SET status = $1, payment_status = $2, updated_at = now() WHERE id = $3', [newStatus, newPaymentStatus, id]);
 
       if (newStatus === 'cancelled' && prevStatus !== 'cancelled') {
-        // restore stock for order items
-        const itemsRes = await client.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [id]);
-        for (const it of itemsRes.rows) {
-          await client.query('UPDATE products SET stock_count = stock_count + $1, updated_at = now() WHERE id = $2', [it.quantity, it.product_id]);
-          await client.query('INSERT INTO inventory_logs(product_id, delta, reason, source, reference_id, metadata, created_at) VALUES($1,$2,$3,$4,$5,$6,now())', [it.product_id, it.quantity, 'order_cancel_restore', 'order', id, { orderId: id, orderRef: order.order_ref || null }]);
+        const stockWasDeducted = await client.query(
+          "SELECT 1 FROM inventory_logs WHERE reference_id = $1 AND source = 'order' AND delta < 0 LIMIT 1",
+          [id]
+        );
+        if (stockWasDeducted.rowCount > 0) {
+          const itemsRes = await client.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [id]);
+          for (const it of itemsRes.rows) {
+            await client.query('UPDATE products SET stock_count = stock_count + $1, updated_at = now() WHERE id = $2', [it.quantity, it.product_id]);
+            await client.query('INSERT INTO inventory_logs(product_id, delta, reason, source, reference_id, metadata, created_at) VALUES($1,$2,$3,$4,$5,$6,now())', [it.product_id, it.quantity, 'order_cancel_restore', 'order', id, { orderId: id, orderRef: order.order_ref || null }]);
+          }
         }
         await createAdminAlertRecord(client, {
           title: 'Order Cancelled',
@@ -6699,7 +7126,7 @@ app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
       let sideEffectError = '';
       await client.query('SAVEPOINT order_status_side_effects');
       try {
-        if (fres.rows[0]?.payment_method === 'upi' && fres.rows[0]?.payment_status === 'paid') {
+        if (['upi', 'cashfree'].includes(fres.rows[0]?.payment_method) && fres.rows[0]?.payment_status === 'paid' && fres.rows[0]?.status !== 'delivery_rejected') {
           await finalizePaidOrderEffects(client, fres.rows[0]);
         } else {
           await applyOrderRewards(client, fres.rows[0]);
@@ -6716,7 +7143,7 @@ app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
            WHERE id = $2`,
           [sideEffectError, id]
         );
-        if (fres.rows[0]?.payment_method === 'upi' && fres.rows[0]?.payment_status === 'paid') {
+        if (['upi', 'cashfree'].includes(fres.rows[0]?.payment_method) && fres.rows[0]?.payment_status === 'paid') {
           const rewardError = await applyOrderRewardsBestEffort(client, fres.rows[0]);
           if (rewardError) sideEffectError = `${sideEffectError}; ${rewardError}`;
         }
@@ -6757,7 +7184,7 @@ app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
         [status || null, paymentStatus || null, err.message || 'Status side effects failed', id]
       );
       if (fallback.rowCount === 0) return res.status(404).json({ error: 'Order not found' });
-      const rewardError = fallback.rows[0]?.payment_method === 'upi' && fallback.rows[0]?.payment_status === 'paid'
+      const rewardError = ['upi', 'cashfree'].includes(fallback.rows[0]?.payment_method) && fallback.rows[0]?.payment_status === 'paid'
         ? await applyOrderRewardsBestEffort({ query: pgQuery }, fallback.rows[0])
         : '';
       const normalizedFallbackOrder = normalizeOrder(fallback.rows[0]);
@@ -6845,16 +7272,18 @@ app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use')
           [stockQuantity, item.productId]
         );
         if (stockUpdate.rowCount === 0) throw new Error(`Insufficient stock for ${prod.name}`);
-        const baseUnitPrice = Number(prod.base_price || 0);
-        const catalogPrice = Number(prod.offer_price) > 0 ? Number(prod.offer_price) : baseUnitPrice;
-        const requestedPrice = item.price !== undefined ? nonNegativeNumber(item.price, 0) : catalogPrice;
-        if (!isOwner && Math.abs(requestedPrice - catalogPrice) > 0.001) {
-          throw new HttpError(403, `Only owner can override price for ${prod.name}.`);
-        }
-        const price = isOwner ? requestedPrice : catalogPrice;
         const productMetadata = prod.metadata && typeof prod.metadata === 'object' ? prod.metadata : {};
         const isLooseLabel = Boolean(item.isLooseLabel);
+        if (isLooseLabel && !productMetadata.isLooseItem) throw new HttpError(400, `${prod.name} is not configured for loose-weight billing.`);
         const looseFactor = isLooseLabel ? looseQuantityFactor(productMetadata, stockQuantity) : 0;
+        const baseUnitPrice = Number(prod.base_price || 0);
+        const catalogPrice = Number(prod.offer_price) > 0 ? Number(prod.offer_price) : baseUnitPrice;
+        const expectedLinePrice = isLooseLabel ? catalogPrice * looseFactor : catalogPrice;
+        const requestedPrice = item.price !== undefined ? nonNegativeNumber(item.price, 0) : expectedLinePrice;
+        if (!isOwner && Math.abs(requestedPrice - expectedLinePrice) > 0.001) {
+          throw new HttpError(403, `Only owner can override price for ${prod.name}.`);
+        }
+        const price = isOwner ? requestedPrice : expectedLinePrice;
         const subtotal = price * lineQuantity;
         const totalBasePrice = isLooseLabel ? baseUnitPrice * looseFactor : baseUnitPrice * lineQuantity;
         const itemDiscount = Math.max(0, totalBasePrice - subtotal);
@@ -6863,12 +7292,13 @@ app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use')
         pendingInventoryLogs.push({
           productId: item.productId,
           delta: -stockQuantity,
-          reason: isLooseLabel ? 'loose_label_sale' : 'offline_sale',
+          reason: isLooseLabel ? (item.directLoose ? 'loose_direct_sale' : 'loose_label_sale') : 'offline_sale',
           source: 'offline',
           metadata: {
             note: note || null,
             displayQuantityLabel: item.displayQuantityLabel || null,
-            scannedBarcode: item.scannedBarcode || null
+            scannedBarcode: item.scannedBarcode || null,
+            directLoose: Boolean(item.directLoose)
           }
         });
         const purchaseUnitCost = Number(productMetadata.purchasePrice || 0);
@@ -7280,6 +7710,10 @@ async function ensureRuntimeSchemaCompatibility() {
   await pgQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_archived_at timestamptz');
   await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS free_delivery_radius_km numeric DEFAULT 0');
   await pgQuery("ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS social_links jsonb DEFAULT '[]'");
+  await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS allow_extended_delivery boolean DEFAULT false');
+  await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS extended_delivery_message text');
+  await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS extended_delivery_note text');
+  await pgQuery("ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS barcode_label_print_settings jsonb DEFAULT '{\"labelWidthMm\":50,\"labelHeightMm\":25,\"columnsPerRow\":2,\"horizontalGapMm\":0,\"verticalGapMm\":0}'::jsonb");
   await pgQuery("ALTER TABLE banners ADD COLUMN IF NOT EXISTS link_type varchar(50) DEFAULT 'none'");
   await pgQuery("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS audience varchar(30) DEFAULT 'customer'");
   await pgQuery("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()");
@@ -7485,6 +7919,18 @@ async function ensureRuntimeSchemaCompatibility() {
   `);
   await pgQuery('CREATE INDEX IF NOT EXISTS idx_product_barcodes_product_id ON product_barcodes(product_id)');
   await pgQuery(`
+    CREATE TABLE IF NOT EXISTS payments (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      order_id uuid REFERENCES orders(id) ON DELETE SET NULL,
+      provider varchar(100),
+      provider_ref varchar(200),
+      amount numeric,
+      status varchar(50),
+      payload jsonb DEFAULT '{}',
+      created_at timestamptz DEFAULT now()
+    )
+  `);
+  await pgQuery(`
     CREATE TABLE IF NOT EXISTS payment_records (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       order_id uuid REFERENCES orders(id) ON DELETE SET NULL,
@@ -7631,22 +8077,30 @@ async function ensureRuntimeSchemaCompatibility() {
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_advance_requests_quantity_nonnegative') THEN
         ALTER TABLE advance_requests ADD CONSTRAINT chk_advance_requests_quantity_nonnegative CHECK (quantity >= 0);
       END IF;
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_orders_status') THEN
-        ALTER TABLE orders ADD CONSTRAINT chk_orders_status CHECK (status IN ('pending','accepted','packed','out_for_delivery','delivered','cancelled'));
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_orders_status') THEN
+        ALTER TABLE orders DROP CONSTRAINT chk_orders_status;
       END IF;
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_orders_payment_method') THEN
-        ALTER TABLE orders ADD CONSTRAINT chk_orders_payment_method CHECK (payment_method IN ('cod','upi','cash','card'));
+      ALTER TABLE orders ADD CONSTRAINT chk_orders_status CHECK (status IN ('pending','pending_delivery_approval','accepted','packed','out_for_delivery','delivered','cancelled','delivery_rejected'));
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_orders_payment_method') THEN
+        ALTER TABLE orders DROP CONSTRAINT chk_orders_payment_method;
       END IF;
+      ALTER TABLE orders ADD CONSTRAINT chk_orders_payment_method CHECK (payment_method IN ('cod','upi','cash','card','cashfree'));
       IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_orders_payment_status') THEN
         ALTER TABLE orders DROP CONSTRAINT chk_orders_payment_status;
       END IF;
-      ALTER TABLE orders ADD CONSTRAINT chk_orders_payment_status CHECK (payment_status IN ('pending','submitted','paid','failed','refunded'));
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payment_records_status') THEN
-        ALTER TABLE payment_records ADD CONSTRAINT chk_payment_records_status CHECK (status IN ('pending','paid','failed','cancelled','refunded'));
+      ALTER TABLE orders ADD CONSTRAINT chk_orders_payment_status CHECK (payment_status IN ('pending','submitted','paid','failed','refunded','user_dropped'));
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payments_status') THEN
+        ALTER TABLE payments DROP CONSTRAINT chk_payments_status;
       END IF;
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payment_records_method') THEN
-        ALTER TABLE payment_records ADD CONSTRAINT chk_payment_records_method CHECK (method IN ('cod','upi','cash','card','manual'));
+      ALTER TABLE payments ADD CONSTRAINT chk_payments_status CHECK (status IN ('pending','paid','failed','cancelled','refunded','user_dropped'));
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payment_records_status') THEN
+        ALTER TABLE payment_records DROP CONSTRAINT chk_payment_records_status;
       END IF;
+      ALTER TABLE payment_records ADD CONSTRAINT chk_payment_records_status CHECK (status IN ('pending','paid','failed','cancelled','refunded','user_dropped'));
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payment_records_method') THEN
+        ALTER TABLE payment_records DROP CONSTRAINT chk_payment_records_method;
+      END IF;
+      ALTER TABLE payment_records ADD CONSTRAINT chk_payment_records_method CHECK (method IN ('cod','upi','cash','card','manual','cashfree'));
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_complaints_status') THEN
         ALTER TABLE complaints ADD CONSTRAINT chk_complaints_status CHECK (status IN ('open','in_progress','resolved','closed'));
       END IF;

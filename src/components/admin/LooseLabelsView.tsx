@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Download, Printer, Scale, Search } from 'lucide-react';
 import { api } from '../../api';
-import { Product } from '../../types';
+import { BarcodeLabelPrintSettings, Product } from '../../types';
 
 const PAGE_SIZE = 100;
 const CODE128_PATTERNS = [
@@ -10,6 +10,27 @@ const CODE128_PATTERNS = [
 
 interface Props {
   isDarkMode: boolean;
+  barcodeLabelPrintSettings?: BarcodeLabelPrintSettings;
+}
+
+const defaultBarcodeLabelPrintSettings: BarcodeLabelPrintSettings = {
+  labelWidthMm: 50,
+  labelHeightMm: 25,
+  columnsPerRow: 2,
+  horizontalGapMm: 0,
+  verticalGapMm: 0
+};
+
+function normalizeBarcodeLabelPrintSettings(value?: Partial<BarcodeLabelPrintSettings>): BarcodeLabelPrintSettings {
+  const positive = (input: unknown, fallback: number) => Number.isFinite(Number(input)) && Number(input) > 0 ? Number(input) : fallback;
+  const gap = (input: unknown, fallback: number) => Number.isFinite(Number(input)) && Number(input) >= 0 ? Number(input) : fallback;
+  return {
+    labelWidthMm: positive(value?.labelWidthMm, defaultBarcodeLabelPrintSettings.labelWidthMm),
+    labelHeightMm: positive(value?.labelHeightMm, defaultBarcodeLabelPrintSettings.labelHeightMm),
+    columnsPerRow: Math.max(1, Math.round(positive(value?.columnsPerRow, defaultBarcodeLabelPrintSettings.columnsPerRow))),
+    horizontalGapMm: gap(value?.horizontalGapMm, defaultBarcodeLabelPrintSettings.horizontalGapMm),
+    verticalGapMm: gap(value?.verticalGapMm, defaultBarcodeLabelPrintSettings.verticalGapMm)
+  };
 }
 
 function code128SvgDataUri(value: string) {
@@ -82,7 +103,8 @@ function buildLooseBarcode(product: Product, quantity: number, amount: number) {
   return `SVL|${plu}|${Math.max(0, Math.round(quantity))}|${Math.max(0, Math.round(amount * 100))}|${todayYmd()}`;
 }
 
-export default function LooseLabelsView({ isDarkMode }: Props) {
+export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings }: Props) {
+  const labelPrintSettings = normalizeBarcodeLabelPrintSettings(barcodeLabelPrintSettings);
   const [products, setProducts] = useState<Product[]>([]);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -90,6 +112,7 @@ export default function LooseLabelsView({ isDarkMode }: Props) {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [copies, setCopies] = useState('1');
 
   const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
   const panelClass = `rounded-xl border p-4 shadow-sm ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`;
@@ -150,26 +173,42 @@ export default function LooseLabelsView({ isDarkMode }: Props) {
     `;
   };
 
-  const labelDocument = (print = false) => `
+  const labelDocument = (print = false) => {
+    const copyCount = Math.min(100, Math.max(1, Math.floor(Number(copies) || 1)));
+    const { labelWidthMm, labelHeightMm, columnsPerRow, horizontalGapMm, verticalGapMm } = labelPrintSettings;
+    const totalWidthMm = (labelWidthMm * columnsPerRow) + (horizontalGapMm * (columnsPerRow - 1));
+    const totalRowHeightMm = labelHeightMm + verticalGapMm;
+    const contentScale = Math.min(1, Math.max(0.55, labelHeightMm / 25));
+    const labels = Array.from({ length: copyCount }, () => labelHtml());
+    const rows: string[] = [];
+    for (let index = 0; index < labels.length; index += columnsPerRow) {
+      rows.push(`<div class="label-row">${labels.slice(index, index + columnsPerRow).join('')}</div>`);
+    }
+
+    return `
     <!doctype html>
     <html>
       <head>
         <meta charset="utf-8" />
         <title>SVAYIRO Loose Item Label</title>
         <style>
-          *{box-sizing:border-box}html,body{margin:0;padding:0;width:50mm;background:#fff;font-family:Arial,sans-serif;color:#000}
-          .label{width:50mm;height:25mm;padding:1.2mm 1.9mm;overflow:hidden}
-          .brand{border-bottom:.25mm solid #000;padding-bottom:.3mm;font-size:7px;font-weight:900;letter-spacing:.035em;line-height:1}
-          .name{margin-top:.45mm;font-size:7.2px;line-height:1.05;max-height:4mm;overflow:hidden}
-          .line{display:flex;justify-content:space-between;gap:1mm;margin-top:.45mm;font-size:7.2px;line-height:1}
-          .line strong{font-size:8px;font-weight:900}.price{display:flex;justify-content:space-between;gap:1mm;margin-top:.3mm;font-size:5.8px;line-height:1;font-weight:400}
-          .barcode{display:block;width:100%;height:7.4mm;object-fit:contain;margin-top:.25mm}
-          @page{size:50mm 25mm;margin:0}
+          *{box-sizing:border-box}html,body{margin:0!important;padding:0!important;width:${totalWidthMm}mm;background:#fff;font-family:Arial,sans-serif;color:#000}
+          .label-row{display:grid;grid-template-columns:repeat(${columnsPerRow},${labelWidthMm}mm);column-gap:${horizontalGapMm}mm;width:${totalWidthMm}mm;height:${totalRowHeightMm}mm;overflow:hidden;break-after:page;page-break-after:always}
+          .label-row:last-child{break-after:auto;page-break-after:auto}
+          .label{width:${labelWidthMm}mm;min-width:${labelWidthMm}mm;max-width:${labelWidthMm}mm;height:${labelHeightMm}mm;min-height:${labelHeightMm}mm;max-height:${labelHeightMm}mm;padding:${(1.2 * contentScale).toFixed(2)}mm ${(1.9 * contentScale).toFixed(2)}mm;overflow:hidden;contain:layout paint}
+          .brand{border-bottom:.25mm solid #000;padding-bottom:.3mm;font-size:${(7 * contentScale).toFixed(2)}px;font-weight:900;letter-spacing:.035em;line-height:1;white-space:nowrap;overflow:hidden}
+          .name{margin-top:.45mm;font-size:${(7.2 * contentScale).toFixed(2)}px;line-height:1.05;max-height:${(4 * contentScale).toFixed(2)}mm;overflow:hidden}
+          .line{display:flex;justify-content:space-between;gap:1mm;margin-top:.45mm;font-size:${(7.2 * contentScale).toFixed(2)}px;line-height:1;overflow:hidden}
+          .line strong{font-size:${(8 * contentScale).toFixed(2)}px;font-weight:900;white-space:nowrap}.price{display:flex;justify-content:space-between;gap:1mm;margin-top:.3mm;font-size:${(5.8 * contentScale).toFixed(2)}px;line-height:1;font-weight:400;overflow:hidden;white-space:nowrap}
+          .barcode{display:block;width:100%;height:${Math.max(4.5, 7.4 * contentScale).toFixed(2)}mm;object-fit:contain;margin-top:.25mm}
+          @page{size:${totalWidthMm}mm ${totalRowHeightMm}mm;margin:0}
+          @media print{html,body{margin:0!important;padding:0!important}.label-row{break-inside:avoid;page-break-inside:avoid}}
         </style>
       </head>
-      <body>${labelHtml()}${print ? '<script>window.onload=()=>{window.focus();window.print();};</script>' : ''}</body>
+      <body>${rows.join('')}${print ? '<script>window.onload=()=>{window.focus();window.print();};</script>' : ''}</body>
     </html>
   `;
+  };
 
   const printLabel = () => {
     if (!barcodeValue) return;
@@ -264,7 +303,7 @@ export default function LooseLabelsView({ isDarkMode }: Props) {
         <section className={panelClass}>
           <div className="mb-3 border-b border-slate-200 pb-3 dark:border-slate-800">
             <h3 className="text-xs font-semibold uppercase text-indigo-800 dark:text-indigo-300">Generate Barcode Label</h3>
-            <p className="mt-1 text-[10px] font-semibold text-slate-500">Label size: 50mm x 25mm. Enter exact weighed quantity in the stock unit.</p>
+            <p className="mt-1 text-[10px] font-semibold text-slate-500">Label size: {labelPrintSettings.labelWidthMm}mm × {labelPrintSettings.labelHeightMm}mm, {labelPrintSettings.columnsPerRow} per row. Enter exact weighed quantity in the stock unit.</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -277,11 +316,16 @@ export default function LooseLabelsView({ isDarkMode }: Props) {
               <p className="mt-1 text-xl font-bold text-emerald-700">Rs. {amount.toFixed(2)}</p>
               <p className="text-[10px] font-semibold text-slate-500">{baseQuantity > 0 ? labelQuantity : 'Enter quantity'}</p>
             </div>
+            <label>
+              <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Copies</span>
+              <input className={inputClass} type="number" min="1" max="100" step="1" value={copies} onChange={(event) => setCopies(event.target.value.replace(/[^\d]/g, ''))} />
+              <span className="mt-1 block text-[10px] font-medium text-slate-500">1 to 100 identical labels</span>
+            </label>
           </div>
 
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
             {barcodeValue ? (
-              <div className="mx-auto w-[50mm] rounded border border-slate-300 bg-white p-1 text-black shadow-sm">
+              <div className="mx-auto max-w-full rounded border border-slate-300 bg-white p-1 text-black shadow-sm" style={{ width: `${labelPrintSettings.labelWidthMm}mm` }}>
                 <div dangerouslySetInnerHTML={{ __html: labelHtml() }} />
               </div>
             ) : (
@@ -299,7 +343,7 @@ export default function LooseLabelsView({ isDarkMode }: Props) {
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-700 px-4 py-3 text-xs font-semibold uppercase text-white shadow disabled:opacity-50"
             >
               <Printer className="h-4 w-4" />
-              Print Label
+              Print {Math.min(100, Math.max(1, Math.floor(Number(copies) || 1)))} {Math.min(100, Math.max(1, Math.floor(Number(copies) || 1))) === 1 ? 'Label' : 'Labels'}
             </button>
             <button
               type="button"

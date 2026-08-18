@@ -35,11 +35,11 @@ export default function TermsContent({ shop, compact = false }: TermsContentProp
     },
     {
       title: '5. Order Placement and Confirmation',
-      body: 'An order is created only after the checkout flow is completed with the required customer details, valid mobile number, selected fulfilment method, and applicable payment information. For UPI orders, submitting a UTR/reference number does not automatically mean payment is verified. The store owner may verify payment before accepting, packing, or dispatching the order.'
+      body: 'An order is created only after the checkout flow is completed with the required customer details, valid mobile number, selected fulfilment method, and applicable payment information. Online payments are confirmed only after gateway verification. COD payments may be collected as cash or through a delivery-side QR shown by the owner or delivery partner.'
     },
     {
       title: '6. UPI, COD, and Payment Verification',
-      body: 'UPI QR and payment links are generated for the exact checkout amount using the merchant UPI details configured by the store. Customers must pay the exact amount and enter a valid UPI reference/UTR when requested. Fake references, reused transaction IDs, screenshots without actual payment, payment mismatch, or failed transactions may result in order rejection. COD and self-pickup payment status can be marked paid only by authorized staff or owner after verification.'
+      body: 'Online payments are processed on Cashfree’s hosted checkout. We do not ask customers to enter a UTR, card number, CVV, PIN, or bank-login details on SVAYIRO. An order is confirmed only after Cashfree reports a successful payment to our server. Failed, cancelled, or incomplete payments do not create a confirmed order. COD and self-pickup payment status can be marked paid only by authorized staff after collection.'
     },
     {
       title: '7. Delivery, Distance, Slots, and Self-Pickup',
@@ -67,7 +67,7 @@ export default function TermsContent({ shop, compact = false }: TermsContentProp
     },
     {
       title: '13. Privacy and Data Use',
-      body: 'The store uses customer data to manage login, orders, delivery addresses, payment verification, support, coupons, rewards, complaints, and service communication. Personal information is not intended to be sold to third-party advertisers. Location coordinates, address details, phone number, order history, and payment references must be handled carefully by the store and authorized staff.'
+      body: 'The store uses customer data to manage login, orders, delivery addresses, payment verification, support, coupons, rewards, complaints, and service communication. Online payment details are collected and processed by Cashfree on its hosted checkout; SVAYIRO receives only the payment result and gateway reference needed for reconciliation. Personal information is not intended to be sold to third-party advertisers. Location coordinates, address details, phone number, and order history must be handled carefully by the store and authorized staff.'
     },
     {
       title: '14. Account Deletion',

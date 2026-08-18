@@ -609,7 +609,8 @@ export default function CustomerApp({
   const [couponError, setCouponError] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponSuccessMessage, setCouponSuccessMessage] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi' | 'cashfree'>('cod');
+  const [extendedDeliveryRequested, setExtendedDeliveryRequested] = useState(false);
   const [upiReference, setUpiReference] = useState('');
   const [upiPaymentId, setUpiPaymentId] = useState<string | null>(null);
   const [upiPaymentUrl, setUpiPaymentUrl] = useState('');
@@ -1683,6 +1684,66 @@ export default function CustomerApp({
     showToast(`Coupon ${code.toUpperCase()} copied to checkout. Tap Verify to apply.`, 'info');
   };
 
+  const loadCashfreeCheckoutSdk = () =>
+    new Promise<any>((resolve, reject) => {
+      const existingSdk = (window as any).Cashfree;
+      if (existingSdk) {
+        resolve(existingSdk);
+        return;
+      }
+
+      const existingScript = document.querySelector('script[data-cashfree-sdk="true"]') as HTMLScriptElement | null;
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve((window as any).Cashfree), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Unable to load secure payment checkout.')), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+      script.async = true;
+      script.dataset.cashfreeSdk = 'true';
+      script.onload = () => resolve((window as any).Cashfree);
+      script.onerror = () => reject(new Error('Unable to load secure payment checkout.'));
+      document.head.appendChild(script);
+    });
+
+  // Cashfree redirects back with its gateway order id. The backend checks the
+  // gateway again; the client never treats a redirect as proof of payment.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cashfreeOrderId = params.get('order_id');
+    if (params.get('payment') !== 'return' || !cashfreeOrderId || !activeUser) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await api.refreshCashfreePaymentStatus(cashfreeOrderId);
+        if (cancelled) return;
+        if (result.order?.paymentStatus === 'paid') {
+          setLastPlacedOrder(result.order);
+          clearCart(true);
+          setAppliedCoupon(null);
+          setCouponSuccessMessage('');
+          setCouponCode('');
+          setIsCheckoutOpen(false);
+          setActiveTab('orders');
+          fetchUserOrders();
+          fetchLoyaltySummary();
+          onRefreshData();
+          showToast('Payment verified. Your order has been placed.', 'success');
+        } else {
+          showToast('Payment was not completed. Your cart is still ready for checkout.', 'warning');
+        }
+      } catch (err: any) {
+        if (!cancelled) showToast(err.message || 'Unable to verify the payment status.', 'error');
+      } finally {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeUser, clearCart, fetchLoyaltySummary, fetchUserOrders, onRefreshData, showToast]);
+
   // Execute purchase
   const handlePlaceOrder = async () => {
     setCheckoutError('');
@@ -1697,6 +1758,7 @@ export default function CustomerApp({
       return;
     }
 
+    let isExtendedDeliveryOrder = false;
     if (deliveryMethod === 'delivery') {
       if (activeUser.savedAddresses.length === 0) {
         setCheckoutError('Please provide a delivery address.');
@@ -1717,9 +1779,66 @@ export default function CustomerApp({
       }
       const dist = googleMapsDistanceKm;
       if (dist > (shop.deliveryRadius || 10)) {
-        setCheckoutError(`Selected delivery address (${dist} km) exceeds our maximum delivery radius of ${shop.deliveryRadius || 10} km. Please select/register another address within range.`);
-        return;
+        if (!shop.allowExtendedDelivery || !extendedDeliveryRequested) {
+          setCheckoutError(shop.extendedDeliveryMessage || `Selected delivery address (${dist} km) exceeds our regular delivery radius of ${shop.deliveryRadius || 10} km. Choose Store Pickup or request extended delivery approval.`);
+          return;
+        }
+        isExtendedDeliveryOrder = true;
       }
+    }
+
+    const activeAddress = deliveryMethod === 'delivery' ? activeUser.savedAddresses[selectedAddressIndex] : null;
+    const baseOrderPayload = {
+      userId: activeUser.id,
+      customerName: activeUser.name,
+      customerPhone: customerPhoneDigits,
+      deliveryMethod,
+      shopBranchId: selectedShopBranchId || null,
+      deliveryAddress: activeAddress,
+      selectedSlot,
+      bagOption,
+      couponCode: appliedCoupon ? appliedCoupon.code : null,
+      deliveryCharge: totals.deliveryCost,
+      bagCharge: totals.bagCost,
+      discountAmount: totals.discount,
+      finalAmount: totals.finalTotal,
+      loyaltyRedeemPoints: totals.loyaltyRedeemPoints,
+      items: buildOrderItemsPayload(),
+      extendedDeliveryRequested: isExtendedDeliveryOrder
+    };
+
+    if (isExtendedDeliveryOrder) {
+      setIsPlacingOrder(true);
+      try {
+        const res = await api.placeOrder({
+          ...baseOrderPayload,
+          paymentMethod: 'cod',
+          paymentStatus: 'pending',
+          upiReference: null
+        });
+        if (res.success && res.order) {
+          setLastPlacedOrder(res.order);
+          clearCart(true);
+          setAppliedCoupon(null);
+          setCouponSuccessMessage('');
+          setCouponCode('');
+          setUpiReference('');
+          setExtendedDeliveryRequested(false);
+          setIsCheckoutOpen(false);
+          setActiveTab('orders');
+          fetchUserOrders();
+          fetchLoyaltySummary();
+          onRefreshData();
+          showToast('Outside-coverage delivery request sent. Owner will confirm delivery and payment before accepting.', 'success');
+        }
+      } catch (err: any) {
+        const errMsg = err.message || 'Unable to submit extended delivery request.';
+        setCheckoutError(errMsg);
+        showToast(errMsg, 'error');
+      } finally {
+        setIsPlacingOrder(false);
+      }
+      return;
     }
 
     if (paymentMethod === 'upi') {
@@ -1730,21 +1849,7 @@ export default function CustomerApp({
 
       try {
         const upiPayload = {
-          userId: activeUser.id,
-          customerName: activeUser.name,
-          customerPhone: customerPhoneDigits,
-          deliveryMethod,
-          shopBranchId: selectedShopBranchId || null,
-          deliveryAddress: deliveryMethod === 'delivery' ? activeUser.savedAddresses[selectedAddressIndex] : null,
-          selectedSlot,
-          bagOption,
-          couponCode: appliedCoupon ? appliedCoupon.code : null,
-          deliveryCharge: totals.deliveryCost,
-          bagCharge: totals.bagCost,
-          discountAmount: totals.discount,
-          finalAmount: totals.finalTotal,
-          loyaltyRedeemPoints: totals.loyaltyRedeemPoints,
-          items: buildOrderItemsPayload(),
+          ...baseOrderPayload,
           paymentMethod: 'upi' as const,
           paymentStatus: 'submitted' as const,
           upiReference: null
@@ -1772,26 +1877,50 @@ export default function CustomerApp({
       return;
     }
 
+    if (paymentMethod === 'cashfree') {
+      setIsPlacingOrder(true);
+      try {
+        const orderRes = await api.placeOrder({
+          ...baseOrderPayload,
+          paymentMethod: 'cashfree',
+          paymentStatus: 'pending',
+          upiReference: null
+        });
+        if (!orderRes.success || !orderRes.order) {
+          throw new Error('Unable to create secure payment order.');
+        }
+
+        const paymentRes = await api.createCashfreePayment(orderRes.order.id);
+        if (paymentRes.paymentSessionId) {
+          const Cashfree = await loadCashfreeCheckoutSdk();
+          const cashfree = Cashfree({ mode: paymentRes.mode === 'production' ? 'production' : 'sandbox' });
+          await cashfree.checkout({
+            paymentSessionId: paymentRes.paymentSessionId,
+            redirectTarget: '_self'
+          });
+        } else if (paymentRes.paymentLink) {
+          window.location.href = paymentRes.paymentLink;
+        } else {
+          throw new Error('Secure payment session was not returned. Please try again.');
+        }
+
+        // Keep the cart intact. It is cleared only by the verified return flow
+        // above, never merely because checkout was opened.
+        showToast('Complete payment in the secure Cashfree window. Cards, UPI and other enabled methods are available there.', 'info');
+      } catch (err: any) {
+        const errMsg = err.message || 'Unable to start secure online payment.';
+        setCheckoutError(errMsg);
+        showToast(errMsg, 'error');
+      } finally {
+        setIsPlacingOrder(false);
+      }
+      return;
+    }
+
     setIsPlacingOrder(true);
     try {
-      const activeAddress = deliveryMethod === 'delivery' ? activeUser.savedAddresses[selectedAddressIndex] : null;
-      
       const payload = {
-        userId: activeUser.id,
-        customerName: activeUser.name,
-        customerPhone: customerPhoneDigits,
-        deliveryMethod,
-        shopBranchId: selectedShopBranchId || null,
-        deliveryAddress: activeAddress,
-        selectedSlot,
-        bagOption,
-        couponCode: appliedCoupon ? appliedCoupon.code : null,
-        deliveryCharge: totals.deliveryCost,
-        bagCharge: totals.bagCost,
-        discountAmount: totals.discount,
-        finalAmount: totals.finalTotal,
-        loyaltyRedeemPoints: totals.loyaltyRedeemPoints,
-        items: buildOrderItemsPayload(),
+        ...baseOrderPayload,
         paymentMethod,
         upiReference: null
       };
@@ -1804,6 +1933,7 @@ export default function CustomerApp({
         setCouponSuccessMessage('');
         setCouponCode('');
         setUpiReference('');
+        setExtendedDeliveryRequested(false);
         setIsCheckoutOpen(false);
         setActiveTab('orders');
         fetchUserOrders();
@@ -2531,6 +2661,8 @@ export default function CustomerApp({
         appliedCoupon={appliedCoupon}
         paymentMethod={paymentMethod}
         setPaymentMethod={setPaymentMethod}
+        extendedDeliveryRequested={extendedDeliveryRequested}
+        setExtendedDeliveryRequested={setExtendedDeliveryRequested}
         generatedUpiUrl={generatedUpiUrl}
         upiReference={upiReference}
         setUpiReference={setUpiReference}

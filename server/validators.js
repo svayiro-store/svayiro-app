@@ -196,6 +196,23 @@ export function validateShopProfileUpdate(body) {
       errors.push('Every social link needs a label and a valid http/https URL');
     }
   }
+  const labelSettings = body.barcode_label_print_settings ?? body.barcodeLabelPrintSettings;
+  if (labelSettings !== undefined) {
+    if (!labelSettings || typeof labelSettings !== 'object' || Array.isArray(labelSettings)) {
+      errors.push('Barcode label print settings are invalid');
+    } else {
+      const width = Number(labelSettings.labelWidthMm ?? labelSettings.label_width_mm);
+      const height = Number(labelSettings.labelHeightMm ?? labelSettings.label_height_mm);
+      const columns = Number(labelSettings.columnsPerRow ?? labelSettings.columns_per_row);
+      const horizontalGap = Number(labelSettings.horizontalGapMm ?? labelSettings.horizontal_gap_mm);
+      const verticalGap = Number(labelSettings.verticalGapMm ?? labelSettings.vertical_gap_mm);
+      if (!Number.isFinite(width) || width <= 0) errors.push('Label width must be greater than 0');
+      if (!Number.isFinite(height) || height <= 0) errors.push('Label height must be greater than 0');
+      if (!Number.isFinite(columns) || !Number.isInteger(columns) || columns < 1) errors.push('Columns per row must be at least 1');
+      if (!Number.isFinite(horizontalGap) || horizontalGap < 0) errors.push('Horizontal label gap cannot be negative');
+      if (!Number.isFinite(verticalGap) || verticalGap < 0) errors.push('Vertical label gap cannot be negative');
+    }
+  }
   return errors;
 }
 
@@ -221,8 +238,8 @@ export function validateOrderPayload(body) {
   }
   if (body.deliveryMethod && !['pickup', 'delivery'].includes(body.deliveryMethod)) errors.push('invalid deliveryMethod');
   if (body.deliveryMethod === 'delivery') errors.push(...validateAddress(body.deliveryAddress, 'deliveryAddress'));
-  if (body.paymentMethod && !['cod', 'upi'].includes(body.paymentMethod)) errors.push('invalid paymentMethod');
-  if (body.paymentStatus && !['pending', 'paid', 'failed', 'submitted'].includes(body.paymentStatus)) errors.push('invalid paymentStatus');
+  if (body.paymentMethod && !['cod', 'upi', 'cashfree'].includes(body.paymentMethod)) errors.push('invalid paymentMethod');
+  if (body.paymentStatus && !['pending', 'paid', 'failed', 'submitted', 'user_dropped'].includes(body.paymentStatus)) errors.push('invalid paymentStatus');
   if (body.paymentMethod === 'upi' && body.paymentStatus === 'paid' && !isNonEmptyString(body.upiReference)) errors.push('upiReference is required for confirmed UPI payments');
   return errors;
 }

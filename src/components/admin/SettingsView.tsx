@@ -19,9 +19,10 @@ import {
   Truck,
   Upload,
   Wallet,
-  Globe2
+  Globe2,
+  Printer
 } from 'lucide-react';
-import { Bag, RoleCode, ShopAddress, ShopProfile, StaffUser } from '../../types';
+import { Bag, BarcodeLabelPrintSettings, RoleCode, ShopAddress, ShopProfile, StaffUser } from '../../types';
 import { api } from '../../api';
 import GoogleMapPicker from '../customer/GoogleMapPicker';
 import { compressAndUploadImage } from '../../utils/cloudinaryUpload';
@@ -61,6 +62,26 @@ const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2
 const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
 const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900';
 const maxLogoUploadBytes = 2 * 1024 * 1024;
+const defaultBarcodeLabelPrintSettings: BarcodeLabelPrintSettings = {
+  labelWidthMm: 50,
+  labelHeightMm: 25,
+  columnsPerRow: 2,
+  horizontalGapMm: 0,
+  verticalGapMm: 0
+};
+
+function normalizeBarcodeLabelPrintSettings(value: any): BarcodeLabelPrintSettings {
+  const source = value && typeof value === 'object' ? value : {};
+  const positive = (input: any, fallback: number) => Number.isFinite(Number(input)) && Number(input) > 0 ? Number(input) : fallback;
+  const gap = (input: any, fallback: number) => Number.isFinite(Number(input)) && Number(input) >= 0 ? Number(input) : fallback;
+  return {
+    labelWidthMm: positive(source.labelWidthMm, defaultBarcodeLabelPrintSettings.labelWidthMm),
+    labelHeightMm: positive(source.labelHeightMm, defaultBarcodeLabelPrintSettings.labelHeightMm),
+    columnsPerRow: Math.max(1, Math.round(positive(source.columnsPerRow, defaultBarcodeLabelPrintSettings.columnsPerRow))),
+    horizontalGapMm: gap(source.horizontalGapMm, defaultBarcodeLabelPrintSettings.horizontalGapMm),
+    verticalGapMm: gap(source.verticalGapMm, defaultBarcodeLabelPrintSettings.verticalGapMm)
+  };
+}
 
 function normalizePhone(value?: string) {
   return String(value || '').replace(/\D/g, '');
@@ -92,7 +113,11 @@ function normalizeShopDetails(shop: ShopProfile): Partial<ShopProfile> {
       : Array.isArray((shop as any).social_links)
         ? (shop as any).social_links
         : [],
-    freeDeliveryRadiusKm: Number(shop.freeDeliveryRadiusKm ?? (shop as any).free_delivery_radius_km ?? 0)
+    freeDeliveryRadiusKm: Number(shop.freeDeliveryRadiusKm ?? (shop as any).free_delivery_radius_km ?? 0),
+    allowExtendedDelivery: normalizeBoolean((shop as any).allowExtendedDelivery ?? (shop as any).allow_extended_delivery, false),
+    extendedDeliveryMessage: (shop as any).extendedDeliveryMessage || (shop as any).extended_delivery_message || 'Your address is outside our regular delivery area. You can choose Store Pickup or request extended delivery for owner approval.',
+    extendedDeliveryNote: (shop as any).extendedDeliveryNote || (shop as any).extended_delivery_note || '',
+    barcodeLabelPrintSettings: normalizeBarcodeLabelPrintSettings((shop as any).barcodeLabelPrintSettings || (shop as any).barcode_label_print_settings)
   };
 }
 
@@ -151,6 +176,14 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
 
   const updateDetail = (key: keyof ShopProfile, value: any) => {
     setDetails((prev) => ({ ...prev, [key]: value }));
+  };
+  const labelPrintSettings = normalizeBarcodeLabelPrintSettings(details.barcodeLabelPrintSettings);
+  const updateLabelPrintSetting = (key: keyof BarcodeLabelPrintSettings, value: string) => {
+    const numeric = Number(value);
+    setDetails((prev) => ({
+      ...prev,
+      barcodeLabelPrintSettings: { ...normalizeBarcodeLabelPrintSettings(prev.barcodeLabelPrintSettings), [key]: Number.isFinite(numeric) ? numeric : 0 }
+    }));
   };
   const socialLinks = Array.isArray(details.socialLinks) ? details.socialLinks : [];
   const staffRoleLabels: Record<Exclude<RoleCode, 'admin' | 'customer'>, string> = {
@@ -354,6 +387,16 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
     if (Number(details.freeDeliveryRadiusKm || 0) > Number(details.deliveryRadius || 10)) {
       return 'Free home delivery distance cannot be greater than maximum delivery radius.';
     }
+    const labelSettings = details.barcodeLabelPrintSettings as any;
+    if (!labelSettings || Number(labelSettings.labelWidthMm) <= 0 || Number(labelSettings.labelHeightMm) <= 0) {
+      return 'Barcode label width and height must be greater than 0.';
+    }
+    if (!Number.isInteger(Number(labelSettings.columnsPerRow)) || Number(labelSettings.columnsPerRow) < 1) {
+      return 'Barcode label columns per row must be at least 1.';
+    }
+    if (Number(labelSettings.horizontalGapMm) < 0 || Number(labelSettings.verticalGapMm) < 0) {
+      return 'Barcode label gaps cannot be negative.';
+    }
     const cleanedSlots = deliverySlots.map((slot) => slot.trim()).filter(Boolean);
     if (cleanedSlots.length === 0) {
       return 'At least one delivery slot is required.';
@@ -435,6 +478,14 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
         delivery_slots: sanitizedDeliverySlots,
         socialLinks: sanitizedSocialLinks,
         social_links: sanitizedSocialLinks,
+        allowExtendedDelivery: Boolean(details.allowExtendedDelivery),
+        allow_extended_delivery: Boolean(details.allowExtendedDelivery),
+        extendedDeliveryMessage: details.extendedDeliveryMessage?.trim(),
+        extended_delivery_message: details.extendedDeliveryMessage?.trim(),
+        extendedDeliveryNote: details.extendedDeliveryNote?.trim(),
+        extended_delivery_note: details.extendedDeliveryNote?.trim(),
+        barcodeLabelPrintSettings: details.barcodeLabelPrintSettings,
+        barcode_label_print_settings: details.barcodeLabelPrintSettings,
         addresses: sanitizedBranches
       };
       const result = await api.updateShopProfile(shopPayload);
@@ -531,6 +582,39 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               </div>
             </div>
           </Field>
+        </div>
+      </section>
+
+      <section className={sectionClass}>
+        <SectionTitle icon={Printer} title="Barcode Label Print Settings" />
+        <p className="mb-4 text-xs text-slate-500">These values control the barcode-label print document. They are saved for this shop and are not tied to A4 or Letter paper.</p>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <Field label="Label Width (mm)"><input className={inputClass} type="number" min="0.1" step="0.1" value={labelPrintSettings.labelWidthMm} onChange={(event) => updateLabelPrintSetting('labelWidthMm', event.target.value)} /></Field>
+          <Field label="Label Height (mm)"><input className={inputClass} type="number" min="0.1" step="0.1" value={labelPrintSettings.labelHeightMm} onChange={(event) => updateLabelPrintSetting('labelHeightMm', event.target.value)} /></Field>
+          <Field label="Columns per Row"><input className={inputClass} type="number" min="1" step="1" value={labelPrintSettings.columnsPerRow} onChange={(event) => updateLabelPrintSetting('columnsPerRow', event.target.value)} /></Field>
+          <Field label="Horizontal Gap (mm)"><input className={inputClass} type="number" min="0" step="0.1" value={labelPrintSettings.horizontalGapMm} onChange={(event) => updateLabelPrintSetting('horizontalGapMm', event.target.value)} /></Field>
+          <Field label="Vertical Gap (mm)"><input className={inputClass} type="number" min="0" step="0.1" value={labelPrintSettings.verticalGapMm} onChange={(event) => updateLabelPrintSetting('verticalGapMm', event.target.value)} /></Field>
+        </div>
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[10px] font-semibold uppercase text-slate-500">
+            <span>Print preview — row width {(labelPrintSettings.labelWidthMm * labelPrintSettings.columnsPerRow + labelPrintSettings.horizontalGapMm * (labelPrintSettings.columnsPerRow - 1)).toFixed(1)} mm</span>
+            <span>{labelPrintSettings.labelWidthMm} × {labelPrintSettings.labelHeightMm} mm · {labelPrintSettings.columnsPerRow} columns</span>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-dashed border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+            <div
+              className="grid w-max"
+              style={{
+                gridTemplateColumns: `repeat(${labelPrintSettings.columnsPerRow}, minmax(74px, ${Math.max(74, labelPrintSettings.labelWidthMm * 2.4)}px))`,
+                gap: `${Math.max(0, labelPrintSettings.verticalGapMm * 2.4)}px ${Math.max(0, labelPrintSettings.horizontalGapMm * 2.4)}px`
+              }}
+            >
+              {Array.from({ length: labelPrintSettings.columnsPerRow * 3 }, (_, index) => (
+                <div key={index} className="flex items-center justify-center border border-indigo-400 bg-indigo-50 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200" style={{ height: Math.max(40, labelPrintSettings.labelHeightMm * 2.4) }}>
+                  LABEL {index + 1}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -756,6 +840,36 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
             <Field label="Per KM Charge (₹ / KM)">
               <input className={inputClass} type="number" min={0} value={details.deliveryChargePerKm ?? 12} onChange={(e) => updateDetail('deliveryChargePerKm', Number(e.target.value))} />
             </Field>
+          </div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+            <Toggle
+              label="Allow Out-of-Range Delivery Requests"
+              checked={Boolean(details.allowExtendedDelivery)}
+              checkedLabel="Allowed"
+              uncheckedLabel="Blocked"
+              onChange={(checked) => updateDetail('allowExtendedDelivery', checked)}
+            />
+            <p className="mt-2 text-[11px] font-semibold leading-relaxed text-amber-800 dark:text-amber-200">
+              If enabled, customers outside normal radius can request owner approval. The order waits as an outside-coverage request and stock/payment effects are not finalized automatically.
+            </p>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <Field label="Message shown to outside-range customers">
+                <textarea
+                  className={`${inputClass} min-h-20`}
+                  value={details.extendedDeliveryMessage || ''}
+                  onChange={(e) => updateDetail('extendedDeliveryMessage', e.target.value)}
+                  placeholder="This address is outside regular delivery range. Choose Store Pickup or request extended delivery approval."
+                />
+              </Field>
+              <Field label="Internal owner handling note">
+                <textarea
+                  className={`${inputClass} min-h-20`}
+                  value={details.extendedDeliveryNote || ''}
+                  onChange={(e) => updateDetail('extendedDeliveryNote', e.target.value)}
+                  placeholder="Example: Contact customer, confirm custom shipping, then accept/reject."
+                />
+              </Field>
+            </div>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
             <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300">

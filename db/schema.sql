@@ -88,6 +88,10 @@ CREATE TABLE shop_profile (
   upi_id varchar(200),
   payment_qr_code_url text,
   social_links jsonb DEFAULT '[]',
+  allow_extended_delivery boolean DEFAULT false,
+  extended_delivery_message text,
+  extended_delivery_note text,
+  barcode_label_print_settings jsonb DEFAULT '{"labelWidthMm":50,"labelHeightMm":25,"columnsPerRow":2,"horizontalGapMm":0,"verticalGapMm":0}',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -261,9 +265,9 @@ CREATE TABLE orders (
   admin_archived_at timestamptz,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  CONSTRAINT chk_orders_status CHECK (status IN ('pending','accepted','packed','out_for_delivery','delivered','cancelled')),
-  CONSTRAINT chk_orders_payment_method CHECK (payment_method IN ('cod','upi','cash','card')),
-  CONSTRAINT chk_orders_payment_status CHECK (payment_status IN ('pending','submitted','paid','failed','refunded')),
+  CONSTRAINT chk_orders_status CHECK (status IN ('pending','pending_delivery_approval','accepted','packed','out_for_delivery','delivered','cancelled','delivery_rejected')),
+  CONSTRAINT chk_orders_payment_method CHECK (payment_method IN ('cod','upi','cash','card','cashfree')),
+  CONSTRAINT chk_orders_payment_status CHECK (payment_status IN ('pending','submitted','paid','failed','refunded','user_dropped')),
   CONSTRAINT chk_orders_delivery_method CHECK (delivery_method IN ('delivery','pickup')),
   CONSTRAINT chk_orders_amounts_nonnegative CHECK (amount_total >= 0 AND delivery_charge >= 0 AND bag_charge >= 0 AND discount_amount >= 0 AND final_amount >= 0)
 );
@@ -445,7 +449,7 @@ CREATE TABLE payments (
   status varchar(50),
   payload jsonb DEFAULT '{}',
   created_at timestamptz DEFAULT now(),
-  CONSTRAINT chk_payments_status CHECK (status IN ('pending','paid','failed','cancelled','refunded')),
+  CONSTRAINT chk_payments_status CHECK (status IN ('pending','paid','failed','cancelled','refunded','user_dropped')),
   CONSTRAINT chk_payments_amount_nonnegative CHECK (amount >= 0)
 );
 
@@ -464,8 +468,8 @@ CREATE TABLE payment_records (
   payload jsonb DEFAULT '{}',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  CONSTRAINT chk_payment_records_status CHECK (status IN ('pending','paid','failed','cancelled','refunded')),
-  CONSTRAINT chk_payment_records_method CHECK (method IN ('cod','upi','cash','card','manual')),
+  CONSTRAINT chk_payment_records_status CHECK (status IN ('pending','paid','failed','cancelled','refunded','user_dropped')),
+  CONSTRAINT chk_payment_records_method CHECK (method IN ('cod','upi','cash','card','manual','cashfree')),
   CONSTRAINT chk_payment_records_amount_nonnegative CHECK (amount >= 0)
 );
 

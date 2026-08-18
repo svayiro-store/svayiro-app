@@ -34,6 +34,7 @@ type PosCartItem = {
   displayQuantityLabel?: string;
   scannedBarcode?: string;
   isLooseLabel?: boolean;
+  directLoose?: boolean;
 };
 type PosRegister = { id: string; name: string; cart: PosCartItem[] };
 
@@ -150,7 +151,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
       .catch(() => {});
   };
 
-  const handleAddToOfflineCart = (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string; product?: Product; scannedBarcode?: string }) => {
+  const handleAddToOfflineCart = (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string; product?: Product; scannedBarcode?: string; looseStockQuantity?: number; directLoose?: boolean }) => {
     const qty = Math.max(1, Number(opts.qty || 1));
     if (opts.customItemName && opts.customItemName.trim()) {
       const pid = 'unlisted_' + Date.now();
@@ -160,6 +161,38 @@ export default function AdminApp({ shop, categories, products, banners, notifica
     if (!opts.productId) return;
     const product = opts.product || products.find(p => p.id === opts.productId);
     if (!product) return;
+    if (opts.directLoose) {
+      const stockQuantity = Math.max(0, Number(opts.looseStockQuantity || 0));
+      const metadata = product.metadata || {};
+      const stockUnit = product.stockUnit || metadata.stockUnit || 'g';
+      const sellingUnit = String(product.sellingUnit || metadata.sellingUnit || metadata.unit || 'kg').toLowerCase();
+      const packageQuantity = Math.max(0.001, Number(product.packageQuantity || metadata.packageQuantity || 1));
+      const factor = (stockUnit === 'g' ? (sellingUnit === 'g' ? stockQuantity : stockQuantity / 1000) : stockUnit === 'ml' ? (sellingUnit === 'ml' ? stockQuantity : stockQuantity / 1000) : stockQuantity) / packageQuantity;
+      const rate = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
+      if (!product.isLooseItem && !metadata.isLooseItem) {
+        showToast('This product is not configured as a loose-weight item.', 'error');
+        return;
+      }
+      if (stockQuantity <= 0 || stockQuantity > Number(product.stockCount || 0)) {
+        showToast(`Enter a weight within available stock for ${product.name}.`, 'error');
+        return;
+      }
+      const displayQuantityLabel = `${stockQuantity} ${stockUnit}`;
+      updateActiveRegisterCart(prev => [...prev, {
+        cartKey: `direct_loose_${product.id}_${Date.now()}`,
+        productId: product.id,
+        name: `${product.name} (${displayQuantityLabel})`,
+        quantity: 1,
+        price: Math.max(0, Number((rate * factor).toFixed(2))),
+        maxStock: 1,
+        weightGrams: stockUnit === 'g' ? stockQuantity : Number(product.weight || 0),
+        stockQuantity,
+        displayQuantityLabel,
+        isLooseLabel: true,
+        directLoose: true
+      }]);
+      return;
+    }
     const looseScan = product.metadata?.looseScan;
     if (looseScan) {
       const scannedBarcode = opts.scannedBarcode || looseScan.barcodeValue;
@@ -177,15 +210,22 @@ export default function AdminApp({ shop, categories, products, banners, notifica
         return;
       }
       const displayQuantityLabel = String(looseScan.quantityLabel || `${stockQuantity} ${product.stockUnit || 'g'}`);
+      const stockUnit = product.stockUnit || product.metadata?.stockUnit || 'g';
+      const sellingUnit = String(product.sellingUnit || product.metadata?.sellingUnit || product.metadata?.unit || 'kg').toLowerCase();
+      const packageQuantity = Math.max(0.001, Number(product.packageQuantity || product.metadata?.packageQuantity || 1));
+      const factor = (stockUnit === 'g' ? (sellingUnit === 'g' ? stockQuantity : stockQuantity / 1000) : stockUnit === 'ml' ? (sellingUnit === 'ml' ? stockQuantity : stockQuantity / 1000) : stockQuantity) / packageQuantity;
+      const rate = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
       const cartKey = `loose_${scannedBarcode || Date.now()}`;
       updateActiveRegisterCart(prev => [...prev, {
         cartKey,
         productId: product.id,
         name: `${product.name} (${displayQuantityLabel})`,
         quantity: 1,
-        price: Math.max(0, Number(looseScan.amount || 0)),
+        // Recalculate from the current catalog rate; labels identify the product
+        // and measured weight, but cannot be used to override price.
+        price: Math.max(0, Number((rate * factor).toFixed(2))),
         maxStock: 1,
-        weightGrams: product.stockUnit === 'g' || product.metadata?.stockUnit === 'g' ? stockQuantity : product.weight,
+        weightGrams: stockUnit === 'g' ? stockQuantity : product.weight,
         stockQuantity,
         displayQuantityLabel,
         scannedBarcode,
@@ -236,7 +276,8 @@ export default function AdminApp({ shop, categories, products, banners, notifica
         stockQuantity: i.stockQuantity,
         displayQuantityLabel: i.displayQuantityLabel,
         scannedBarcode: i.scannedBarcode,
-        isLooseLabel: i.isLooseLabel
+        isLooseLabel: i.isLooseLabel,
+        directLoose: i.directLoose
       })),
       customerName: overrides?.customerName || 'Walk-In Customer',
       customerPhone: overrides?.customerPhone || '',
@@ -370,8 +411,8 @@ export default function AdminApp({ shop, categories, products, banners, notifica
         <div className="p-4 md:p-6 xl:p-8">
         {activeMenu === 'dashboard' && <DashboardView reportsLoading={admin.reportsLoading} isDarkMode={isDarkMode} reports={admin.reports} lowStockProducts={lowStockProducts} onOpenLowStockProduct={openProductFromDashboard} />}
         {activeMenu === 'pos' && <PosView isDarkMode={isDarkMode} products={products} offlineCart={offlineCart} registers={registerSummaries} activeRegisterId={activeRegisterId} bags={admin.bags} inventoryLogs={admin.invLogs} canOverridePrice={isOwner} onSelectRegister={setActiveRegisterId} onAddRegister={addPosRegister} onCloseRegister={closePosRegister} onFilterInventoryLogs={handleFilterInventoryLogs} onCleanupInventoryLogs={handleCleanupInventoryLogs} onAddToCart={handleAddToOfflineCart} onUpdateQuantity={updateOfflineCartQuantity} onRemoveItem={removeOfflineCartItem} onSubmitSale={handleOfflineSaleSubmit} onClearCart={() => updateActiveRegisterCart(() => [])} />}
-        {activeMenu === 'looseLabels' && <LooseLabelsView isDarkMode={isDarkMode} />}
-        {activeMenu === 'products' && <ProductsView isDarkMode={isDarkMode} focusedProductId={focusedProductId} onFocusedProductHandled={() => setFocusedProductId(null)} />}
+        {activeMenu === 'looseLabels' && <LooseLabelsView isDarkMode={isDarkMode} barcodeLabelPrintSettings={shop.barcodeLabelPrintSettings} />}
+        {activeMenu === 'products' && <ProductsView isDarkMode={isDarkMode} barcodeLabelPrintSettings={shop.barcodeLabelPrintSettings} focusedProductId={focusedProductId} onFocusedProductHandled={() => setFocusedProductId(null)} />}
         {activeMenu === 'orders' && <OrdersView orders={admin.orders} shop={shop} roles={userRoles} isDarkMode={isDarkMode} refresh={admin.refresh} showToast={showToast} />}
         {activeMenu === 'categories' && <CategoriesView categories={adminCategories} isDarkMode={isDarkMode} showToast={showToast} refresh={() => { refreshAdminCategories(); onRefreshData(); }} />}
         {activeMenu === 'advances' && <AdvanceRequestsView advanceRequests={admin.advRequests} isDarkMode={isDarkMode} refresh={admin.refresh} showToast={showToast} />}

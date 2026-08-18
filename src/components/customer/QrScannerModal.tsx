@@ -220,7 +220,7 @@ export default function QrScannerModal({
                 SVAYIRO Scan & Pay
               </h3>
               <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-none">
-                Scan billing QR codes to process UPI orders
+                Scan approved COD collection QR codes
               </p>
             </div>
           </div>

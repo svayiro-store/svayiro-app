@@ -500,7 +500,7 @@ export default function CartView({
                 </div>
               )}
               <p className="border-t border-emerald-200 pt-2 text-[11px] font-medium text-emerald-800 dark:border-emerald-900 dark:text-emerald-200">
-                Final payable is shown below. UPI orders are submitted only for owner verification after you enter the UTR/reference.
+                Final payable is shown below. Online payment is verified by the secure gateway. COD can be paid to the owner or delivery partner.
               </p>
             </div>
 

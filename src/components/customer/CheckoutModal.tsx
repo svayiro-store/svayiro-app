@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, MapPin, ShoppingBag, QrCode, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, MapPin, ShoppingBag, QrCode, Trash2 } from 'lucide-react';
 import { Coupon, CustomerTab, ShopProfile, User as UserType } from '../../types';
 import { commonStyles } from './commonStyles';
 import { getDistrictsForState, getTaluksForDistrict, getCitiesForTaluk } from '../../data/indianPlaces';
@@ -68,8 +68,8 @@ interface CheckoutModalProps {
   couponError: string;
   couponSuccessMessage?: string;
   appliedCoupon: any;
-  paymentMethod: 'cod' | 'upi';
-  setPaymentMethod: (method: 'cod' | 'upi') => void;
+  paymentMethod: 'cod' | 'upi' | 'cashfree';
+  setPaymentMethod: (method: 'cod' | 'upi' | 'cashfree') => void;
   generatedUpiUrl: string;
   upiReference: string;
   setUpiReference: (ref: string) => void;
@@ -79,7 +79,9 @@ interface CheckoutModalProps {
   setActiveTab: (tab: CustomerTab) => void;
   bagOption: 'own' | 'need';
   setBagOption: (opt: 'own' | 'need') => void;
-  showToast: (msg: string, type: 'success' | 'error') => void;
+  showToast: (msg: string, type: 'success' | 'info' | 'warning' | 'error') => void;
+  extendedDeliveryRequested?: boolean;
+  setExtendedDeliveryRequested?: (requested: boolean) => void;
   handleSaveAddress?: () => Promise<void>;
   handleDeleteAddress?: (addressId: string, index?: number) => Promise<void>;
   isAddingAddress?: boolean;
@@ -131,6 +133,8 @@ export default function CheckoutModal({
   bagOption,
   setBagOption,
   showToast,
+  extendedDeliveryRequested = false,
+  setExtendedDeliveryRequested,
   handleSaveAddress,
   handleDeleteAddress,
   isAddingAddress,
@@ -152,7 +156,33 @@ export default function CheckoutModal({
 }: CheckoutModalProps) {
   const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null);
   const [slotDay, setSlotDay] = useState<SlotDay>(selectedSlot.toLowerCase().includes('tomorrow') ? 'tomorrow' : 'today');
+  const [offersOpen, setOffersOpen] = useState(false);
   const formatMoney = (value: number | undefined) => `₹${Math.round(Number(value || 0))}`;
+  const formatCouponDiscount = (coupon: Coupon) =>
+    coupon.discountType === 'percentage'
+      ? `${Number(coupon.discountValue || 0)}% off`
+      : `${formatMoney(coupon.discountValue)} off`;
+  const formatCouponDate = (value?: string) => {
+    if (!value) return 'No expiry set';
+    const raw = String(value);
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[3]}-${match[2]}-${match[1]}` : raw;
+  };
+  const getCouponConditions = (coupon: Coupon) => {
+    const conditions: string[] = [];
+    if (Number(coupon.minOrderValue || 0) > 0) conditions.push(`Min order ${formatMoney(coupon.minOrderValue)}`);
+    else conditions.push('No minimum order');
+    conditions.push(coupon.expiryDate ? `Valid till ${formatCouponDate(coupon.expiryDate)}` : 'No expiry set');
+    if (coupon.usageLimit !== undefined && coupon.usageLimit !== null) {
+      const used = Number(coupon.currentUsage || 0);
+      conditions.push(`${Math.max(0, Number(coupon.usageLimit) - used)} uses left`);
+    }
+    if (coupon.metadata?.campaignEligibility) conditions.push('Selected offer items only');
+    const code = String(coupon.code || '').toUpperCase();
+    if (/BDAY|BIRTHDAY|BIRTH|HBD/.test(code)) conditions.push('Birthday account only');
+    if (/FIRST|NEW|WELCOME/.test(code)) conditions.push('One-time welcome offer');
+    return conditions;
+  };
   const deliverySlotsKey = useMemo(() => (shop.deliverySlots || []).join('|'), [shop.deliverySlots]);
   const configuredSlots = useMemo(
     () => deliverySlotsKey
@@ -388,6 +418,8 @@ export default function CheckoutModal({
     ? activeUser.savedAddresses[selectedAddressIndex]
     : null;
   const isOutOfRange = deliveryMethod === 'delivery' && !!selectedAddress && (totals.deliveryDistanceKm ?? 0) > (shop.deliveryRadius || 10);
+  const canRequestExtendedDelivery = isOutOfRange && Boolean(shop.allowExtendedDelivery);
+  const outOfRangeBlocked = isOutOfRange && !extendedDeliveryRequested;
 
   return (
     <div className={`${commonStyles.modalOverlay} overflow-y-auto`}>
@@ -412,7 +444,7 @@ export default function CheckoutModal({
             <label className="block font-bold leading-normal text-[11px] uppercase opacity-75 text-slate-700 dark:text-slate-300">
               Fulfillment preference
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <button 
                 type="button" 
                 onClick={() => setDeliveryMethod('delivery')}
@@ -433,6 +465,7 @@ export default function CheckoutModal({
                 type="button" 
                 onClick={() => {
                   setDeliveryMethod('pickup');
+                  setExtendedDeliveryRequested?.(false);
                   setIsAddingAddress?.(false);
                 }}
                 className={`flex items-center gap-2 p-3 border rounded-xl select-none text-left transition-all ${
@@ -1014,9 +1047,45 @@ export default function CheckoutModal({
                       </div>
                       
                       {isOutOfRange && (
-                        <p className="text-[10px] text-rose-500 dark:text-rose-400 font-bold mt-1 text-center leading-normal animate-pulse">
-                          ⚠ This location is too far! We only deliver up to {shop.deliveryRadius || 10} km. Please select or add an address closer to our store facility.
-                        </p>
+                        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left dark:border-amber-900 dark:bg-amber-950/30">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                            Outside regular delivery range
+                          </p>
+                          <p className="mt-1 text-[10px] font-semibold leading-relaxed text-slate-700 dark:text-slate-300">
+                            {shop.extendedDeliveryMessage || 'This address is outside our regular delivery area. Choose Store Pickup or request extended delivery approval from the owner.'}
+                          </p>
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              disabled={!canRequestExtendedDelivery}
+                              onClick={() => setExtendedDeliveryRequested?.(!extendedDeliveryRequested)}
+                              className={`rounded-lg px-3 py-2 text-[10px] font-semibold uppercase transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                                extendedDeliveryRequested
+                                  ? 'bg-amber-600 text-white shadow-sm'
+                                  : 'border border-amber-300 bg-white text-amber-800 dark:bg-slate-950 dark:text-amber-200'
+                              }`}
+                            >
+                              {canRequestExtendedDelivery
+                                ? extendedDeliveryRequested ? 'Extended Request Selected' : 'Request Extended Delivery'
+                                : 'Extended Delivery Disabled'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExtendedDeliveryRequested?.(false);
+                                setDeliveryMethod('pickup');
+                              }}
+                              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-[10px] font-semibold uppercase text-indigo-700 transition hover:bg-indigo-50 dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300"
+                            >
+                              Switch to Store Pickup
+                            </button>
+                          </div>
+                          {extendedDeliveryRequested && (
+                            <p className="mt-2 text-[10px] font-semibold leading-relaxed text-amber-800 dark:text-amber-200">
+                              Your order will be saved as an outside-coverage delivery request. The owner will confirm availability and any custom shipping charge before accepting it.
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   );
@@ -1072,18 +1141,77 @@ export default function CheckoutModal({
             )}
 
             {suggestedCoupons.length > 0 && !appliedCoupon && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {suggestedCoupons.slice(0, 3).map((coupon) => (
-                  <button
-                    key={coupon.id || coupon.code}
-                    type="button"
-                    onClick={() => onUseCoupon?.(coupon.code)}
-                    className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
-                  >
-                    Use {coupon.code}
-                    {coupon.metadata?.campaignEligibility && <span className="ml-1 opacity-70">offer only</span>}
-                  </button>
-                ))}
+              <div className="rounded-2xl border border-emerald-100 bg-white shadow-sm dark:border-emerald-900/60 dark:bg-slate-950">
+                <button
+                  type="button"
+                  onClick={() => setOffersOpen((open) => !open)}
+                  className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
+                >
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                      Available offers
+                    </p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      {suggestedCoupons.length} coupon{suggestedCoupons.length === 1 ? '' : 's'} available for this checkout
+                    </p>
+                  </div>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                    {offersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </span>
+                </button>
+
+                {offersOpen && (
+                  <div className="max-h-72 space-y-2 overflow-y-auto border-t border-emerald-100 p-3 dark:border-emerald-900/60">
+                    {suggestedCoupons.map((coupon) => {
+                      const conditions = getCouponConditions(coupon);
+                      const minNotMet = Number(totals.productTotal || 0) < Number(coupon.minOrderValue || 0);
+                      return (
+                        <div
+                          key={coupon.id || coupon.code}
+                          className="rounded-xl border border-slate-150 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/70"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-mono text-[13px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                                {coupon.code}
+                              </p>
+                              <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                {formatCouponDiscount(coupon)}
+                              </p>
+                              {coupon.description && (
+                                <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                                  {coupon.description}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              disabled={minNotMet}
+                              onClick={() => onUseCoupon?.(coupon.code)}
+                              className="shrink-0 rounded-full bg-indigo-700 px-3 py-1.5 text-[10px] font-semibold uppercase text-white shadow-sm transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                            >
+                              Apply
+                            </button>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {conditions.map((condition) => (
+                              <span
+                                key={condition}
+                                className={`rounded-full px-2 py-1 text-[9px] font-semibold ${
+                                  minNotMet && condition.startsWith('Min order')
+                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-200'
+                                    : 'bg-white text-slate-600 ring-1 ring-slate-150 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-800'
+                                }`}
+                              >
+                                {condition}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1105,27 +1233,24 @@ export default function CheckoutModal({
                 <span className="font-semibold">💸 Cash on Delivery</span>
               </button>
 
-              <button 
-                type="button" 
-                onClick={() => setPaymentMethod('upi')}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('cashfree')}
                 className={`flex items-center gap-2 p-3 border rounded-xl select-none transition-all ${
-                  paymentMethod === 'upi' 
-                    ? 'border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 font-bold text-indigo-600 dark:text-indigo-400' 
+                  paymentMethod === 'cashfree'
+                    ? 'border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 font-bold text-indigo-600 dark:text-indigo-400'
                     : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
                 }`}
               >
-                <span className="font-semibold">📱 Direct UPI Pay</span>
+                <span className="font-semibold">Secure Online Pay</span>
               </button>
             </div>
 
-            {paymentMethod === 'upi' && (
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4 text-xs font-semibold text-indigo-900 animate-fadeIn dark:border-indigo-900 dark:bg-indigo-950/20 dark:text-indigo-200">
-                <p className="font-semibold uppercase tracking-wide">UPI selected</p>
+            {paymentMethod === 'cashfree' && (
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 text-xs font-semibold text-emerald-900 animate-fadeIn dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-200">
+                <p className="font-semibold uppercase tracking-wide">Secure payment selected</p>
                 <p className="mt-1 leading-relaxed">
-                  Click the submit button below. The next screen will show one payment QR, direct UPI app link, and the UTR/reference input after the order is reserved.
-                </p>
-                <p className="mt-2 font-mono text-[10px] text-indigo-700 dark:text-indigo-300">
-                  Merchant UPI: {shop.upiId || 'svayiro.essentials@upi'}
+                  Pay on Cashfree's secure hosted checkout using UPI, credit/debit cards, net banking, or other methods enabled for this merchant. SVAYIRO confirms the order only after Cashfree verifies payment.
                 </p>
               </div>
             )}
@@ -1185,7 +1310,7 @@ export default function CheckoutModal({
               </div>
             </div>
             <p className="mt-2 text-[10px] font-medium leading-relaxed text-emerald-800 dark:text-emerald-200">
-              This is the final review. For UPI, your order is submitted only for owner verification after you enter the payment UTR/reference.
+              Card and UPI details are entered only on Cashfree's secure payment page; SVAYIRO does not request or store them. Online payment confirms only after secure gateway verification.
             </p>
           </div>
 
@@ -1235,7 +1360,7 @@ export default function CheckoutModal({
         {/* Action Button Footer */}
         <div className="border-t border-slate-150 dark:border-slate-800 p-5 shrink-0 bg-slate-50 dark:bg-slate-900 flex flex-col gap-2">
           <button 
-            disabled={isPlacingOrder || (deliveryMethod === 'delivery' && !!isAddingAddress) || isOutOfRange || (deliveryMethod === 'delivery' && (!activeUser?.savedAddresses || activeUser.savedAddresses.length === 0))}
+            disabled={isPlacingOrder || (deliveryMethod === 'delivery' && !!isAddingAddress) || outOfRangeBlocked || (deliveryMethod === 'delivery' && (!activeUser?.savedAddresses || activeUser.savedAddresses.length === 0))}
             onClick={handlePlaceOrder}
             className={`${commonStyles.buttonPrimary} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
@@ -1243,11 +1368,13 @@ export default function CheckoutModal({
               ? 'Validating stock transaction...' 
               : deliveryMethod === 'delivery' && isAddingAddress 
               ? 'Please Save or Cancel Address Form First'
-              : isOutOfRange 
-              ? 'Cannot Deliver: Address Out of Range'
-              : paymentMethod === 'upi'
-                ? `Submit for UPI Verification (${formatMoney(totals.finalTotal)})`
-                : `Place Order (${formatMoney(totals.finalTotal)})`
+              : outOfRangeBlocked
+              ? 'Choose Extended Delivery Request or Store Pickup'
+              : isOutOfRange && extendedDeliveryRequested
+              ? `Request Owner Delivery Approval (${formatMoney(totals.finalTotal)})`
+              : paymentMethod === 'cashfree'
+              ? `Pay Securely (${formatMoney(totals.finalTotal)})`
+              : `Place Order (${formatMoney(totals.finalTotal)})`
             }
           </button>
           
@@ -1257,9 +1384,17 @@ export default function CheckoutModal({
             </p>
           )}
 
-          {deliveryMethod === 'delivery' && isOutOfRange && (
-            <p className="text-[10px] text-center text-rose-500 dark:text-rose-400 font-bold animate-pulse leading-normal">
+          {false && deliveryMethod === 'delivery' && isOutOfRange && (
+            <p className={`text-[10px] text-center font-bold leading-normal ${extendedDeliveryRequested ? 'text-amber-600 dark:text-amber-300' : 'text-rose-500 dark:text-rose-400 animate-pulse'}`}>
               ⚠ Selected address is too far ({totals.deliveryDistanceKm} km) and exceeds maximum delivery range ({shop.deliveryRadius} km).
+            </p>
+          )}
+
+          {deliveryMethod === 'delivery' && isOutOfRange && (
+            <p className={`text-[10px] text-center font-bold leading-normal ${extendedDeliveryRequested ? 'text-amber-600 dark:text-amber-300' : 'text-rose-500 dark:text-rose-400 animate-pulse'}`}>
+              {extendedDeliveryRequested
+                ? 'This order will wait for owner delivery approval before payment acceptance or preparation.'
+                : `Selected address is outside regular delivery range (${totals.deliveryDistanceKm} km / ${shop.deliveryRadius} km).`}
             </p>
           )}
 

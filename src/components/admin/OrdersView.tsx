@@ -15,21 +15,25 @@ interface Props {
 }
 
 const nextStatusMap: Record<string, string> = {
+  pending_delivery_approval: 'accepted',
   pending: 'accepted',
   accepted: 'packed',
   packed: 'out_for_delivery',
   out_for_delivery: 'delivered',
   delivered: 'delivered',
-  cancelled: 'cancelled'
+  cancelled: 'cancelled',
+  delivery_rejected: 'delivery_rejected'
 };
 
 const statusColors: Record<string, string> = {
+  pending_delivery_approval: 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200',
   pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   accepted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   packed: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
   out_for_delivery: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
   delivered: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-  cancelled: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
+  cancelled: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
+  delivery_rejected: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
 };
 
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
@@ -262,7 +266,8 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
   };
 
   const canUpdateOrderStatus = (order: Order) => {
-    if (isOwner || isCustomerCare) return order.status !== 'delivered' && order.status !== 'cancelled';
+    if (isOwner) return !['delivered', 'cancelled', 'delivery_rejected'].includes(order.status);
+    if (isCustomerCare) return !['delivered', 'cancelled', 'delivery_rejected', 'pending_delivery_approval'].includes(order.status);
     if (!isDeliveryPartner) return false;
     if (order.deliveryMethod !== 'delivery') return false;
     return ['packed', 'out_for_delivery'].includes(order.status);
@@ -304,6 +309,11 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
     const paymentMethod = (order.paymentMethod || order.paymentDetails?.method || 'cod').toLowerCase();
     const nextStatus = nextStatusMap[order.status] || 'delivered';
 
+    if (order.status === 'pending_delivery_approval' && !isOwner) {
+      showToast('Only the owner can approve outside-coverage delivery requests.', 'error');
+      return;
+    }
+
     // GUARD 1: COD not paid -> don't allow to mark delivered
     const isCod = paymentMethod === 'cod' || paymentMethod === 'cash';
     if (nextStatus === 'delivered' && isCod && paymentStatus !== 'paid') {
@@ -311,10 +321,14 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
       return;
     }
 
-    // GUARD 2: UPI checks for accepting order
-    if (nextStatus === 'accepted' && paymentMethod === 'upi') {
+    // GUARD 2: Online payments must be verified before accepting
+    if (nextStatus === 'accepted' && ['upi', 'cashfree'].includes(paymentMethod)) {
       if (paymentStatus === 'failed') {
-        showToast('Cannot accept order! Customer UPI payment has failed.', 'error');
+        showToast('Cannot accept order! Customer online payment has failed.', 'error');
+        return;
+      }
+      if (paymentStatus !== 'paid') {
+        showToast('Cannot accept order until online payment is verified as paid.', 'error');
         return;
       }
     }
@@ -344,6 +358,22 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
       loadInvoiceQueue();
     } catch (err: any) {
       showToast(err.message || 'Unable to cancel order', 'error');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const handleRejectExtendedDelivery = async (order: Order) => {
+    if (!isOwner || order.status !== 'pending_delivery_approval') return;
+    if (!window.confirm(`Reject outside-coverage delivery request ${order.orderRef || order.id.substring(0, 8)}?`)) return;
+    setLoadingId(order.id);
+    try {
+      await api.updateOrderStatus(order.id, 'delivery_rejected', 'failed');
+      showToast(`Delivery request ${order.orderRef || order.id.substring(0, 8)} rejected.`, 'success');
+      refresh();
+      loadInvoiceQueue();
+    } catch (err: any) {
+      showToast(err.message || 'Unable to reject delivery request', 'error');
     } finally {
       setLoadingId(null);
     }
@@ -484,6 +514,21 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
     }
   };
 
+  const handleRefreshCashfreePayment = async (order: Order) => {
+    setLoadingId(order.id);
+    try {
+      const result = await api.adminRefreshCashfreePaymentStatus(order.id);
+      const status = result.order?.paymentStatus || result.cashfree?.order_status || 'pending';
+      showToast(`Cashfree status refreshed: ${String(status).replace(/_/g, ' ')}`, status === 'paid' ? 'success' : 'info');
+      refresh();
+      loadInvoiceQueue();
+    } catch (err: any) {
+      showToast(err.message || 'Unable to refresh Cashfree payment status', 'error');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
   const totalAmount = filteredOrders.reduce((sum, o) => sum + (o.finalTotal || 0), 0);
   const queueCounts = {
     dueSoon: invoiceQueue.filter((order) => order.invoiceQueue?.isDueSoon).length,
@@ -585,9 +630,10 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                   const paymentMethod = (order.paymentMethod || order.paymentDetails?.method || 'cod').toLowerCase();
                   const isCod = paymentMethod === 'cod' || paymentMethod === 'cash';
                   const isUpi = paymentMethod === 'upi';
+                  const isCashfree = paymentMethod === 'cashfree';
                   const nextStatus = nextStatusMap[order.status] || 'delivered';
 
-                  const canProgress = canUpdateOrderStatus(order) && !(isUpi && paymentStatus !== 'paid') && !(nextStatus === 'delivered' && isCod && paymentStatus !== 'paid');
+                  const canProgress = canUpdateOrderStatus(order) && !((isUpi || isCashfree) && nextStatus === 'accepted' && paymentStatus !== 'paid') && !(nextStatus === 'delivered' && isCod && paymentStatus !== 'paid');
                   
                   const canCollectCodDelivery = (isDeliveryPartner || isOwner)
                     && isCod
@@ -637,7 +683,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                         <p className="font-bold uppercase">{paymentMethod}</p>
                         <p className={`text-[10px] font-semibold uppercase ${paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>{paymentStatus}</p>
                         {order.paymentRef && <p className="font-mono text-[10px] text-slate-500">{order.paymentRef}</p>}
-                        {isUpi && paymentStatus !== 'paid' && (
+                        {(isUpi || isCashfree) && paymentStatus !== 'paid' && (
                           <span className="mt-1 block text-[9px] font-bold text-amber-600 animate-pulse">Verification Pending from Store Side</span>
                         )}
                       </td>
@@ -651,6 +697,16 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                               className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                             >
                               Print
+                            </button>
+                          )}
+                          {isOwner && order.status === 'pending_delivery_approval' && (
+                            <button
+                              type="button"
+                              disabled={loadingId === order.id}
+                              onClick={() => handleRejectExtendedDelivery(order)}
+                              className="rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-[10px] font-semibold text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+                            >
+                              Reject
                             </button>
                           )}
                           {canCollectCod ? (
@@ -674,6 +730,15 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                                 </button>
                               )}
                             </>
+                          ) : isCashfree && paymentStatus !== 'paid' ? (
+                            <button
+                              type="button"
+                              disabled={loadingId === order.id || !isOwner}
+                              onClick={() => handleRefreshCashfreePayment(order)}
+                              className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[10px] font-semibold text-amber-700 disabled:opacity-50 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                            >
+                              Refresh Cashfree
+                            </button>
                           ) : isUpi && paymentStatus !== 'paid' ? (
                             <button
                               type="button"
@@ -714,12 +779,14 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
         </div>
         <select className={`${inputClass} max-w-[160px]`} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="all">All Status</option>
+          <option value="pending_delivery_approval">Delivery Approval</option>
           <option value="pending">Pending</option>
           <option value="accepted">Accepted</option>
           <option value="packed">Packed</option>
           <option value="out_for_delivery">Out for Delivery</option>
           <option value="delivered">Delivered</option>
           <option value="cancelled">Cancelled</option>
+          <option value="delivery_rejected">Delivery Rejected</option>
         </select>
         <div className="text-xs font-bold opacity-70">
           {activeFilteredOrders.length} active / {completedFilteredOrders.length} completed - {money(totalAmount)} total
@@ -740,6 +807,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
             const paymentMethod = (order.paymentMethod || order.paymentDetails?.method || 'cod').toLowerCase();
             const isCod = paymentMethod === 'cod' || paymentMethod === 'cash';
             const isUpi = paymentMethod === 'upi';
+            const isCashfree = paymentMethod === 'cashfree';
 
             const canMarkCodPaid = isOwner
               && isCod
@@ -766,7 +834,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                     </span>
 
                     {/* Store Verification Pending Badge for UPI */}
-                    {isUpi && paymentStatus !== 'paid' && (
+                    {(isUpi || isCashfree) && paymentStatus !== 'paid' && (
                       <span className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 animate-pulse">
                         Verification Pending from Store Side
                       </span>
@@ -871,6 +939,15 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                               Cancel Order
                             </button>
                           )}
+                          {isOwner && order.status === 'pending_delivery_approval' && (
+                            <button
+                              disabled={loadingId === order.id}
+                              onClick={() => handleRejectExtendedDelivery(order)}
+                              className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+                            >
+                              Reject Delivery Request
+                            </button>
+                          )}
                         </>
                       ) : (
                         <span className="text-xs font-bold opacity-70 py-2">Order {order.status === 'delivered' ? 'completed' : 'cancelled'}</span>
@@ -897,6 +974,16 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       {canVerifyUpiPaid && (
                         <button disabled={loadingId === order.id} className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50" onClick={() => handleVerifyUpiPaid(order)}>
                           {loadingId === order.id ? 'Verifying...' : 'Verify UPI & Accept'}
+                        </button>
+                      )}
+
+                      {isOwner && isCashfree && paymentStatus !== 'paid' && (
+                        <button
+                          disabled={loadingId === order.id}
+                          className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                          onClick={() => handleRefreshCashfreePayment(order)}
+                        >
+                          {loadingId === order.id ? 'Checking...' : 'Refresh Cashfree Status'}
                         </button>
                       )}
 

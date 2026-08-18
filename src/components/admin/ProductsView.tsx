@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api';
-import { Product, Category } from '../../types';
+import { BarcodeLabelPrintSettings, Product, Category } from '../../types';
 import { Plus, Trash2, Upload, Image as ImageIcon, Link2, ChevronLeft, ChevronRight, ChevronDown, X, Save, Printer, Search, Download } from 'lucide-react';
 import { formatDateTimeDDMMYYYY } from '../../utils/date';
 import { compressAndUploadImage } from '../../utils/cloudinaryUpload';
@@ -8,6 +8,7 @@ import { PRODUCT_UNIT_OPTIONS, estimatePackingWeightGrams, formatProductMeasure 
 
 interface Props {
   isDarkMode: boolean;
+  barcodeLabelPrintSettings?: BarcodeLabelPrintSettings;
   focusedProductId?: string | null;
   onFocusedProductHandled?: () => void;
 }
@@ -64,6 +65,26 @@ function escapeHtml(value: string) {
     '"': '&quot;',
     "'": '&#39;'
   }[char] || char));
+}
+
+const defaultBarcodeLabelPrintSettings: BarcodeLabelPrintSettings = {
+  labelWidthMm: 50,
+  labelHeightMm: 25,
+  columnsPerRow: 2,
+  horizontalGapMm: 0,
+  verticalGapMm: 0
+};
+
+function normalizeBarcodeLabelPrintSettings(value?: Partial<BarcodeLabelPrintSettings>): BarcodeLabelPrintSettings {
+  const positive = (input: any, fallback: number) => Number.isFinite(Number(input)) && Number(input) > 0 ? Number(input) : fallback;
+  const gap = (input: any, fallback: number) => Number.isFinite(Number(input)) && Number(input) >= 0 ? Number(input) : fallback;
+  return {
+    labelWidthMm: positive(value?.labelWidthMm, defaultBarcodeLabelPrintSettings.labelWidthMm),
+    labelHeightMm: positive(value?.labelHeightMm, defaultBarcodeLabelPrintSettings.labelHeightMm),
+    columnsPerRow: Math.max(1, Math.round(positive(value?.columnsPerRow, defaultBarcodeLabelPrintSettings.columnsPerRow))),
+    horizontalGapMm: gap(value?.horizontalGapMm, defaultBarcodeLabelPrintSettings.horizontalGapMm),
+    verticalGapMm: gap(value?.verticalGapMm, defaultBarcodeLabelPrintSettings.verticalGapMm)
+  };
 }
 
 interface ProductForm {
@@ -143,7 +164,8 @@ const LOOSE_STOCK_UNIT_OPTIONS = [
   { value: 'piece', label: 'pieces' }
 ] as const;
 
-export default function ProductsView({ isDarkMode, focusedProductId, onFocusedProductHandled }: Props) {
+export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, focusedProductId, onFocusedProductHandled }: Props) {
+  const labelPrintSettings = normalizeBarcodeLabelPrintSettings(barcodeLabelPrintSettings);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -163,6 +185,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   const [codeCategoryFilter, setCodeCategoryFilter] = useState('');
   const [codeListType, setCodeListType] = useState<'product' | 'plu'>('product');
   const [selectedCodeIds, setSelectedCodeIds] = useState<Set<string>>(new Set());
+  const [labelCopies, setLabelCopies] = useState('1');
   const [includePriceOnSticker, setIncludePriceOnSticker] = useState(false);
   const [includeMfdOnSticker, setIncludeMfdOnSticker] = useState(false);
   const [includeExpOnSticker, setIncludeExpOnSticker] = useState(false);
@@ -595,7 +618,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
   };
 
   const buildBarcodeLabelHtml = (items: Product[]) => {
-    return items.map((product) => {
+    const labels = items.map((product) => {
       const code = codeListType === 'plu' ? productPluCode(product) : productCode(product);
       const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
       const dateInfo = stickerDateInfo[product.id] || { mfd: '', exp: '', bestBefore: '' };
@@ -618,35 +641,61 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
           <img class="barcode" src="${code128SvgDataUri(code)}" alt="${code}" />
         </section>
       `;
-    }).join('');
+    });
+    const rows: string[] = [];
+    for (let index = 0; index < labels.length; index += labelPrintSettings.columnsPerRow) {
+      rows.push(`<div class="label-row">${labels.slice(index, index + labelPrintSettings.columnsPerRow).join('')}</div>`);
+    }
+    return rows.join('');
+  };
+
+  const labelsWithCopies = (items: Product[]) => {
+    const copies = Math.min(100, Math.max(1, Math.floor(Number(labelCopies) || 1)));
+    return items.flatMap((product) => Array.from({ length: copies }, () => product));
   };
 
   const buildBarcodeLabelDocument = (items: Product[], includePrintScript = false) => {
     const labelHtml = buildBarcodeLabelHtml(items);
+    const totalWidthMm = labelPrintSettings.labelWidthMm * labelPrintSettings.columnsPerRow
+      + labelPrintSettings.horizontalGapMm * (labelPrintSettings.columnsPerRow - 1);
+    const totalRowHeightMm = labelPrintSettings.labelHeightMm + labelPrintSettings.verticalGapMm;
+    // Scale every content block from the configured physical label height. This
+    // keeps the barcode and optional sticker details inside one label instead
+    // of letting a browser reflow them into the neighbouring column.
+    const contentScale = Math.min(1.6, Math.max(0.35, labelPrintSettings.labelHeightMm / 25));
+    const labelPaddingMm = 1.2 * contentScale;
+    const brandFontPx = 7 * contentScale;
+    const nameFontPx = 7.4 * contentScale;
+    const metaFontPx = 6.2 * contentScale;
+    const dateFontPx = 5.7 * contentScale;
+    const barcodeHeightMm = 7.6 * contentScale;
     return `
       <!doctype html>
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>SVAYIRO 50mm x 25mm Product Barcode Labels</title>
+          <title>SVAYIRO ${labelPrintSettings.labelWidthMm}mm x ${labelPrintSettings.labelHeightMm}mm Product Barcode Labels</title>
           <style>
             * { box-sizing: border-box; }
-            html, body { margin: 0; padding: 0; width: 50mm; background: #fff; font-family: Arial, sans-serif; color: #000; }
-            .sheet { display: block; width: 50mm; }
-            .label { width: 50mm; height: 25mm; padding: 1.2mm 1.9mm; page-break-after: always; break-after: page; overflow: hidden; }
-            .brand { border-bottom: .25mm solid #000; padding-bottom: .3mm; font-size: 7px; font-weight: 900; letter-spacing: .035em; color: #000; line-height: 1; }
-            .name { margin-top: .35mm; font-size: 7.4px; line-height: 1.05; font-weight: 400; max-height: 4mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-            .meta { margin-top: .15mm; font-size: 6.2px; color: #000; line-height: 1; min-height: 1.5mm; font-weight: 400; }
-            .price { display: flex; justify-content: space-between; gap: 1.2mm; margin-top: .35mm; font-size: 6.9px; line-height: 1; font-weight: 900; color: #000; }
-            .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .2mm 1mm; margin-top: .35mm; font-size: 5.7px; line-height: 1; font-weight: 400; color: #000; }
+            html, body { margin: 0 !important; padding: 0 !important; width: ${totalWidthMm}mm; min-width: ${totalWidthMm}mm; background: #fff; font-family: Arial, sans-serif; color: #000; }
+            .sheet { display: block; width: ${totalWidthMm}mm; margin: 0; padding: 0; }
+            .label-row { display: grid; grid-template-columns: repeat(${labelPrintSettings.columnsPerRow}, ${labelPrintSettings.labelWidthMm}mm); column-gap: ${labelPrintSettings.horizontalGapMm}mm; align-items: start; width: ${totalWidthMm}mm; height: ${totalRowHeightMm}mm; margin: 0; padding: 0; overflow: hidden; break-inside: avoid; page-break-inside: avoid; break-after: page; page-break-after: always; }
+            .label-row:last-child { break-after: auto; page-break-after: auto; }
+            .label { width: ${labelPrintSettings.labelWidthMm}mm; min-width: ${labelPrintSettings.labelWidthMm}mm; max-width: ${labelPrintSettings.labelWidthMm}mm; height: ${labelPrintSettings.labelHeightMm}mm; min-height: ${labelPrintSettings.labelHeightMm}mm; max-height: ${labelPrintSettings.labelHeightMm}mm; margin: 0; padding: ${labelPaddingMm}mm; overflow: hidden; contain: layout paint; }
+            .brand { border-bottom: .25mm solid #000; padding-bottom: .3mm; font-size: ${brandFontPx}px; font-weight: 900; letter-spacing: .035em; color: #000; line-height: 1; white-space: nowrap; overflow: hidden; }
+            .name { margin-top: .35mm; font-size: ${nameFontPx}px; line-height: 1.05; font-weight: 400; max-height: ${4 * contentScale}mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+            .meta { margin-top: .15mm; font-size: ${metaFontPx}px; color: #000; line-height: 1; min-height: 1.5mm; overflow: hidden; white-space: nowrap; font-weight: 400; }
+            .price { display: flex; justify-content: space-between; gap: 1.2mm; margin-top: .35mm; font-size: ${metaFontPx}px; line-height: 1; font-weight: 900; color: #000; white-space: nowrap; overflow: hidden; }
+            .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .2mm 1mm; margin-top: .35mm; font-size: ${dateFontPx}px; line-height: 1; font-weight: 400; color: #000; overflow: hidden; }
             .dates span:last-child:nth-child(odd) { grid-column: 1 / -1; }
-            .barcode { display: block; width: 100%; height: 7.6mm; object-fit: contain; margin-top: .35mm; }
-            @page { size: 50mm 25mm; margin: 0; }
+            .barcode { display: block; width: 100%; max-width: 100%; height: ${barcodeHeightMm}mm; max-height: ${barcodeHeightMm}mm; object-fit: contain; margin-top: .35mm; }
+            @page { size: ${totalWidthMm}mm ${totalRowHeightMm}mm; margin: 0; }
+            @media print { html, body, .sheet { margin: 0 !important; padding: 0 !important; width: ${totalWidthMm}mm !important; min-width: ${totalWidthMm}mm !important; } }
           </style>
         </head>
         <body>
           <main class="sheet">${labelHtml}</main>
-          ${includePrintScript ? '<script>window.onload = () => { window.focus(); window.print(); };</script>' : ''}
+          ${includePrintScript ? '<script>window.onload = () => { window.setTimeout(() => { window.focus(); window.print(); }, 100); };</script>' : ''}
         </body>
       </html>
     `;
@@ -662,7 +711,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       alert('Popup blocked. Allow popups to print barcode labels.');
       return;
     }
-    printWindow.document.write(buildBarcodeLabelDocument(items, true));
+    printWindow.document.write(buildBarcodeLabelDocument(labelsWithCopies(items), true));
     printWindow.document.close();
   };
 
@@ -735,12 +784,12 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
       alert('Select at least one product label to download.');
       return;
     }
-    const html = buildBarcodeLabelDocument(items, false);
+    const html = buildBarcodeLabelDocument(labelsWithCopies(items), false);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `svayiro-50x25mm-barcode-labels-${new Date().toISOString().slice(0, 10)}.html`;
+    anchor.download = `svayiro-${labelPrintSettings.labelWidthMm}x${labelPrintSettings.labelHeightMm}mm-barcode-labels-${new Date().toISOString().slice(0, 10)}.html`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -1306,6 +1355,21 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
                 </select>
               </label>
             </div>
+            {codeListType === 'product' && (
+              <label className="w-full shrink-0 sm:w-40">
+                <span className={labelClass}>Sticker copies / product</span>
+                <input
+                  className={`${inputClass} text-center font-mono`}
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={labelCopies}
+                  onChange={(event) => setLabelCopies(event.target.value.replace(/\D/g, '').slice(0, 3))}
+                />
+                <span className="mt-1 block text-[10px] font-medium text-slate-500">Prints 1 to 100 of each selected product.</span>
+              </label>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -1394,7 +1458,7 @@ export default function ProductsView({ isDarkMode, focusedProductId, onFocusedPr
               </div>
             </div>
             <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 lg:max-w-[140px]">
-              Prints compact 50mm x 25mm thermal labels.
+              Prints ${labelPrintSettings.labelWidthMm}mm × ${labelPrintSettings.labelHeightMm}mm thermal labels in ${labelPrintSettings.columnsPerRow}-column rows using the saved print settings.
             </p>
             <div className="flex flex-wrap gap-2">
               <button

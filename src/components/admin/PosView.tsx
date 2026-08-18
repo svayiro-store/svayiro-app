@@ -13,6 +13,7 @@ import {
   QrCode,
   Receipt,
   Search,
+  Scale,
   ShoppingBag,
   Trash2,
   Printer,
@@ -35,6 +36,7 @@ type PosCartItem = {
   displayQuantityLabel?: string;
   scannedBarcode?: string;
   isLooseLabel?: boolean;
+  directLoose?: boolean;
 };
 
 type RegisterSession = {
@@ -65,7 +67,7 @@ interface Props {
   onCloseRegister?: (id: string) => void;
   onFilterInventoryLogs?: (filters?: { date?: string }) => void;
   onCleanupInventoryLogs?: (olderThan: '1w' | '1m' | '2m' | '3m' | '5m') => Promise<number | void> | number | void;
-  onAddToCart?: (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string; product?: Product; scannedBarcode?: string }) => void;
+  onAddToCart?: (opts: { productId?: string; qty?: number; priceOverride?: number; customItemName?: string; product?: Product; scannedBarcode?: string; looseStockQuantity?: number; directLoose?: boolean }) => void;
   onUpdateQuantity?: (id: string, delta: number) => void;
   onRemoveItem?: (id: string) => void;
   onSubmitSale?: (overrides?: {
@@ -170,6 +172,10 @@ export default function PosView({
   const [posProductsHasMore, setPosProductsHasMore] = useState(products.length >= POS_PRODUCT_PAGE_SIZE);
   const [posProductsLoading, setPosProductsLoading] = useState(false);
   const [showCustomPanel, setShowCustomPanel] = useState(false);
+  const [showDirectLoosePanel, setShowDirectLoosePanel] = useState(false);
+  const [directLooseProductId, setDirectLooseProductId] = useState('');
+  const [directLooseWeight, setDirectLooseWeight] = useState('');
+  const [directLooseSearch, setDirectLooseSearch] = useState('');
   const [posPage, setPosPage] = useState<'billing' | 'logs'>('billing');
 
   const sessionKey = activeRegisterId || registers[0]?.id || 'register_1';
@@ -238,6 +244,34 @@ export default function PosView({
       : sortedProducts;
     return matches;
   }, [productSearch, sortedProducts]);
+  const looseProducts = useMemo(
+    () => sortedProducts.filter((product) => Boolean(product.isLooseItem || product.metadata?.isLooseItem)),
+    [sortedProducts]
+  );
+  const directLooseProduct = looseProducts.find((product) => product.id === directLooseProductId);
+  const directLooseMatches = useMemo(() => {
+    const term = directLooseSearch.trim().toLowerCase();
+    if (!term) return looseProducts;
+    return looseProducts.filter((product) => [
+      product.name, product.sku, product.pluCode, product.metadata?.pluCode,
+      product.looseSection, product.metadata?.looseSection
+    ].filter(Boolean).join(' ').toLowerCase().includes(term));
+  }, [directLooseSearch, looseProducts]);
+  const directLooseStockUnit = directLooseProduct?.stockUnit || directLooseProduct?.metadata?.stockUnit || 'g';
+  const directLooseSellingUnit = String(directLooseProduct?.sellingUnit || directLooseProduct?.metadata?.sellingUnit || directLooseProduct?.metadata?.unit || 'kg').toLowerCase();
+  const directLoosePackageQuantity = Math.max(0.001, Number(directLooseProduct?.packageQuantity || directLooseProduct?.metadata?.packageQuantity || 1));
+  const directLooseQuantity = Math.max(0, Number(directLooseWeight || 0));
+  const directLooseFactor = directLooseStockUnit === 'g'
+    ? (directLooseSellingUnit === 'g' ? directLooseQuantity : directLooseQuantity / 1000)
+    : directLooseStockUnit === 'ml'
+      ? (directLooseSellingUnit === 'ml' ? directLooseQuantity : directLooseQuantity / 1000)
+      : directLooseQuantity;
+  const directLoosePriceFactor = directLooseFactor / directLoosePackageQuantity;
+  const directLooseRate = directLooseProduct ? (directLooseProduct.offerPrice > 0 ? directLooseProduct.offerPrice : directLooseProduct.basePrice) : 0;
+  const directLooseAmount = Math.round(directLooseRate * directLoosePriceFactor * 100) / 100;
+  const directLooseLabel = directLooseStockUnit === 'g' && directLooseQuantity >= 1000
+    ? `${Number((directLooseQuantity / 1000).toFixed(3))} kg`
+    : `${Number(directLooseQuantity.toFixed(2))} ${directLooseStockUnit}`;
   const normalizedBags = useMemo(() => bags.map((bag: any, index) => ({
     ...bag,
     size: bag.size || bag.size_label || `Bag ${index + 1}`,
@@ -390,11 +424,41 @@ export default function PosView({
       alert(`${product.name} is out of stock.`);
       return;
     }
+    if (product.isLooseItem || product.metadata?.isLooseItem) {
+      setDirectLooseProductId(product.id);
+      setDirectLooseWeight('');
+      setDirectLooseSearch(product.name);
+      setShowDirectLoosePanel(true);
+      return;
+    }
     const qty = Math.max(1, Number(session.qtyInput || 1));
     clearCompletedSaleActions();
     onAddToCart?.({ productId: product.id, qty });
     setCatalogAddFlash(true);
     window.setTimeout(() => setCatalogAddFlash(false), 650);
+  };
+
+  const handleAddDirectLooseItem = () => {
+    if (!directLooseProduct) {
+      alert('Select a loose-weight product.');
+      return;
+    }
+    const stockQuantity = Number(directLooseWeight);
+    const stockUnit = directLooseProduct.stockUnit || directLooseProduct.metadata?.stockUnit || 'g';
+    if (!Number.isFinite(stockQuantity) || stockQuantity <= 0) {
+      alert(`Enter a valid weight in ${stockUnit}.`);
+      return;
+    }
+    if (stockQuantity > Number(directLooseProduct.stockCount || 0)) {
+      alert(`Only ${directLooseProduct.stockCount} ${stockUnit} of ${directLooseProduct.name} is in stock.`);
+      return;
+    }
+    clearCompletedSaleActions();
+    onAddToCart?.({ productId: directLooseProduct.id, product: directLooseProduct, qty: 1, looseStockQuantity: stockQuantity, directLoose: true });
+    setDirectLooseWeight('');
+    setShowDirectLoosePanel(false);
+    setCatalogAddFlash(true);
+    window.setTimeout(() => setCatalogAddFlash(false), 700);
   };
 
   const handleLoadMorePosProducts = async () => {
@@ -733,6 +797,72 @@ export default function PosView({
               >
                 Custom Item
               </button>
+            </div>
+
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Direct Loose-Weight Billing</p>
+                  <p className="text-[10px] text-emerald-700 dark:text-emerald-300">Enter the measured weight for loose goods; no barcode label is required.</p>
+                </div>
+                <button type="button" onClick={() => setShowDirectLoosePanel((open) => !open)} className="rounded-lg bg-emerald-700 px-3 py-2 text-[10px] font-semibold uppercase text-white">
+                  {showDirectLoosePanel ? 'Close' : 'Direct Weight'}
+                </button>
+              </div>
+              {showDirectLoosePanel && (
+                <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_0.8fr]">
+                  <div className="rounded-lg border border-emerald-200 bg-white p-3 dark:border-emerald-900 dark:bg-slate-950">
+                    <div className="mb-2 flex items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
+                      <Scale className="h-4 w-4 text-emerald-700" />
+                      <span className="text-[10px] font-semibold uppercase text-slate-600 dark:text-slate-300">Select Loose Product</span>
+                    </div>
+                    <label className="block">
+                      <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Search PLU / item name</span>
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input className={`${inputClass} pl-9`} value={directLooseSearch} onChange={(event) => setDirectLooseSearch(event.target.value)} placeholder="e.g. tomato, rice, 101" />
+                      </div>
+                    </label>
+                    <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto pr-1">
+                      {directLooseMatches.length === 0 ? (
+                        <p className="rounded-lg border border-dashed border-slate-300 p-3 text-center text-[10px] font-semibold text-slate-500">No loose products found.</p>
+                      ) : directLooseMatches.map((product) => {
+                        const active = product.id === directLooseProductId;
+                        const stockUnit = product.stockUnit || product.metadata?.stockUnit || 'g';
+                        const saleUnit = product.sellingUnit || product.metadata?.sellingUnit || product.metadata?.unit || 'kg';
+                        return (
+                          <button key={product.id} type="button" onClick={() => { setDirectLooseProductId(product.id); setDirectLooseWeight(''); }} className={`grid w-full grid-cols-[1fr_auto] items-center gap-2 rounded-lg border p-2 text-left transition ${active ? 'border-indigo-700 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-200 bg-white hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-950'}`}>
+                            <span className="min-w-0">
+                              <span className="block truncate text-xs font-semibold">{product.name}</span>
+                              <span className="block text-[10px] font-semibold text-slate-500">Price per {product.packageQuantity || product.metadata?.packageQuantity || 1} {saleUnit} · Stock {product.stockCount} {stockUnit}</span>
+                            </span>
+                            <span className="rounded bg-emerald-50 px-2 py-1 font-mono text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">PLU {product.pluCode || product.metadata?.pluCode || '-'}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-emerald-200 bg-white p-3 dark:border-emerald-900 dark:bg-slate-950">
+                    <div className="mb-2 border-b border-slate-200 pb-2 dark:border-slate-800">
+                      <p className="text-[10px] font-semibold uppercase text-slate-600 dark:text-slate-300">Add Weighed Item to Bill</p>
+                      <p className="mt-1 text-[10px] text-slate-500">No barcode is generated or printed.</p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                      <label>
+                        <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Weighed Quantity ({directLooseProduct ? directLooseStockUnit : 'unit'})</span>
+                        <input className={`${inputClass} font-mono`} inputMode="decimal" value={directLooseWeight} onChange={(event) => setDirectLooseWeight(event.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 750" disabled={!directLooseProduct} />
+                      </label>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-900">
+                        <p className="text-[10px] font-semibold uppercase text-slate-500">Calculated Amount</p>
+                        <p className="mt-1 text-xl font-bold text-emerald-700">Rs. {directLooseAmount.toFixed(2)}</p>
+                        <p className="text-[10px] font-semibold text-slate-500">{directLooseQuantity > 0 ? directLooseLabel : 'Enter quantity'}</p>
+                      </div>
+                    </div>
+                    <button type="button" onClick={handleAddDirectLooseItem} disabled={!directLooseProductId || !directLooseWeight} className="mt-3 w-full rounded-lg bg-emerald-700 px-3 py-3 text-xs font-semibold uppercase text-white disabled:opacity-50">Add Weighed Item to Bill</button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {showCustomPanel && canOverridePrice && (

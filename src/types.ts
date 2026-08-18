@@ -33,7 +33,19 @@ export interface ShopProfile {
   deliveryChargePerKm?: number;
   baseDeliveryCharge?: number;
   freeDeliveryRadiusKm?: number;
+  allowExtendedDelivery?: boolean;
+  extendedDeliveryMessage?: string;
+  extendedDeliveryNote?: string;
+  barcodeLabelPrintSettings?: BarcodeLabelPrintSettings;
   addresses?: ShopAddress[];
+}
+
+export interface BarcodeLabelPrintSettings {
+  labelWidthMm: number;
+  labelHeightMm: number;
+  columnsPerRow: number;
+  horizontalGapMm: number;
+  verticalGapMm: number;
 }
 
 export type CustomerTab = 'home' | 'search' | 'categories' | 'wishlist' | 'cart' | 'orders' | 'profile';
@@ -121,9 +133,9 @@ export interface Order {
   userId: string;
   customerName: string;
   customerPhone: string;
-  status: 'pending' | 'accepted' | 'packed' | 'out_for_delivery' | 'delivered' | 'cancelled';
-  paymentMethod: 'cod' | 'upi';
-  paymentStatus: 'pending' | 'submitted' | 'paid' | 'failed' | 'refunded';
+  status: 'pending' | 'pending_delivery_approval' | 'accepted' | 'packed' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'delivery_rejected';
+  paymentMethod: 'cod' | 'upi' | 'cashfree';
+  paymentStatus: 'pending' | 'submitted' | 'paid' | 'failed' | 'refunded' | 'user_dropped';
   paymentRef?: string;
   deliveryMethod: 'pickup' | 'delivery';
   deliveryAddress?: any;
@@ -142,6 +154,12 @@ export interface Order {
     status: string;
     upiReference?: string;
   };
+  extendedDelivery?: {
+    requested?: boolean;
+    message?: string | null;
+    note?: string | null;
+  };
+  cashfree?: Record<string, any>;
   createdAt?: string;
   updatedAt?: string;
   // Aliases for customer app
@@ -224,10 +242,10 @@ export interface PaymentRecord {
   userId?: string | null;
   provider: string;
   providerRef?: string | null;
-  method: 'cod' | 'upi' | 'cash' | 'card' | 'manual';
+  method: 'cod' | 'upi' | 'cash' | 'card' | 'manual' | 'cashfree';
   amount: number;
   currency: string;
-  status: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
+  status: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded' | 'user_dropped';
   paidAt?: string | null;
   payload?: Record<string, any>;
   createdAt?: string;

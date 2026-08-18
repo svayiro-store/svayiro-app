@@ -821,9 +821,11 @@ export const api = {
     finalAmount?: number;
     loyaltyRedeemPoints?: number;
     items: { productId: string; quantity: number; stockQuantity?: number; displayQuantityLabel?: string; isLooseLabel?: boolean }[];
-    paymentMethod: 'cod' | 'upi';
-    paymentStatus?: 'pending' | 'paid' | 'failed' | 'submitted';
+    paymentMethod: 'cod' | 'upi' | 'cashfree';
+    paymentStatus?: 'pending' | 'paid' | 'failed' | 'submitted' | 'user_dropped';
     upiReference?: string | null;
+    paymentRef?: string | null;
+    extendedDeliveryRequested?: boolean;
   }) =>
     apiRequest<{ success: boolean; order: Order }>('/orders', {
       method: 'POST',
@@ -840,6 +842,27 @@ export const api = {
     apiRequest<{ success: boolean }>('/payments/upi/confirm', {
       method: 'POST',
       body: JSON.stringify({ paymentId, providerRef })
+    }),
+
+  createCashfreePayment: (orderId: string) =>
+    apiRequest<{
+      success: boolean;
+      orderId: string;
+      cashfreeOrderId: string;
+      paymentSessionId?: string | null;
+      paymentLink?: string | null;
+      mode: 'sandbox' | 'production';
+    }>('/payments/cashfree/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ orderId })
+    }),
+
+  refreshCashfreePaymentStatus: (orderId: string) =>
+    apiRequest<{ success: boolean; order: Order; cashfree?: any }>(`/payments/cashfree/order/${orderId}/status`),
+
+  adminRefreshCashfreePaymentStatus: (orderId: string) =>
+    apiRequest<{ success: boolean; order: Order; cashfree?: any }>(`/admin/orders/${orderId}/refresh-cashfree`, {
+      method: 'POST'
     }),
 
   getLoyaltySummary: () =>
