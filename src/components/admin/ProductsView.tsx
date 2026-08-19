@@ -24,6 +24,30 @@ function productCode(product: Product) {
   return String(product.sku || product.id.substring(0, 8).toUpperCase()).trim().toUpperCase();
 }
 
+const UPC_A_PATTERNS = ['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+const UPC_A_RIGHT_PATTERNS = ['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
+
+function upcAValue(value: string) {
+  const source = value.replace(/\D/g, '');
+  let digits = source.length >= 11 ? source.slice(0, 11) : '';
+  if (!digits) {
+    const seed = [...value].reduce((total, char) => (total * 31 + char.charCodeAt(0)) % 100000000000, 0);
+    digits = String(seed).padStart(11, '0');
+  }
+  const checksum = [...digits].reduce((total, digit, index) => total + Number(digit) * (index % 2 === 0 ? 3 : 1), 0);
+  return `${digits}${(10 - (checksum % 10)) % 10}`;
+}
+
+function upcASvgDataUri(value: string) {
+  const digits = upcAValue(value);
+  const left = digits.slice(0, 6).split('').map((digit) => UPC_A_PATTERNS[Number(digit)]).join('');
+  const right = digits.slice(6).split('').map((digit) => UPC_A_RIGHT_PATTERNS[Number(digit)]).join('');
+  const modules = `101${left}01010${right}101`;
+  const bars = [...modules].map((bit, index) => bit === '1' ? `<rect x="${index}" y="0" width="1" height="42"/>` : '').join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${modules.length}" height="52" viewBox="0 0 ${modules.length} 52"><rect width="100%" height="100%" fill="#fff"/><g fill="#020617">${bars}</g><text x="${modules.length / 2}" y="51" text-anchor="middle" font-family="monospace" font-size="7" fill="#020617">${digits}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 function productPluCode(product: Product) {
   return String(product.pluCode || product.metadata?.pluCode || '').trim();
 }
@@ -605,16 +629,16 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
   const formatStickerDate = (value: string) => {
     if (!value) return '';
     const displayParts = value.trim().match(/^(\d{2})[\s/-](\d{2})[\s/-](\d{4})$/);
-    if (displayParts) return `${displayParts[1]} ${displayParts[2]} ${displayParts[3]}`;
+    if (displayParts) return `${displayParts[1]}/${displayParts[2]}/${displayParts[3]}`;
     const [year, month, day] = value.split('-');
-    return year && month && day ? `${day} ${month} ${year}` : value;
+    return year && month && day ? `${day}/${month}/${year}` : value;
   };
 
   const formatStickerDateInput = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 8);
     if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
-    return `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4)}`;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
   };
 
   const buildBarcodeLabelHtml = (items: Product[]) => {
@@ -625,7 +649,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
       const priceLine = includePriceOnSticker
         ? `<div class="price"><span>MRP Rs ${Number(product.basePrice).toFixed(0)}</span>${product.offerPrice > 0 ? `<span>OFF Rs ${Number(activePrice).toFixed(0)}</span>` : ''}</div>`
         : '';
-      const mfdLine = includeMfdOnSticker && dateInfo.mfd ? `<span>MFD: ${escapeHtml(formatStickerDate(dateInfo.mfd))}</span>` : '';
+      const mfdLine = includeMfdOnSticker && dateInfo.mfd ? `<span>PKD: ${escapeHtml(formatStickerDate(dateInfo.mfd))}</span>` : '';
       const expLine = includeExpOnSticker && dateInfo.exp ? `<span>EXP: ${escapeHtml(formatStickerDate(dateInfo.exp))}</span>` : '';
       const bestBeforeLine = includeBestBeforeOnSticker && dateInfo.bestBefore ? `<span>Best before ${escapeHtml(dateInfo.bestBefore)}</span>` : '';
       const dateLine = [mfdLine, expLine, bestBeforeLine].filter(Boolean).length > 0
@@ -638,7 +662,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
           <div class="meta">${escapeHtml(formatProductMeasure(product))}</div>
           ${priceLine}
           ${dateLine}
-          <img class="barcode" src="${code128SvgDataUri(code)}" alt="${code}" />
+          <img class="barcode" src="${upcASvgDataUri(code)}" alt="${upcAValue(code)}" />
         </section>
       `;
     });
@@ -665,7 +689,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
     const contentScale = Math.min(1.6, Math.max(0.35, labelPrintSettings.labelHeightMm / 25));
     const labelPaddingMm = 1.2 * contentScale;
     const brandFontPx = 7 * contentScale;
-    const nameFontPx = 7.4 * contentScale;
+    const nameFontPx = 8.6 * contentScale;
     const metaFontPx = 6.2 * contentScale;
     const dateFontPx = 5.7 * contentScale;
     const barcodeHeightMm = 7.6 * contentScale;
@@ -683,7 +707,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             .label-row:last-child { break-after: auto; page-break-after: auto; }
             .label { width: ${labelPrintSettings.labelWidthMm}mm; min-width: ${labelPrintSettings.labelWidthMm}mm; max-width: ${labelPrintSettings.labelWidthMm}mm; height: ${labelPrintSettings.labelHeightMm}mm; min-height: ${labelPrintSettings.labelHeightMm}mm; max-height: ${labelPrintSettings.labelHeightMm}mm; margin: 0; padding: ${labelPaddingMm}mm; overflow: hidden; contain: layout paint; }
             .brand { border-bottom: .25mm solid #000; padding-bottom: .3mm; font-size: ${brandFontPx}px; font-weight: 900; letter-spacing: .035em; color: #000; line-height: 1; white-space: nowrap; overflow: hidden; }
-            .name { margin-top: .35mm; font-size: ${nameFontPx}px; line-height: 1.05; font-weight: 400; max-height: ${4 * contentScale}mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+            .name { margin-top: .35mm; font-size: ${nameFontPx}px; line-height: 1.05; font-weight: 400; max-height: ${5 * contentScale}mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
             .meta { margin-top: .15mm; font-size: ${metaFontPx}px; color: #000; line-height: 1; min-height: 1.5mm; overflow: hidden; white-space: nowrap; font-weight: 400; }
             .price { display: flex; justify-content: space-between; gap: 1.2mm; margin-top: .35mm; font-size: ${metaFontPx}px; line-height: 1; font-weight: 900; color: #000; white-space: nowrap; overflow: hidden; }
             .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .2mm 1mm; margin-top: .35mm; font-size: ${dateFontPx}px; line-height: 1; font-weight: 400; color: #000; overflow: hidden; }
@@ -1407,7 +1431,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                   className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-500"
                 />
                 <span>
-                  Show MFD date
+                  Show PKD date
                   <span className="block text-[10px] font-semibold text-slate-500">Manufactured/packed date per product.</span>
                 </span>
               </label>
@@ -1622,11 +1646,12 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                 <span>Barcode</span>
                 <span>Category</span>
                 <span>Sticker Price</span>
-                <span>MFD / EXP / Best Before</span>
+                <span>PKD / EXP / Best Before</span>
                 <span>Action</span>
               </div>
               {visibleCodeProducts.map((product) => {
                 const code = productCode(product);
+                const upcCode = upcAValue(code);
                 const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
                 const dateInfo = stickerDateInfo[product.id] || { mfd: '', exp: '', bestBefore: '' };
                 return (
@@ -1652,7 +1677,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                         </div>
                       )}
                     </div>
-                    <img src={code128SvgDataUri(code)} alt={code} className="h-12 w-36 rounded border border-slate-200 bg-white object-contain p-1" />
+                    <img src={upcASvgDataUri(code)} alt={upcCode} className="h-12 w-36 rounded border border-slate-200 bg-white object-contain p-1" />
                     <div className="text-xs opacity-80">{productCategoryLabel(product)}</div>
                     <div className="text-xs font-bold">
                       {includePriceOnSticker ? (
@@ -1666,14 +1691,14 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                     </div>
                     <div className="grid gap-2 text-[10px]">
                       <label className="grid grid-cols-[42px_1fr] items-center gap-2">
-                        <span className="font-semibold text-slate-500">MFD</span>
+                        <span className="font-semibold text-slate-500">PKD</span>
                         <input
                           type="text"
                           inputMode="numeric"
                           value={dateInfo.mfd}
                           onChange={(event) => updateStickerDateInfo(product.id, 'mfd', formatStickerDateInput(event.target.value))}
                           disabled={!includeMfdOnSticker}
-                          placeholder="dd mm yyyy"
+                          placeholder="dd/mm/yyyy"
                           className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:disabled:bg-slate-900"
                         />
                       </label>
@@ -1685,7 +1710,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                           value={dateInfo.exp}
                           onChange={(event) => updateStickerDateInfo(product.id, 'exp', formatStickerDateInput(event.target.value))}
                           disabled={!includeExpOnSticker}
-                          placeholder="dd mm yyyy"
+                          placeholder="dd/mm/yyyy"
                           className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:disabled:bg-slate-900"
                         />
                       </label>
@@ -1696,7 +1721,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                           value={dateInfo.bestBefore}
                           onChange={(event) => updateStickerDateInfo(product.id, 'bestBefore', event.target.value)}
                           disabled={!includeBestBeforeOnSticker}
-                          placeholder="e.g. 3 months from MFD"
+                          placeholder="e.g. 3 months from PKD"
                           className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:disabled:bg-slate-900"
                         />
                       </label>
