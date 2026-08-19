@@ -44,7 +44,7 @@ function upcASvgDataUri(value: string) {
   const right = digits.slice(6).split('').map((digit) => UPC_A_RIGHT_PATTERNS[Number(digit)]).join('');
   const modules = `101${left}01010${right}101`;
   const bars = [...modules].map((bit, index) => bit === '1' ? `<rect x="${index}" y="0" width="1" height="42"/>` : '').join('');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${modules.length}" height="62" viewBox="0 0 ${modules.length} 62"><rect width="100%" height="100%" fill="#fff"/><g fill="#020617">${bars}</g><text x="${modules.length / 2}" y="60" text-anchor="middle" font-family="monospace" font-size="10" font-weight="400" fill="#020617">${digits}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${modules.length}" height="68" viewBox="0 0 ${modules.length} 68"><rect width="100%" height="100%" fill="#fff"/><g fill="#020617">${bars}</g><text x="${modules.length / 2}" y="66" text-anchor="middle" font-family="monospace" font-size="13" font-weight="400" fill="#020617">${digits}</text></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
@@ -647,7 +647,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
       const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
       const dateInfo = stickerDateInfo[product.id] || { mfd: '', exp: '', bestBefore: '' };
       const priceLine = includePriceOnSticker
-        ? `<div class="price"><span>MRP Rs ${Number(product.basePrice).toFixed(0)}</span>${product.offerPrice > 0 ? `<span>OFF Rs ${Number(activePrice).toFixed(0)}</span>` : ''}</div>`
+        ? `<div class="price"><span class="mrp">MRP Rs ${Number(product.basePrice).toFixed(0)}</span>${product.offerPrice > 0 ? `<span class="selling-price">S.Price Rs ${Number(activePrice).toFixed(0)}</span>` : ''}</div><div class="tax-note">(Inclusive of all taxes)</div>`
         : '';
       const mfdLine = includeMfdOnSticker && dateInfo.mfd ? `<span>PKD: ${escapeHtml(formatStickerDate(dateInfo.mfd))}</span>` : '';
       const expLine = includeExpOnSticker && dateInfo.exp ? `<span>EXP: ${escapeHtml(formatStickerDate(dateInfo.exp))}</span>` : '';
@@ -706,10 +706,13 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             .label-row { display: grid; grid-template-columns: repeat(${labelPrintSettings.columnsPerRow}, ${labelPrintSettings.labelWidthMm}mm); column-gap: ${labelPrintSettings.horizontalGapMm}mm; align-items: start; width: ${totalWidthMm}mm; height: ${totalRowHeightMm}mm; margin: 0; padding: 0; overflow: hidden; break-inside: avoid; page-break-inside: avoid; break-after: page; page-break-after: always; }
             .label-row:last-child { break-after: auto; page-break-after: auto; }
             .label { width: ${labelPrintSettings.labelWidthMm}mm; min-width: ${labelPrintSettings.labelWidthMm}mm; max-width: ${labelPrintSettings.labelWidthMm}mm; height: ${labelPrintSettings.labelHeightMm}mm; min-height: ${labelPrintSettings.labelHeightMm}mm; max-height: ${labelPrintSettings.labelHeightMm}mm; margin: 0; padding: ${labelPaddingMm}mm; overflow: hidden; contain: layout paint; }
-            .brand { border-bottom: .25mm solid #000; padding-bottom: .3mm; font-size: ${brandFontPx}px; font-weight: 900; letter-spacing: .035em; color: #000; line-height: 1; white-space: nowrap; overflow: hidden; }
+            .brand { border-bottom: .25mm solid #000; padding-top: .5mm; padding-bottom: .3mm; font-size: ${brandFontPx}px; font-weight: 700; letter-spacing: .035em; color: #27303a; line-height: 1; white-space: nowrap; overflow: hidden; }
             .name { margin-top: 1mm; font-size: ${nameFontPx}px; line-height: 1.08; font-weight: 700; text-align: center; max-height: ${5.5 * contentScale}mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
             .meta { margin-top: .9mm; font-size: ${metaFontPx}px; color: #000; line-height: 1.05; min-height: 1.5mm; overflow: hidden; white-space: nowrap; font-weight: 400; }
-            .price { display: flex; justify-content: space-between; gap: 1.2mm; margin-top: .9mm; font-size: ${metaFontPx}px; line-height: 1.05; font-weight: 900; color: #000; white-space: nowrap; overflow: hidden; }
+            .price { display: flex; justify-content: space-between; align-items: baseline; gap: 1.2mm; margin-top: .9mm; line-height: 1.05; color: #000; white-space: nowrap; overflow: hidden; }
+            .price .mrp { font-size: ${Math.max(5, metaFontPx - 1.1)}px; font-weight: 700; }
+            .price .selling-price { font-size: ${metaFontPx + .5}px; font-weight: 700; }
+            .tax-note { margin-top: .45mm; font-size: ${Math.max(4.3, dateFontPx - .5)}px; line-height: 1; font-weight: 400; text-align: right; color: #374151; white-space: nowrap; overflow: hidden; }
             .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .7mm 1mm; margin-top: .9mm; font-size: ${dateFontPx}px; line-height: 1.05; font-weight: 400; color: #000; overflow: hidden; }
             .dates span:last-child:nth-child(odd) { grid-column: 1 / -1; }
             .barcode { display: block; width: 100%; max-width: 100%; height: ${barcodeHeightMm}mm; max-height: ${barcodeHeightMm}mm; object-fit: contain; margin-top: 1.2mm; font-weight: 400; }
