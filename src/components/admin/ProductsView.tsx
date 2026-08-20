@@ -713,7 +713,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             .price .mrp { font-size: ${Math.max(5, metaFontPx - 1.1)}px; font-weight: 700; }
             .price .selling-price { font-size: ${metaFontPx + .5}px; font-weight: 700; }
             .tax-note { margin-top: .45mm; font-size: ${Math.max(4.3, dateFontPx - .5)}px; line-height: 1; font-weight: 400; text-align: right; color: #374151; white-space: nowrap; overflow: hidden; }
-            .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .7mm 1mm; margin-top: .9mm; font-size: ${dateFontPx}px; line-height: 1.05; font-weight: 400; color: #000; overflow: hidden; }
+            .dates { display: grid; grid-template-columns: 1fr 1fr; gap: .7mm 1mm; margin-top: .7mm; font-size: ${dateFontPx}px; line-height: 1.25; font-weight: 400; color: #000; overflow: hidden; }
             .dates span:last-child:nth-child(odd) { grid-column: 1 / -1; }
             .barcode { display: block; width: 100%; max-width: 100%; height: ${barcodeHeightMm}mm; max-height: ${barcodeHeightMm}mm; object-fit: contain; margin-top: 1.2mm; font-weight: 400; }
             @page { size: ${totalWidthMm}mm ${totalRowHeightMm}mm; margin: 0; }
