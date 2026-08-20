@@ -44,7 +44,7 @@ function upcASvgDataUri(value: string) {
   const right = digits.slice(6).split('').map((digit) => UPC_A_RIGHT_PATTERNS[Number(digit)]).join('');
   const modules = `101${left}01010${right}101`;
   const bars = [...modules].map((bit, index) => bit === '1' ? `<rect x="${index}" y="0" width="1" height="42"/>` : '').join('');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${modules.length}" height="68" viewBox="0 0 ${modules.length} 68"><rect width="100%" height="100%" fill="#fff"/><g fill="#020617">${bars}</g><text x="${modules.length / 2}" y="66" text-anchor="middle" font-family="monospace" font-size="13" font-weight="400" fill="#020617">${digits}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${modules.length}" height="68" viewBox="0 0 ${modules.length} 68"><rect width="100%" height="100%" fill="#fff"/><g fill="#020617">${bars}</g><text x="${modules.length / 2}" y="54" text-anchor="middle" font-family="monospace" font-size="13" font-weight="400" fill="#020617">${digits}</text></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
@@ -687,12 +687,12 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
     // keeps the barcode and optional sticker details inside one label instead
     // of letting a browser reflow them into the neighbouring column.
     const contentScale = Math.min(1.6, Math.max(0.35, labelPrintSettings.labelHeightMm / 25));
-    const labelPaddingMm = 1.3 * contentScale;
-    const brandFontPx = 7 * contentScale;
-    const nameFontPx = 8.8 * contentScale;
-    const metaFontPx = 6.2 * contentScale;
+    const labelPaddingMm = 1.15 * contentScale;
+    const brandFontPx = 6.8 * contentScale;
+    const nameFontPx = 9 * contentScale;
+    const metaFontPx = 6.4 * contentScale;
     const dateFontPx = 5.7 * contentScale;
-    const barcodeHeightMm = 8.8 * contentScale;
+    const barcodeHeightMm = 8.6 * contentScale;
     return `
       <!doctype html>
       <html>
@@ -706,8 +706,8 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             .label-row { display: grid; grid-template-columns: repeat(${labelPrintSettings.columnsPerRow}, ${labelPrintSettings.labelWidthMm}mm); column-gap: ${labelPrintSettings.horizontalGapMm}mm; align-items: start; width: ${totalWidthMm}mm; height: ${totalRowHeightMm}mm; margin: 0; padding: 0; overflow: hidden; break-inside: avoid; page-break-inside: avoid; break-after: page; page-break-after: always; }
             .label-row:last-child { break-after: auto; page-break-after: auto; }
             .label { width: ${labelPrintSettings.labelWidthMm}mm; min-width: ${labelPrintSettings.labelWidthMm}mm; max-width: ${labelPrintSettings.labelWidthMm}mm; height: ${labelPrintSettings.labelHeightMm}mm; min-height: ${labelPrintSettings.labelHeightMm}mm; max-height: ${labelPrintSettings.labelHeightMm}mm; margin: 0; padding: ${labelPaddingMm}mm; overflow: hidden; contain: layout paint; }
-            .brand { border-bottom: .25mm solid #000; padding-top: .5mm; padding-bottom: .3mm; font-size: ${brandFontPx}px; font-weight: 700; letter-spacing: .035em; color: #27303a; line-height: 1; white-space: nowrap; overflow: hidden; }
-            .name { margin-top: 1mm; font-size: ${nameFontPx}px; line-height: 1.08; font-weight: 700; text-align: center; max-height: ${5.5 * contentScale}mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+            .brand { border-bottom: .25mm solid #000; padding-top: .5mm; padding-bottom: .3mm; font-size: ${brandFontPx}px; font-weight: 500; letter-spacing: .035em; color: #27303a; line-height: 1; white-space: nowrap; overflow: hidden; }
+            .name { margin-top: 1mm; font-size: ${nameFontPx}px; line-height: 1.08; font-weight: 800; text-align: center; max-height: ${5.5 * contentScale}mm; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
             .meta { margin-top: .9mm; font-size: ${metaFontPx}px; color: #000; line-height: 1.05; min-height: 1.5mm; overflow: hidden; white-space: nowrap; font-weight: 400; }
             .price { display: flex; justify-content: space-between; align-items: baseline; gap: 1.2mm; margin-top: .9mm; line-height: 1.05; color: #000; white-space: nowrap; overflow: hidden; }
             .price .mrp { font-size: ${Math.max(5, metaFontPx - 1.1)}px; font-weight: 700; }
