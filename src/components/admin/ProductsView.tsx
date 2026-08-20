@@ -691,8 +691,8 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
     const brandFontPx = 6.8 * contentScale;
     const nameFontPx = 9 * contentScale;
     const metaFontPx = 6.4 * contentScale;
-    const dateFontPx = 5.7 * contentScale;
-    const barcodeHeightMm = 8.6 * contentScale;
+    const dateFontPx = 5.5 * contentScale;
+    const barcodeHeightMm = 8.3 * contentScale;
     return `
       <!doctype html>
       <html>
