@@ -1596,6 +1596,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                       <div>
                         <div className="font-semibold">{product.name}</div>
                         <div className="text-[10px] opacity-70 font-mono">{product.sku || product.id.substring(0, 8)}</div>
+                        <div className="text-[10px] text-slate-500">Slug: {product.slug || 'not set'}</div>
                         <div className="text-[10px] font-semibold text-slate-500">{formatProductMeasure(product)}</div>
                         {(product.isLooseItem || product.metadata?.isLooseItem) && (
                           <div className="mt-1 inline-flex rounded bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">

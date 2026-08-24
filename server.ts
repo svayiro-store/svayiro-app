@@ -5069,7 +5069,6 @@ app.get('/api/products/lookup-by-barcode/:barcode', authMiddleware, requirePermi
       `, [looseLabel.pluCode]);
       if (p.rowCount === 0) return res.status(404).json({ error: 'Loose label PLU is not linked to any product.' });
       const row = p.rows[0];
-      if (!row.is_enabled) return res.status(409).json({ error: `${row.name} is disabled.` });
       if (Number(row.stock_count || 0) < looseLabel.baseQuantity) return res.status(409).json({ error: `Insufficient stock for ${row.name}.` });
       const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
       const stockUnit = normalizeLooseStockUnit(metadata.stockUnit);
@@ -5313,7 +5312,18 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
         sellingUnit: isLooseItem ? sellingUnit : ''
       };
       const generatedSku = await generateUniqueProductSku(client, productData.name);
-      const ins = await client.query('INSERT INTO products(category_id, subcategory_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) RETURNING *', [productData.categoryId, productData.subcategoryId || null, generatedSku, productData.name, productData.slug || (productData.name.toLowerCase().replace(/\s+/g, '-')), productData.description || null, basePrice, offerPrice, stockCount, weightGrams, productData.isEnabled !== undefined ? productData.isEnabled : true, lowStockThreshold, metadata]);
+      const baseSlug = String(productData.slug || productData.name)
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || `product-${Date.now()}`;
+      let slug = baseSlug;
+      let slugNumber = 2;
+      while ((await client.query('SELECT 1 FROM products WHERE slug = $1 LIMIT 1', [slug])).rowCount > 0) {
+        slug = `${baseSlug}-${slugNumber++}`;
+      }
+      const ins = await client.query('INSERT INTO products(category_id, subcategory_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) RETURNING *', [productData.categoryId, productData.subcategoryId || null, generatedSku, productData.name, slug, productData.description || null, basePrice, offerPrice, stockCount, weightGrams, productData.isEnabled !== undefined ? productData.isEnabled : true, lowStockThreshold, metadata]);
       const prod = ins.rows[0];
       await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, productData.categoryId, productData.subcategoryId), productData.categoryId);
       await syncProductBarcodes(client, prod.id, productData.externalBarcodes || []);
@@ -5379,8 +5389,22 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
         metadata.stockUnit = '';
         metadata.sellingUnit = '';
       }
+      let slug = current.slug;
+      if (productData.slug !== undefined || productData.name !== undefined) {
+        const baseSlug = String(productData.slug || productData.name || current.name)
+          .normalize('NFKD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') || `product-${Date.now()}`;
+        slug = baseSlug;
+        let slugNumber = 2;
+        while ((await client.query('SELECT 1 FROM products WHERE slug = $1 AND id <> $2 LIMIT 1', [slug, id])).rowCount > 0) {
+          slug = `${baseSlug}-${slugNumber++}`;
+        }
+      }
       // update product
-      const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), subcategory_id = $2, sku = COALESCE($3,sku), name = COALESCE($4,name), slug = COALESCE($5,slug), description = COALESCE($6,description), base_price = COALESCE($7,base_price), offer_price = COALESCE($8,offer_price), stock_count = $9, weight_grams = COALESCE($10,weight_grams), is_enabled = COALESCE($11,is_enabled), low_stock_threshold = COALESCE($12,low_stock_threshold), metadata = COALESCE($13,metadata), updated_at = now() WHERE id = $14 RETURNING *', [productData.categoryId, productData.subcategoryId || null, productData.sku, productData.name, productData.slug, productData.description, productData.basePrice !== undefined ? nonNegativeNumber(productData.basePrice, 0) : null, productData.offerPrice !== undefined ? nonNegativeNumber(productData.offerPrice, 0) : null, newStock, productData.weight !== undefined ? nonNegativeNumber(productData.weight, 0) : null, productData.isEnabled, productData.lowStockAlertThreshold !== undefined ? nonNegativeInteger(productData.lowStockAlertThreshold, 0) : null, metadata, id]);
+      const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), subcategory_id = $2, sku = COALESCE($3,sku), name = COALESCE($4,name), slug = $5, description = COALESCE($6,description), base_price = COALESCE($7,base_price), offer_price = COALESCE($8,offer_price), stock_count = $9, weight_grams = COALESCE($10,weight_grams), is_enabled = COALESCE($11,is_enabled), low_stock_threshold = COALESCE($12,low_stock_threshold), metadata = COALESCE($13,metadata), updated_at = now() WHERE id = $14 RETURNING *', [productData.categoryId, productData.subcategoryId || null, productData.sku, productData.name, slug, productData.description, productData.basePrice !== undefined ? nonNegativeNumber(productData.basePrice, 0) : null, productData.offerPrice !== undefined ? nonNegativeNumber(productData.offerPrice, 0) : null, newStock, productData.weight !== undefined ? nonNegativeNumber(productData.weight, 0) : null, productData.isEnabled, productData.lowStockAlertThreshold !== undefined ? nonNegativeInteger(productData.lowStockAlertThreshold, 0) : null, metadata, id]);
       const prod = upd.rows[0];
       await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, prod.category_id, prod.subcategory_id), prod.category_id);
       if (Array.isArray(productData.externalBarcodes)) {
@@ -5415,7 +5439,8 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
 app.delete('/api/products/:id', authMiddleware, requirePermission('products:manage'), async (req, res) => {
   const { id } = req.params;
   try {
-    await pgQuery('DELETE FROM products WHERE id = $1', [id]);
+    const result = await pgQuery('DELETE FROM products WHERE id = $1 RETURNING id', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Product not found' });
     invalidatePublicCache('products:');
     return res.json({ success: true });
   } catch (err) {

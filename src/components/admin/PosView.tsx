@@ -489,6 +489,7 @@ export default function PosView({
     try {
       const directSkuMatch = sortedProducts.find((product) => String(product.sku || '').toUpperCase() === barcode);
       if (directSkuMatch) {
+        if (Number(directSkuMatch.stockCount || 0) <= 0) throw new Error(`${directSkuMatch.name} is out of stock.`);
         clearCompletedSaleActions();
         onAddToCart?.({ productId: directSkuMatch.id, qty: 1 });
         setBarcodeScanValue('');
@@ -752,7 +753,7 @@ export default function PosView({
                   value={barcodeScanValue}
                   onChange={(event) => setBarcodeScanValue(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
+                    if (event.key === 'Enter' || event.key === 'Tab') {
                       event.preventDefault();
                       handleBarcodeScanSubmit();
                     }
