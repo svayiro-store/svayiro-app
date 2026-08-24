@@ -166,7 +166,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
 
   // Get top-level categories (no parent)
   const topLevelCategories = useMemo(() => sortByPosition(orderedCategories.filter(c => !c.parentId)), [orderedCategories]);
-  
+
   // Get subcategories for a given parent
   const getSubcategories = (parentId: string) => {
     return sortByPosition(orderedCategories.filter(c => c.parentId === parentId));
@@ -266,7 +266,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
     }
   };
 
-  const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
+  const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100   ';
   const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
 
   return (
@@ -277,8 +277,8 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
       </div>
 
       {/* Create/Edit Category Form */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm  ">
+        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 ">
           {editingId ? <><Plus className="h-4 w-4" /> Edit Category</> : <><Plus className="h-4 w-4" /> Add New Category</>}
         </h3>
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
@@ -297,7 +297,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
             {/* Parent Category Selection */}
             <label className="block">
               <span className={labelClass}>Parent Category (optional - make this a subcategory)</span>
-              <select 
+              <select
                 className={inputClass}
                 value={parentId || ''}
                 onChange={(e) => setParentId(e.target.value || null)}
@@ -334,7 +334,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
                     }}
                   />
                 </div>
-                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-900/30">
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100    ">
                   <Upload className="h-4 w-4" />
                   Upload
                   <input
@@ -352,11 +352,11 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
           </div>
           <div className="flex flex-col items-center justify-center gap-2 md:min-w-[160px]">
             {(imagePreview || imageUrl) ? (
-              <div className="h-24 w-24 overflow-hidden rounded-full border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950">
+              <div className="h-24 w-24 overflow-hidden rounded-full border border-slate-200 bg-slate-50  ">
                 <img src={imagePreview || imageUrl} alt="Category preview" className="h-full w-full object-cover" />
               </div>
             ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-dashed border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-950">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-dashed border-slate-300 bg-slate-50  ">
                 <ImageIcon className="h-6 w-6 text-slate-400" />
               </div>
             )}
@@ -382,17 +382,17 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
       {categories.length === 0 ? (
         <div className="p-6 border rounded text-center opacity-80">No categories have been added.</div>
       ) : (
-        <div className="rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
+        <div className="rounded border bg-white  border-slate-200  overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3  ">
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800 dark:text-slate-100">Category Display Order</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-800 ">Category Display Order</h3>
               <p className="text-[10px] font-semibold text-slate-500">Tick categories, move them up/down, then save. Parent and subcategory order are handled separately.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => moveSelectedCategories('up')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
+              <button onClick={() => moveSelectedCategories('up')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase text-slate-700 hover:bg-white   ">
                 <ArrowUp className="h-3.5 w-3.5" /> Selected Up
               </button>
-              <button onClick={() => moveSelectedCategories('down')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
+              <button onClick={() => moveSelectedCategories('down')} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase text-slate-700 hover:bg-white   ">
                 <ArrowDown className="h-3.5 w-3.5" /> Selected Down
               </button>
               <button
@@ -407,7 +407,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
 
           <div className="overflow-x-auto">
           <div className="min-w-[860px]">
-          <div className="grid grid-cols-[44px_minmax(0,2fr)_90px_80px_minmax(0,1fr)_190px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+          <div className="grid grid-cols-[44px_minmax(0,2fr)_90px_80px_minmax(0,1fr)_190px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100  text-slate-600 ">
             <span>Select</span>
             <span>Name / Image</span>
             <span>Order</span>
@@ -424,7 +424,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
             return (
               <div key={category.id}>
                 {/* Parent Category Row */}
-                <div className="grid grid-cols-[44px_minmax(0,2fr)_90px_80px_minmax(0,1fr)_190px] gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center bg-slate-50 dark:bg-slate-800/30">
+                <div className="grid grid-cols-[44px_minmax(0,2fr)_90px_80px_minmax(0,1fr)_190px] gap-4 px-4 py-3 border-t border-slate-200  items-center bg-slate-50 ">
                   <div>
                     <input type="checkbox" checked={selectedIds.has(category.id)} onChange={() => toggleSelected(category.id)} className="h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-500" />
                   </div>
@@ -432,7 +432,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
                     {subcategories.length > 0 && (
                       <button
                         onClick={() => toggleExpandParent(category.id)}
-                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+                        className="p-1 hover:bg-slate-200  rounded"
                       >
                         {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </button>
@@ -440,7 +440,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
                     {category.imageUrl ? (
                       <img src={category.imageUrl} alt={category.name} className="h-10 w-10 rounded-full object-cover border border-slate-200" referrerPolicy="no-referrer" />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 ">
                         <ImageIcon className="h-4 w-4 text-slate-400" />
                       </div>
                     )}
@@ -449,16 +449,16 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
                       {category.description && <div className="text-[10px] opacity-70 truncate max-w-[180px]">{category.description}</div>}
                     </div>
                   </div>
-                  <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded px-2 py-1">
+                  <div className="text-xs font-bold text-emerald-600  bg-emerald-50  rounded px-2 py-1">
                     #{categoryPosition(category)}
                   </div>
-                  <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded px-2 py-1">
+                  <div className="text-xs font-bold text-emerald-600  bg-emerald-50  rounded px-2 py-1">
                     Parent
                   </div>
                   <div className="text-xs opacity-70 font-mono">{category.slug || category.id.substring(0, 8)}</div>
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={() => moveOneCategory(category, 'up')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200"><ArrowUp className="h-3 w-3" /></button>
-                    <button onClick={() => moveOneCategory(category, 'down')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200"><ArrowDown className="h-3 w-3" /></button>
+                    <button onClick={() => moveOneCategory(category, 'up')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600  "><ArrowUp className="h-3 w-3" /></button>
+                    <button onClick={() => moveOneCategory(category, 'down')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600  "><ArrowDown className="h-3 w-3" /></button>
                     <button onClick={() => startEdit(category)} className="rounded bg-indigo-600 px-3 py-1 text-xs text-white">Edit</button>
                     <button onClick={() => handleDelete(category.id)} className="rounded bg-rose-600 px-3 py-1 text-xs text-white">Delete</button>
                   </div>
@@ -466,7 +466,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
 
                 {/* Subcategories */}
                 {isExpanded && subcategories.map((subcat) => (
-                  <div key={subcat.id} className="grid grid-cols-[44px_minmax(0,2fr)_90px_80px_minmax(0,1fr)_190px] gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center bg-white dark:bg-slate-900">
+                  <div key={subcat.id} className="grid grid-cols-[44px_minmax(0,2fr)_90px_80px_minmax(0,1fr)_190px] gap-4 px-4 py-3 border-t border-slate-200  items-center bg-white ">
                     <div>
                       <input type="checkbox" checked={selectedIds.has(subcat.id)} onChange={() => toggleSelected(subcat.id)} className="h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-500" />
                     </div>
@@ -475,7 +475,7 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
                       {subcat.imageUrl ? (
                         <img src={subcat.imageUrl} alt={subcat.name} className="h-10 w-10 rounded-full object-cover border border-slate-200" referrerPolicy="no-referrer" />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 ">
                           <ImageIcon className="h-4 w-4 text-slate-400" />
                         </div>
                       )}
@@ -484,16 +484,16 @@ export default function CategoriesView({ categories, isDarkMode, showToast, refr
                         {subcat.description && <div className="text-[10px] opacity-70 truncate max-w-[180px]">{subcat.description}</div>}
                       </div>
                     </div>
-                    <div className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
+                    <div className="text-xs font-bold text-blue-600  bg-blue-50  rounded px-2 py-1">
                       #{categoryPosition(subcat)}
                     </div>
-                    <div className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 rounded px-2 py-1">
+                    <div className="text-xs font-bold text-blue-600  bg-blue-50  rounded px-2 py-1">
                       Sub
                     </div>
                     <div className="text-xs opacity-70 font-mono">{subcat.slug || subcat.id.substring(0, 8)}</div>
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => moveOneCategory(subcat, 'up')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200"><ArrowUp className="h-3 w-3" /></button>
-                      <button onClick={() => moveOneCategory(subcat, 'down')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200"><ArrowDown className="h-3 w-3" /></button>
+                      <button onClick={() => moveOneCategory(subcat, 'up')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600  "><ArrowUp className="h-3 w-3" /></button>
+                      <button onClick={() => moveOneCategory(subcat, 'down')} className="rounded border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600  "><ArrowDown className="h-3 w-3" /></button>
                       <button onClick={() => startEdit(subcat)} className="rounded bg-indigo-600 px-3 py-1 text-xs text-white">Edit</button>
                       <button onClick={() => handleDelete(subcat.id)} className="rounded bg-rose-600 px-3 py-1 text-xs text-white">Delete</button>
                     </div>

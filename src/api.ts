@@ -275,7 +275,7 @@ export const api = {
     }),
 
   // Auth APIs
-  sendOtp: (phone: string) => 
+  sendOtp: (phone: string) =>
     apiRequest<{ success: boolean; message: string; devOtp?: string; expiresInSeconds?: number; resendAfterSeconds?: number }>('/auth/send-otp', {
       method: 'POST',
       body: JSON.stringify({ phone })
@@ -312,7 +312,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ origin, destination, originLat, originLng, destLat, destLng })
     }),
-    
+
   verifyOtp: (phone: string, code: string, name?: string) =>
     apiRequest<{ success: boolean; user: User; token: string; refreshToken: string }>('/auth/verify-otp', {
       method: 'POST',
@@ -383,9 +383,9 @@ export const api = {
     }),
 
   // Shop Profile APIs
-  getShopProfile: () => 
+  getShopProfile: () =>
     apiRequest<ShopProfile>('/shop-profile', undefined, 5 * 60 * 1000),
-    
+
   updateShopProfile: (details: Partial<ShopProfile>) =>
     apiRequest<{ success: boolean; data: ShopProfile }>('/shop-profile', {
       method: 'PUT',
@@ -398,10 +398,10 @@ export const api = {
   // Categories APIs
   getCategories: () =>
     apiRequest<Category[]>('/categories', undefined, 5 * 60 * 1000),
-    
+
   getAdminCategories: () =>
     apiRequest<Category[]>('/admin/categories', undefined, 5 * 60 * 1000),
-    
+
   createCategory: (category: Partial<Category>) =>
     apiRequest<{ success: boolean; data: Category }>('/categories', {
       method: 'POST',
@@ -412,7 +412,7 @@ export const api = {
       invalidateApiCache('/products');
       return res;
     }),
-    
+
   updateCategory: (id: string, category: Partial<Category>) =>
     apiRequest<{ success: boolean; data: Category }>(`/categories/${id}`, {
       method: 'PUT',
@@ -423,7 +423,7 @@ export const api = {
       invalidateApiCache('/products');
       return res;
     }),
-    
+
   deleteCategory: (id: string) =>
     apiRequest<{ success: boolean; data: boolean }>(`/categories/${id}`, {
       method: 'DELETE'
@@ -502,7 +502,7 @@ export const api = {
 
   getSearchConfig: () =>
     apiRequest<{ useDelay: boolean; delayMs: number }>('/search-config'),
-    
+
   createProduct: (product: Partial<Product>) =>
     apiRequest<{ success: boolean; data: Product }>('/products', {
       method: 'POST',
@@ -511,7 +511,7 @@ export const api = {
       invalidateApiCache('/products');
       return res;
     }),
-    
+
   updateProduct: (id: string, product: Partial<Product> & { logNote?: string }) =>
     apiRequest<{ success: boolean; data: Product }>(`/products/${id}`, {
       method: 'PUT',
@@ -520,7 +520,7 @@ export const api = {
       invalidateApiCache('/products');
       return res;
     }),
-    
+
   deleteProduct: (id: string) =>
     apiRequest<{ success: boolean; data: boolean }>(`/products/${id}`, {
       method: 'DELETE'
@@ -532,7 +532,7 @@ export const api = {
   // Bags Configuration APIs
   getBags: () =>
     apiRequest<Bag[]>('/bags', undefined, 60_000),
-    
+
   updateBags: (bags: Bag[]) =>
     apiRequest<{ success: boolean; data: Bag[] }>('/bags', {
       method: 'PUT',
@@ -545,7 +545,7 @@ export const api = {
   // Coupon / Offes APIs
   getCoupons: () =>
     apiRequest<any[]>('/coupons', undefined, 30_000).then((rows) => rows.map(normalizeCoupon)),
-    
+
   createCoupon: (coupon: Partial<Coupon>) =>
     apiRequest<{ success: boolean; data: Coupon }>('/coupons', {
       method: 'POST',
@@ -554,7 +554,7 @@ export const api = {
       invalidateApiCache('/coupons');
       return { ...res, data: normalizeCoupon(res.data) };
     }),
-    
+
   deleteCoupon: (id: string) =>
     apiRequest<{ success: boolean; data: boolean }>(`/coupons/${id}`, {
       method: 'DELETE'
@@ -562,7 +562,7 @@ export const api = {
       invalidateApiCache('/coupons');
       return res;
     }),
-    
+
   validateCoupon: (code: string, orderValue: number) =>
     apiRequest<{ valid: boolean; coupon: any }>(`/coupons/validate/${code}?orderValue=${orderValue}`)
       .then((res) => ({ ...res, coupon: normalizeCoupon(res.coupon) })),
@@ -570,7 +570,7 @@ export const api = {
   // Homepage Banners APIs
   getBanners: () =>
     apiRequest<Banner[]>('/banners', undefined, 5 * 60 * 1000),
-    
+
   createBanner: (banner: Partial<Banner>) =>
     apiRequest<{ success: boolean; data: Banner }>('/banners', {
       method: 'POST',
@@ -579,7 +579,7 @@ export const api = {
       invalidateApiCache('/banners');
       return res;
     }),
-    
+
   deleteBanner: (id: string) =>
     apiRequest<{ success: boolean; data: boolean }>(`/banners/${id}`, {
       method: 'DELETE'
@@ -645,7 +645,7 @@ export const api = {
   // Broadcast System Notifications APIs
   getNotifications: () =>
     apiRequest<any[]>('/notifications', undefined, 30_000).then((rows) => rows.map(normalizeNotification)),
-    
+
   createNotification: (notif: { title: string; message: string; type: 'offer' | 'order' | 'holiday' | 'announcement' }) =>
     apiRequest<{ success: boolean; data: Notification }>('/notifications', {
       method: 'POST',
@@ -696,7 +696,7 @@ export const api = {
     const suffix = query.toString();
     return apiRequest<any[]>(`/advance-requests${suffix ? `?${suffix}` : ''}`).then((rows) => rows.map(normalizeAdvanceRequest));
   },
-    
+
   createAdvanceRequest: (req: { userId?: string; customerName: string; customerPhone: string; productName: string; quantity: number; targetDate: string; note?: string }) =>
     apiRequest<{ success: boolean; data: any }>('/advance-requests', {
       method: 'POST',
@@ -758,7 +758,7 @@ export const api = {
     apiRequest<{ success: boolean; deletedCount: number }>(`/admin/inventory-logs/cleanup?olderThan=${olderThan}`, {
       method: 'DELETE'
     }),
-    
+
   recordOfflineSale: (payload: {
     productId?: string;
     quantity?: number;
@@ -779,7 +779,7 @@ export const api = {
   // Orders & Checkouts APIs
   customerOrders: (phone?: string) =>
     apiRequest<Order[]>(`/orders${phone ? `?phone=${phone}` : ''}`),
-    
+
   adminOrders: (params: { limit?: number; offset?: number } = {}) => {
     const query = new URLSearchParams();
     if (params.limit) query.set('limit', String(params.limit));
@@ -804,7 +804,7 @@ export const api = {
 
   adminInvoiceLink: (orderId: string) =>
     apiRequest<{ success: boolean; invoiceNo: string; invoiceUrl: string; invoiceText: string }>(`/admin/orders/${orderId}/invoice-link`),
-    
+
   placeOrder: (order: {
     userId?: string;
     customerName: string;
@@ -831,7 +831,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(order)
     }),
-    
+
   createUpiPayment: (orderId: string, amount: number) =>
     apiRequest<{ success: boolean; payment: any; upiUrl: string }>('/payments/upi/create', {
       method: 'POST',
@@ -937,13 +937,13 @@ export const api = {
   // Complaints
   getComplaints: (phone?: string) =>
     apiRequest<{ tickets: any[] }>(`/complaints${phone ? `?phone=${phone}` : ''}`),
-  
+
   createComplaint: (data: { userId?: string; customerName?: string; customerPhone?: string; subject: string; category?: string; description: string; priority?: 'low' | 'medium' | 'high' }) =>
     apiRequest<{ ticket: any }>('/complaints', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
-  
+
   updateComplaintStatus: (id: string, status: string, adminAnswer?: string) =>
     apiRequest<{ success: boolean; ticket: any }>(`/complaints/${id}/status`, {
       method: 'PUT',
@@ -985,10 +985,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ endpoint })
     }),
-    
+
    // 🟢 ADD THIS FUNCTION AT THE END OF THE api OBJECT:
   getPublicOrderInvoice: async (orderId: string) => {
    return apiRequest<any>(`/public/orders/${orderId}`);
-  }, 
+  },
 
 };

@@ -220,7 +220,7 @@ export default function GoogleMapPicker({
     <div className="space-y-3 p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{label}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 ">{label}</p>
           <p className="text-[10px] font-semibold text-slate-500">
             {provider === 'osm' ? `${helperText} Free OpenStreetMap search mode is active.` : helperText}
           </p>
@@ -247,21 +247,21 @@ export default function GoogleMapPicker({
                 handleSearch();
               }
             }}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100   "
             placeholder="Search area, landmark, road, city, pincode..."
           />
           <button
             type="button"
             onClick={handleSearch}
             disabled={searching}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-semibold uppercase text-white disabled:opacity-60 dark:bg-white dark:text-slate-900"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-semibold uppercase text-white disabled:opacity-60  "
           >
             <Search className="h-3.5 w-3.5" />
             {searching ? 'Searching' : 'Search'}
           </button>
         </div>
         {searchResults.length > 1 && (
-          <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-950">
+          <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg  ">
             {searchResults.map((result, index) => (
               <button
                 key={`${result.lat}_${result.lng}_${index}`}
@@ -273,7 +273,7 @@ export default function GoogleMapPicker({
                   setStatus(result.formattedAddress || 'Search result pinned.');
                   updatePin({ lat: Number(result.lat), lng: Number(result.lng) }, false);
                 }}
-                className="block w-full border-b border-slate-100 px-3 py-2 text-left text-[11px] font-semibold text-slate-700 hover:bg-indigo-50 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
+                className="block w-full border-b border-slate-100 px-3 py-2 text-left text-[11px] font-semibold text-slate-700 hover:bg-indigo-50   "
               >
                 {result.formattedAddress || `${result.lat}, ${result.lng}`}
               </button>
@@ -286,7 +286,7 @@ export default function GoogleMapPicker({
 
   if (apiKey) {
     return (
-      <div className={`overflow-hidden rounded-xl border border-indigo-100 bg-white dark:border-indigo-900 dark:bg-slate-950 ${className}`}>
+      <div className={`overflow-hidden rounded-xl border border-indigo-100 bg-white   ${className}`}>
         {renderHeader('google')}
         <div className="h-64 w-full sm:h-72">
           <APIProvider apiKey={apiKey}>
@@ -311,7 +311,7 @@ export default function GoogleMapPicker({
             </Map>
           </APIProvider>
         </div>
-        <div className="flex items-start gap-2 border-t border-slate-100 p-3 text-[10px] font-semibold text-slate-500 dark:border-slate-800">
+        <div className="flex items-start gap-2 border-t border-slate-100 p-3 text-[10px] font-semibold text-slate-500 ">
           <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" />
           <span>{status || (position ? `Pinned at ${position.lat.toFixed(7)}, ${position.lng.toFixed(7)}` : 'No location pinned yet.')}</span>
         </div>
@@ -320,7 +320,7 @@ export default function GoogleMapPicker({
   }
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-indigo-100 bg-white dark:border-indigo-900 dark:bg-slate-950 ${className}`}>
+    <div className={`overflow-hidden rounded-xl border border-indigo-100 bg-white   ${className}`}>
       {renderHeader('osm')}
       <div
         ref={mapRef}
@@ -379,7 +379,7 @@ export default function GoogleMapPicker({
           © OpenStreetMap contributors
         </div>
       </div>
-      <div className="flex items-start gap-2 border-t border-slate-100 p-3 text-[10px] font-semibold text-slate-500 dark:border-slate-800">
+      <div className="flex items-start gap-2 border-t border-slate-100 p-3 text-[10px] font-semibold text-slate-500 ">
         <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" />
         <span>{status || (position ? `Pinned at ${position.lat.toFixed(7)}, ${position.lng.toFixed(7)}. Free OSM mode stores coordinates; Google can be added later for address lookup.` : 'No location pinned yet. Click the map or use GPS.')}</span>
       </div>

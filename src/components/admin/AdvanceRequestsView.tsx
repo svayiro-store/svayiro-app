@@ -12,11 +12,11 @@ interface Props {
 }
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  accepted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  rejected: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
-  arranged: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
-  converted_to_order: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+  pending: 'bg-amber-100 text-amber-800  ',
+  accepted: 'bg-blue-100 text-blue-800  ',
+  rejected: 'bg-rose-100 text-rose-800  ',
+  arranged: 'bg-indigo-100 text-indigo-800  ',
+  converted_to_order: 'bg-emerald-100 text-emerald-800  '
 };
 
 export default function AdvanceRequestsView({ advanceRequests, isDarkMode, refresh, showToast }: Props) {
@@ -49,7 +49,7 @@ export default function AdvanceRequestsView({ advanceRequests, isDarkMode, refre
       </div>
 
       {advanceRequests.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border py-12 text-sm opacity-70 dark:border-slate-700">
+        <div className="flex flex-col items-center justify-center rounded-xl border py-12 text-sm opacity-70 ">
           <Calendar className="h-10 w-10 mb-3 opacity-30" />
           <p>No advance request entries found.</p>
         </div>
@@ -61,7 +61,7 @@ export default function AdvanceRequestsView({ advanceRequests, isDarkMode, refre
               <div key={req.id} className={`rounded-xl border p-4 shadow-sm ${sectionBg}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950/40">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 ">
                       <Calendar className="h-5 w-5 text-indigo-600" />
                     </div>
                     <div>
@@ -78,7 +78,7 @@ export default function AdvanceRequestsView({ advanceRequests, isDarkMode, refre
                   <div><span className="font-bold">Target:</span> {formatDateDDMMYYYY(req.targetDate)}</div>
                   <div><span className="font-bold">Note:</span> {req.note || 'None'}</div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-3 dark:border-slate-700">
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-3 ">
                   {req.status === 'pending' && (
                     <>
                       <button disabled={loadingId === req.id} onClick={() => handleStatus(req.id, 'accepted')} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Accept</button>
@@ -91,7 +91,7 @@ export default function AdvanceRequestsView({ advanceRequests, isDarkMode, refre
                   {req.status === 'arranged' && (
                     <button disabled={loadingId === req.id} onClick={() => handleStatus(req.id, 'converted_to_order')} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-bold text-white flex items-center gap-1"><ArrowRight className="h-3 w-3" /> Convert to Order</button>
                   )}
-                  <a href={`tel:${req.customerPhone}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-bold flex items-center gap-1 dark:border-slate-600"><Phone className="h-3 w-3" /> Call</a>
+                  <a href={`tel:${req.customerPhone}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-bold flex items-center gap-1 "><Phone className="h-3 w-3" /> Call</a>
                 </div>
               </div>
             );

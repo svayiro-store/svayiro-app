@@ -124,7 +124,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
               setReviewSearch('');
               setSortMode('newest');
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50   "
           >
             <ArrowDownUp className="h-3.5 w-3.5" />
             Reset
@@ -134,14 +134,14 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
       </div>
 
       {reviews.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border py-12 text-sm opacity-70 dark:border-slate-700">
+        <div className="flex flex-col items-center justify-center rounded-xl border py-12 text-sm opacity-70 ">
           <MessageSquare className="h-10 w-10 mb-3 opacity-30" />
           <p>No reviews available yet.</p>
         </div>
       ) : (
         <div className="max-h-[calc(100vh-320px)] space-y-3 overflow-y-auto pr-1">
           {filteredReviews.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center text-xs font-bold text-slate-500 dark:border-slate-700">
+            <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center text-xs font-bold text-slate-500 ">
               No reviews match this search or sort filter.
             </div>
           ) : filteredReviews.map((review) => (
@@ -149,7 +149,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                   <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 ">
                     <User className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
@@ -160,7 +160,7 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
                   </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950/40">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 ">
                       <Package className="h-4 w-4 text-indigo-600" />
                     </div>
                     <div className="min-w-0">
@@ -175,28 +175,28 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
                         <Star key={star} className={`h-3 w-3 ${star <= review.rating ? 'text-amber-500 fill-amber-500' : 'text-slate-300'}`} />
                       ))}
                       <span className="text-[10px] font-mono opacity-70 ml-1">{review.rating}/5</span>
-                      {review.isHidden && <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-semibold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">Hidden</span>}
+                      {review.isHidden && <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-semibold uppercase text-slate-600  ">Hidden</span>}
                     </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   {review.isHidden ? (
-                    <button onClick={() => handleToggle(review.id)} className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-[10px] font-bold flex items-center gap-1 dark:border-slate-600"><Eye className="h-3 w-3" /> Unhide</button>
+                    <button onClick={() => handleToggle(review.id)} className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-[10px] font-bold flex items-center gap-1 "><Eye className="h-3 w-3" /> Unhide</button>
                   ) : (
                     <button onClick={() => handleToggle(review.id)} className="rounded-lg bg-amber-500 px-2.5 py-1.5 text-[10px] font-bold text-white flex items-center gap-1"><EyeOff className="h-3 w-3" /> Hide</button>
                   )}
                 </div>
               </div>
-              <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{review.comment}</p>
+              <p className="mt-3 text-sm text-slate-700 ">{review.comment}</p>
               <p className="mt-2 text-[11px] opacity-60">{formatDateDDMMYYYY(review.date || Date.now())}</p>
 
               {/* Reply Section */}
-              <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-700">
+              <div className="mt-4 border-t border-slate-200 pt-3 ">
                 <p className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-2">
                   {review.reply ? 'Your Reply:' : 'No reply yet'}
                 </p>
                 {review.reply && (
-                  <div className="mb-3 rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-200">
+                  <div className="mb-3 rounded-lg bg-indigo-50 p-3 text-xs text-indigo-800  ">
                     {review.reply}
                   </div>
                 )}
@@ -206,15 +206,15 @@ export default function ReviewsView({ reviews, isDarkMode, refresh, showToast }:
                       value={replyText[review.id] || ''}
                       onChange={(e) => setReplyText((prev) => ({ ...prev, [review.id]: e.target.value }))}
                       placeholder="Write your reply..."
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-950"
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs  "
                     />
                     <div className="flex gap-2">
                       <button onClick={() => handleReply(review.id)} className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white"><Reply className="h-3 w-3 inline" /> Send</button>
-                      <button onClick={() => { setExpandedReply(null); setReplyText((prev) => ({ ...prev, [review.id]: '' })); }} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold dark:border-slate-600">Cancel</button>
+                      <button onClick={() => { setExpandedReply(null); setReplyText((prev) => ({ ...prev, [review.id]: '' })); }} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold ">Cancel</button>
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setExpandedReply(review.id)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-bold flex items-center gap-1 dark:border-slate-600">
+                  <button onClick={() => setExpandedReply(review.id)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-bold flex items-center gap-1 ">
                     <Reply className="h-3 w-3" /> {review.reply ? 'Edit Reply' : 'Write Reply'}
                   </button>
                 )}

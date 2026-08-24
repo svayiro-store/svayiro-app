@@ -7,7 +7,7 @@ export function cn(...classes: ClassValue[]) {
 }
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-lg border bg-white text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50', className)} {...props} />;
+  return <div className={cn('rounded-lg border bg-white text-slate-950 shadow-sm   ', className)} {...props} />;
 }
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -19,7 +19,7 @@ export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHead
 }
 
 export function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn('text-sm text-slate-500 dark:text-slate-400', className)} {...props} />;
+  return <p className={cn('text-sm text-slate-500 ', className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -55,7 +55,7 @@ export function Input({ className, name, id, placeholder, ...props }: React.Inpu
       className={cn(
         'flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-colors',
         'placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15',
-        'dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50',
+        '  ',
         className
       )}
       {...props}
@@ -73,7 +73,7 @@ export function Textarea({ className, name, id, placeholder, ...props }: React.T
       className={cn(
         'flex min-h-24 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-colors',
         'placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15',
-        'dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50',
+        '  ',
         className
       )}
       {...props}

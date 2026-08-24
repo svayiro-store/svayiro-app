@@ -185,7 +185,7 @@ export default function AdminAlertsView({ isDarkMode, showToast }: Props) {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <h2 className="text-sm font-semibold">{alert.title}</h2>
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">{alert.type}</span>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600  ">{alert.type}</span>
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
                             alert.status === 'unread'
                               ? 'bg-indigo-100 text-indigo-700'
@@ -194,7 +194,7 @@ export default function AdminAlertsView({ isDarkMode, showToast }: Props) {
                                 : 'bg-emerald-100 text-emerald-700'
                           }`}>{alert.status}</span>
                         </div>
-                        <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{alert.message}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600 ">{alert.message}</p>
                         <p className="mt-2 text-[11px] font-semibold text-slate-400">
                           {formatDate(alert.createdAt || alert.date)}{alert.source ? ` · ${alert.source}` : ''}
                         </p>

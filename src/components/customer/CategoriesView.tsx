@@ -25,7 +25,7 @@ const categoryFallback = (name: string) => name.trim().slice(0, 2).toUpperCase()
 
 function CategoryThumb({ category, className = '' }: { category?: Category | null; className?: string }) {
   return (
-    <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white text-[11px] font-semibold text-indigo-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-indigo-300 ${className}`}>
+    <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white text-[11px] font-semibold text-indigo-700 shadow-sm    ${className}`}>
       {category ? categoryFallback(category.name) : <Compass className="h-5 w-5" />}
       {category?.imageUrl && (
         <img
@@ -126,15 +126,15 @@ export default function CategoriesView({
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] space-y-2 px-2 text-slate-950 dark:text-slate-100 sm:px-4 lg:px-6">
+    <div className="mx-auto w-full max-w-[1440px] space-y-2 px-2 text-slate-950  sm:px-4 lg:px-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-serif text-xl font-semibold text-slate-950 dark:text-white sm:text-2xl">Categories</h2>
+          <h2 className="font-serif text-xl font-semibold text-slate-950  sm:text-2xl">Categories</h2>
         </div>
         <button
           type="button"
           onClick={() => setActiveTab('home')}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50   "
           aria-label="Close categories"
         >
           <X className="h-5 w-5" />
@@ -150,7 +150,7 @@ export default function CategoriesView({
                 setActiveParentId(null);
                 showCategoryResults(null);
               }}
-              className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-semibold transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:gap-3 md:px-3 md:text-left ${showResults && !resultCategoryId ? 'border-l-4 border-l-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-200' : isDarkMode ? 'border-slate-800 text-slate-200 hover:bg-slate-800' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
+              className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-semibold transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:gap-3 md:px-3 md:text-left ${showResults && !resultCategoryId ? 'border-l-4 border-l-indigo-600 bg-indigo-50 text-indigo-700  ' : isDarkMode ? 'border-slate-800 text-slate-200 hover:bg-slate-800' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
             >
               <CategoryThumb category={null} className="h-9 w-9 rounded-lg sm:h-11 sm:w-11 md:h-12 md:w-12 md:rounded-xl" />
               <span className="line-clamp-2 md:line-clamp-1">All Items</span>
@@ -167,7 +167,7 @@ export default function CategoriesView({
                     setActiveParentId(cat.id);
                     setShowResults(false);
                   }}
-                  className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-normal leading-tight transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:px-3 md:text-left ${active || showingResult ? 'border-l-4 border-l-rose-500 bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-200' : isDarkMode ? 'border-slate-800 text-slate-200 hover:bg-slate-800' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
+                  className={`flex w-full flex-col items-center gap-1.5 border-b px-1 py-2 text-center text-[10px] font-normal leading-tight transition sm:gap-2 sm:px-2 sm:py-3 sm:text-xs md:flex-row md:items-center md:justify-start md:px-3 md:text-left ${active || showingResult ? 'border-l-4 border-l-rose-500 bg-rose-50 text-rose-600  ' : isDarkMode ? 'border-slate-800 text-slate-200 hover:bg-slate-800' : 'border-slate-100 text-slate-700 hover:bg-white'}`}
                 >
                   <CategoryThumb category={cat} className="h-9 w-9 rounded-lg sm:h-11 sm:w-11 md:h-12 md:w-12 md:rounded-xl" />
                   <span className="line-clamp-2 md:line-clamp-1">{cat.name}</span>
@@ -183,12 +183,12 @@ export default function CategoriesView({
                   <button
                     type="button"
                     onClick={backToBrowse}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50   "
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     Categories
                   </button>
-                  <span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-semibold uppercase text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                  <span className="rounded-full bg-indigo-50 px-3 py-1 text-[10px] font-semibold uppercase text-indigo-700  ">
                     {categoryProducts.length} items
                   </span>
                 </div>
@@ -215,8 +215,8 @@ export default function CategoriesView({
                 <div className="mb-3 flex items-center gap-2 sm:mb-4 sm:gap-3">
                   <CategoryThumb category={activeParent} className="h-11 w-11 rounded-xl sm:h-14 sm:w-14 sm:rounded-2xl" />
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-950 dark:text-white sm:text-lg">{activeParent.name}</h3>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <h3 className="text-sm font-semibold text-slate-950  sm:text-lg">{activeParent.name}</h3>
+                    <p className="text-xs font-medium text-slate-500 ">
                       {activeSubcategories.length ? `${activeSubcategories.length} subcategories` : 'Products available in this section'}
                     </p>
                   </div>
@@ -225,12 +225,12 @@ export default function CategoriesView({
                 <button
                   type="button"
                   onClick={() => showCategoryResults(activeParent.id)}
-                  className={`mb-3 flex w-full items-center gap-2 rounded-xl border p-2 text-left transition sm:gap-3 sm:p-3 ${selectedCategory === activeParent.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300' : isDarkMode ? 'border-slate-800 bg-slate-900 hover:border-indigo-800' : 'border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/40'}`}
+                  className={`mb-3 flex w-full items-center gap-2 rounded-xl border p-2 text-left transition sm:gap-3 sm:p-3 ${selectedCategory === activeParent.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700  ' : isDarkMode ? 'border-slate-800 bg-slate-900 hover:border-indigo-800' : 'border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/40'}`}
                 >
                   <CategoryThumb category={activeParent} className="h-9 w-9 rounded-lg sm:h-11 sm:w-11 sm:rounded-xl" />
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold sm:text-sm">All {activeParent.name}</p>
-                    <p className="truncate text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:text-xs">Open products in this section</p>
+                    <p className="truncate text-[10px] font-medium text-slate-500  sm:text-xs">Open products in this section</p>
                   </div>
                 </button>
 
@@ -240,7 +240,7 @@ export default function CategoriesView({
                       key={sub.id}
                       type="button"
                       onClick={() => showCategoryResults(sub.id)}
-                      className={`group relative flex min-w-0 flex-col items-center justify-start gap-1.5 text-center transition ${selectedCategory === sub.id ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
+                      className={`group relative flex min-w-0 flex-col items-center justify-start gap-1.5 text-center transition ${selectedCategory === sub.id ? 'text-indigo-700 ' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
                     >
                       <CategoryThumb
                         category={sub}
@@ -255,8 +255,8 @@ export default function CategoriesView({
             ) : (
               <div className="flex h-full min-h-[320px] flex-col items-center justify-center text-center">
                 <CategoryThumb category={null} className="h-16 w-16 rounded-2xl" />
-                <h3 className="mt-4 text-lg font-semibold text-slate-950 dark:text-white">All Items</h3>
-                <p className="mt-1 max-w-xs text-sm font-medium text-slate-500 dark:text-slate-400">
+                <h3 className="mt-4 text-lg font-semibold text-slate-950 ">All Items</h3>
+                <p className="mt-1 max-w-xs text-sm font-medium text-slate-500 ">
                   Open the full product list inside the categories page.
                 </p>
                 <button

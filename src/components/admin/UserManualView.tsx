@@ -364,7 +364,7 @@ export default function UserManualView({ roles, isDarkMode }: Props) {
             </div>
             <p className="mt-1 text-xs text-slate-500">This page shows only the operating instructions for your current role.</p>
           </div>
-          <div className="rounded-lg bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200">
+          <div className="rounded-lg bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700  ">
             Current access: {displayRoles}
           </div>
         </div>
@@ -402,7 +402,7 @@ export default function UserManualView({ roles, isDarkMode }: Props) {
                 <ol className="space-y-2 text-xs font-semibold leading-relaxed">
                   {section.dailyFlow.map((item, index) => (
                     <li key={item} className="flex gap-2">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">{index + 1}</span>
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-semibold text-indigo-700  ">{index + 1}</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -434,7 +434,7 @@ export default function UserManualView({ roles, isDarkMode }: Props) {
                     return (
                       <div key={workflow.title} className={`rounded-xl border p-4 ${isDarkMode ? 'border-slate-800 bg-slate-950/70' : 'border-slate-100 bg-slate-50/80'}`}>
                         <div className="mb-3 flex items-start gap-3">
-                          <div className="rounded-lg bg-indigo-100 p-2 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">
+                          <div className="rounded-lg bg-indigo-100 p-2 text-indigo-700  ">
                             <WorkflowIcon className="h-4 w-4" />
                           </div>
                           <div>
@@ -445,7 +445,7 @@ export default function UserManualView({ roles, isDarkMode }: Props) {
                         <ol className="space-y-2 text-xs font-semibold leading-relaxed">
                           {workflow.steps.map((step, index) => (
                             <li key={step} className="flex gap-2">
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-indigo-700 ring-1 ring-indigo-100 dark:bg-slate-900 dark:text-indigo-200 dark:ring-slate-800">
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-indigo-700 ring-1 ring-indigo-100   ">
                                 {index + 1}
                               </span>
                               <span>{step}</span>
@@ -454,8 +454,8 @@ export default function UserManualView({ roles, isDarkMode }: Props) {
                         </ol>
                         {workflow.notes?.length ? (
                           <div className={`mt-4 rounded-lg border p-3 ${isDarkMode ? 'border-amber-900/60 bg-amber-950/20' : 'border-amber-100 bg-amber-50'}`}>
-                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-300">Notes</p>
-                            <ul className="space-y-1.5 text-[11px] font-semibold leading-relaxed text-slate-600 dark:text-slate-300">
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-amber-700 ">Notes</p>
+                            <ul className="space-y-1.5 text-[11px] font-semibold leading-relaxed text-slate-600 ">
                               {workflow.notes.map((note) => (
                                 <li key={note} className="flex gap-2">
                                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
@@ -481,7 +481,7 @@ export default function UserManualView({ roles, isDarkMode }: Props) {
             <CreditCard className="h-5 w-5 text-emerald-600" />
             <h3 className="text-lg font-semibold">COD Collection Rule</h3>
           </div>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          <p className="mt-2 text-sm leading-relaxed text-slate-600 ">
             Ask the customer whether they are paying by cash or QR. Cash can be marked paid only after collecting the exact amount. QR payments stay submitted until the owner verifies the UTR/reference in the bank or UPI app and marks it paid.
           </p>
         </section>

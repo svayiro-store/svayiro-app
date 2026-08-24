@@ -87,8 +87,8 @@ export default function ComplaintsView({ isDarkMode, showToast }: { isDarkMode: 
     <div className={`rounded-2xl border p-6 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
-          <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Complaints & Tickets</h3>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">Manage customer support tickets</p>
+          <h3 className="font-serif text-lg font-semibold text-slate-900 ">Complaints & Tickets</h3>
+          <p className="text-[11px] text-slate-500 ">Manage customer support tickets</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -118,10 +118,10 @@ export default function ComplaintsView({ isDarkMode, showToast }: { isDarkMode: 
                     <span className={`text-[10px] uppercase ${priorityColor(ticket.priority)}`}>{ticket.priority}</span>
                     <span className="text-[10px] text-slate-400">{ticket.category}</span>
                   </div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white">{ticket.subject}</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{ticket.description}</p>
+                  <p className="text-xs font-bold text-slate-900 ">{ticket.subject}</p>
+                  <p className="text-[11px] text-slate-500  mt-1 line-clamp-2">{ticket.description}</p>
                   {ticket.admin_answer && (
-                    <div className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50 p-2 text-[11px] font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+                    <div className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50 p-2 text-[11px] font-semibold text-emerald-800   ">
                       Answer: {ticket.admin_answer}
                     </div>
                   )}
@@ -144,7 +144,7 @@ export default function ComplaintsView({ isDarkMode, showToast }: { isDarkMode: 
                   {ticket.status === 'open' && <button onClick={() => updateStatus(ticket.id, 'in_progress')} className="px-3 py-2 rounded-lg bg-blue-600 text-white text-[11px] font-bold">Start</button>}
                   {ticket.status === 'in_progress' && <button onClick={() => updateStatus(ticket.id, 'resolved')} className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-[11px] font-bold">Resolve</button>}
                   {(ticket.status === 'resolved' || ticket.status === 'in_progress') && <button onClick={() => updateStatus(ticket.id, 'open')} className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-[11px] font-bold">Reopen</button>}
-                  <button onClick={() => deleteTicket(ticket)} className="px-3 py-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-[11px] font-bold flex items-center gap-1 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+                  <button onClick={() => deleteTicket(ticket)} className="px-3 py-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-[11px] font-bold flex items-center gap-1   ">
                     <Trash2 className="h-3.5 w-3.5" />
                     Delete
                   </button>

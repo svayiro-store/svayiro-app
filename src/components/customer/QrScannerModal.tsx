@@ -39,7 +39,7 @@ export default function QrScannerModal({
   const [utrInput, setUtrInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerificationSuccess, setIsVerificationSuccess] = useState(false);
-  
+
   const qrCodeInstance = useRef<Html5Qrcode | null>(null);
   const containerId = 'qr-camera-stream-reader';
 
@@ -207,27 +207,27 @@ export default function QrScannerModal({
 
   return (
     <div className={`${commonStyles.modalOverlay} overflow-y-auto z-[999]`}>
-      <div className={`${commonStyles.modalContent} max-w-lg p-5 flex flex-col space-y-4 shadow-2xl border border-indigo-100 dark:border-indigo-950 transition-all`}>
-        
+      <div className={`${commonStyles.modalContent} max-w-lg p-5 flex flex-col space-y-4 shadow-2xl border border-indigo-100  transition-all`}>
+
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-150 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-150 ">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-indigo-50  text-indigo-600  flex items-center justify-center">
               <Camera className="w-4.5 h-4.5" />
             </div>
             <div>
-              <h3 className="font-serif font-semibold text-sm tracking-normal text-slate-900 dark:text-slate-100">
+              <h3 className="font-serif font-semibold text-sm tracking-normal text-slate-900 ">
                 SVAYIRO Scan & Pay
               </h3>
-              <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-none">
+              <p className="text-[10px] font-medium text-slate-500  leading-none">
                 Scan approved COD collection QR codes
               </p>
             </div>
           </div>
-          <button 
+          <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600  hover:bg-slate-100  transition-colors"
           >
             <X className="w-4.5 h-4.5" />
           </button>
@@ -264,17 +264,17 @@ export default function QrScannerModal({
               )}
 
               {/* The Live Video Element Target Container */}
-              <div 
-                id={containerId} 
+              <div
+                id={containerId}
                 className="w-full h-full text-white font-mono text-[10px] [&>video]:w-full [&>video]:h-full [&>video]:object-cover"
               ></div>
             </div>
 
             <div className="text-center space-y-1">
-              <p className="text-slate-600 dark:text-slate-300 font-medium text-[11px] max-w-xs">
+              <p className="text-slate-600  font-medium text-[11px] max-w-xs">
                 Align the billing QR code shown on the desktop screen or paper invoice within the camera frame.
               </p>
-              <p className="text-slate-400 dark:text-slate-500 text-[10px] italic">
+              <p className="text-slate-400  text-[10px] italic">
                 (It automatically decodes amounts, UPI handles, and reference details)
               </p>
             </div>
@@ -287,7 +287,7 @@ export default function QrScannerModal({
             {parsedUpi ? (
               <div className="space-y-4">
                 {/* Result Announcement Badge */}
-                <div className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 flex items-center gap-2.5">
+                <div className="bg-emerald-50  text-emerald-700  p-3 rounded-2xl border border-emerald-100  flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-bold shadow-sm">
                     ✓
                   </div>
@@ -298,36 +298,36 @@ export default function QrScannerModal({
                 </div>
 
                 {/* Bill Details Summary Card */}
-                <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-150 dark:border-slate-850 space-y-3">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-slate-400 dark:text-slate-500">Bill Parameters</span>
-                  
+                <div className="bg-slate-50  p-4 rounded-2xl border border-slate-150  space-y-3">
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-slate-400 ">Bill Parameters</span>
+
                   <div className="grid grid-cols-2 gap-y-2.5 font-mono text-[11px]">
-                    <div className="text-slate-400 dark:text-slate-500">Merchant Name:</div>
-                    <div className="font-bold text-slate-800 dark:text-slate-200 text-right">{parsedUpi.pn || shopName}</div>
-                    
-                    <div className="text-slate-400 dark:text-slate-500">UPI ID / Handle:</div>
-                    <div className="font-bold text-slate-800 dark:text-slate-200 text-right select-all">{parsedUpi.pa || shopUpiId}</div>
-                    
-                    <div className="text-slate-400 dark:text-slate-500">Amount Due:</div>
-                    <div className="font-semibold text-indigo-600 dark:text-indigo-400 text-right text-xs">₹{parsedUpi.am || currentCartTotal || '0'}</div>
-                    
+                    <div className="text-slate-400 ">Merchant Name:</div>
+                    <div className="font-bold text-slate-800  text-right">{parsedUpi.pn || shopName}</div>
+
+                    <div className="text-slate-400 ">UPI ID / Handle:</div>
+                    <div className="font-bold text-slate-800  text-right select-all">{parsedUpi.pa || shopUpiId}</div>
+
+                    <div className="text-slate-400 ">Amount Due:</div>
+                    <div className="font-semibold text-indigo-600  text-right text-xs">₹{parsedUpi.am || currentCartTotal || '0'}</div>
+
                     {parsedUpi.tr && (
                       <>
-                        <div className="text-slate-400 dark:text-slate-500">Reference (TR):</div>
-                        <div className="font-bold text-slate-800 dark:text-slate-200 text-right truncate max-w-[150px]">{parsedUpi.tr}</div>
+                        <div className="text-slate-400 ">Reference (TR):</div>
+                        <div className="font-bold text-slate-800  text-right truncate max-w-[150px]">{parsedUpi.tr}</div>
                       </>
                     )}
                   </div>
                 </div>
 
                 {/* Instructions */}
-                <div className="space-y-1.5 bg-indigo-500/5 dark:bg-indigo-400/5 p-3 rounded-xl border border-indigo-500/10 dark:border-indigo-400/10">
-                  <h5 className="font-serif font-bold text-[11px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                <div className="space-y-1.5 bg-indigo-500/5  p-3 rounded-xl border border-indigo-500/10 ">
+                  <h5 className="font-serif font-bold text-[11px] text-indigo-600  flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
                     Secure Mobile Checkout Flow
                   </h5>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal font-sans">
-                    1. Click the <strong className="text-slate-700 dark:text-slate-300 font-bold">Launch UPI App</strong> button below to open your banking app and pay.
+                  <p className="text-[10px] text-slate-500  leading-normal font-sans">
+                    1. Click the <strong className="text-slate-700  font-bold">Launch UPI App</strong> button below to open your banking app and pay.
                     <br />
                     2. After paying, type your 12-digit UTR transaction reference ID below to finalize your order.
                   </p>
@@ -336,7 +336,7 @@ export default function QrScannerModal({
                 {/* Actions Form */}
                 <div className="space-y-3.5 pt-1">
                   {/* Redirect Protocol Button */}
-                  <a 
+                  <a
                     href={scanResult}
                     className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs py-3 px-4 rounded-xl shadow-lg shadow-indigo-600/15 flex items-center justify-center gap-2 uppercase tracking-wider transition-all"
                   >
@@ -345,25 +345,25 @@ export default function QrScannerModal({
                   </a>
 
                   {/* Manual UTR Insertion */}
-                  <div className="border-t border-dashed border-slate-200 dark:border-slate-800 pt-3 space-y-2">
-                    <label className="block text-slate-700 dark:text-slate-300 font-bold text-[10px] uppercase tracking-wider">
+                  <div className="border-t border-dashed border-slate-200  pt-3 space-y-2">
+                    <label className="block text-slate-700  font-bold text-[10px] uppercase tracking-wider">
                       Verify With 12-Digit UPI UTR Ref <span className="text-rose-500">*</span>
                     </label>
                     <div className="flex gap-2">
-                      <input 
+                      <input
                         id="qr_scanner_upi_reference"
                         name="qr_scanner_upi_reference"
-                        type="text" 
-                        placeholder="Enter 12-digit UPI Transaction Ref ID" 
-                        value={utrInput} 
+                        type="text"
+                        placeholder="Enter 12-digit UPI Transaction Ref ID"
+                        value={utrInput}
                         onChange={(e) => setUtrInput(e.target.value.replace(/[^A-Za-z0-9]/g, ''))}
-                        className="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 p-2.5 rounded-xl font-mono text-xs text-slate-850 dark:text-slate-100 font-bold focus:border-indigo-500 focus:outline-none transition-all tracking-widest placeholder:tracking-normal placeholder:font-sans placeholder:font-normal" 
+                        className="flex-1 bg-white  border border-slate-300  p-2.5 rounded-xl font-mono text-xs text-slate-850  font-bold focus:border-indigo-500 focus:outline-none transition-all tracking-widest placeholder:tracking-normal placeholder:font-sans placeholder:font-normal"
                       />
                       {utrInput && (
                         <button
                           type="button"
                           onClick={handleCopyUtr}
-                          className="bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 p-2.5 rounded-xl transition-all"
+                          className="bg-slate-100  text-slate-500 hover:text-slate-700  p-2.5 rounded-xl transition-all"
                           title="Copy reference"
                         >
                           <Copy className="w-4 h-4" />
@@ -392,9 +392,9 @@ export default function QrScannerModal({
             ) : (
               // Handle general custom plain text or URL QR codes
               <div className="space-y-4">
-                <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-slate-400 dark:text-slate-500">Scanned Content</span>
-                  <p className="font-mono text-xs text-slate-800 dark:text-slate-200 break-all select-all font-bold p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-150 dark:border-slate-850">
+                <div className="bg-slate-50  p-4 rounded-2xl border border-slate-200  space-y-2">
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-slate-400 ">Scanned Content</span>
+                  <p className="font-mono text-xs text-slate-800  break-all select-all font-bold p-2.5 bg-white  rounded-xl border border-slate-150 ">
                     {scanResult}
                   </p>
                 </div>
@@ -403,7 +403,7 @@ export default function QrScannerModal({
                   <button
                     type="button"
                     onClick={handleCopyRawResult}
-                    className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-[11px] py-2.5 rounded-xl transition-all"
+                    className="flex-1 bg-slate-100  hover:bg-slate-200 text-slate-700  font-bold text-[11px] py-2.5 rounded-xl transition-all"
                   >
                     Copy to Clipboard
                   </button>
@@ -421,11 +421,11 @@ export default function QrScannerModal({
               </div>
             )}
 
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+            <div className="border-t border-slate-100  pt-3">
               <button
                 type="button"
                 onClick={handleRestartScanner}
-                className="w-full text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 text-xs font-bold py-1.5 transition-all text-center uppercase tracking-wider"
+                className="w-full text-indigo-600 hover:text-indigo-700   text-xs font-bold py-1.5 transition-all text-center uppercase tracking-wider"
               >
                 Scan Another QR Code
               </button>

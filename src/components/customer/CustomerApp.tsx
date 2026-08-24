@@ -4,12 +4,12 @@
  */
 
 import React, { Suspense, lazy, useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  X, AlertTriangle, Store, ShoppingBag, FileText, User, 
+import {
+  X, AlertTriangle, Store, ShoppingBag, FileText, User,
   MapPin, Clipboard, QrCode, LayoutGrid
 } from 'lucide-react';
 import { api } from '../../api';
-import { 
+import {
   ShopProfile, Category, Product, Banner, Notification, Order, Address, Coupon, User as UserType, CheckoutBagInfo, Bag, CustomerTab, Review, Campaign
 } from '../../types';
 import { isValidDDMMYYYY, parseDDMMYYYYToISO } from '../../utils/date';
@@ -178,7 +178,7 @@ export function calculateDistanceInKm(address: Address | null): number {
 
   // 2. Keyword/Layout/Neighborhood matching with the shop (e.g. Maruti/Maruthi Layout, Vasantapura)
   const shopKeywordsClean = ['maruti', 'maruti layout', 'vasantapura', 'vasanthapura', 'subramanyapura', 'subramanyapra', 'ekalavya'];
-  
+
   const normalizeWord = (w: string) => w.replace(/[^a-z0-9]/g, '');
   const cleanWordForMatching = (w: string) => {
     return w.replace(/th/g, 't').replace(/sh/g, 's').replace(/ph/g, 'f');
@@ -326,10 +326,10 @@ export default function CustomerApp({
   const [enableSound, setEnableSound] = useState<boolean>(true);
   const [enableLocalAlerts, setEnableLocalAlerts] = useState<boolean>(() => wasPushEnabled('customer'));
   const [newsletterSubscribed, setNewsletterSubscribed] = useState<boolean>(true);
-  
+
   // Banner slider state
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  
+
   // Modals & Details states
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const hydratedProductIdsRef = useRef<Set<string>>(new Set());
@@ -362,12 +362,12 @@ export default function CustomerApp({
       }
     }
   };
-  
+
   // Review Formulation state
   const [tempRating, setTempRating] = useState(5);
   const [tempComment, setTempComment] = useState('');
   const [reviews, setReviews] = useState<Review[]>([]);
-  
+
   // Future dates booking system state
   const [reqProductName, setReqProductName] = useState('');
   const [reqQuantity, setReqQuantity] = useState(1);
@@ -539,10 +539,10 @@ export default function CustomerApp({
 
       // Build full address strings
       const customerAddr = `${selectedAddr.flatAndHouse}, ${selectedAddr.areaAndStreet}, ${selectedAddr.landmark}, ${selectedAddr.cityOrVillage}, ${selectedAddr.taluk}, ${selectedAddr.district}, ${selectedAddr.state} - ${selectedAddr.pincode}`;
-      
+
       // Find selected shop branch address
       const branch = shop.addresses?.find(a => a.id === selectedShopBranchId);
-      const shopAddr = branch 
+      const shopAddr = branch
         ? `${branch.flatAndHouse}, ${branch.areaAndStreet}, ${branch.landmark}, ${branch.cityOrVillage}, ${branch.taluk}, ${branch.district}, ${branch.state} - ${branch.pincode}`
         : shop.address;
 
@@ -854,7 +854,7 @@ export default function CustomerApp({
     }
     const prod = products.find(p => p.id === productId);
     if (!prod) return;
-    
+
     // Check stock limit
     const existing = cart.find(item => item.productId === productId);
     const quantityStep = isLooseProduct(prod) ? Math.max(1, Math.round(qty)) : Math.max(1, Math.floor(qty));
@@ -868,7 +868,7 @@ export default function CustomerApp({
 
     let nextCart = [...cart];
     if (existing) {
-      nextCart = cart.map(item => 
+      nextCart = cart.map(item =>
         item.productId === productId ? { ...item, quantity: totalNewQty } : item
       );
     } else {
@@ -898,7 +898,7 @@ export default function CustomerApp({
       return;
     }
 
-    const nextCart = cart.map(item => 
+    const nextCart = cart.map(item =>
       item.productId === productId ? { ...item, quantity: nextQuantity } : item
     );
     updateCartState(nextCart);
@@ -1156,10 +1156,10 @@ export default function CustomerApp({
       return;
     }
     const isInside = activeUser.wishlist.includes(productId);
-    const nextWish = isInside 
+    const nextWish = isInside
       ? activeUser.wishlist.filter(id => id !== productId)
       : [...activeUser.wishlist, productId];
-    
+
     try {
       const res = await api.updateWishlist(activeUser.phone, nextWish);
       if (res.user) {
@@ -1181,7 +1181,7 @@ export default function CustomerApp({
 
   const handleSaveAddress = async () => {
     if (!activeUser) return;
-    
+
     // 1. Validate State
     if (!newAddress.state) {
       showToast('Please select a State in India.', 'warning');
@@ -1239,8 +1239,8 @@ export default function CustomerApp({
     }
 
     // Set fallback name / contact person name if not provided
-    const finalContactName = (newAddress.pickupPersonName && newAddress.pickupPersonName.trim()) 
-      ? newAddress.pickupPersonName.trim() 
+    const finalContactName = (newAddress.pickupPersonName && newAddress.pickupPersonName.trim())
+      ? newAddress.pickupPersonName.trim()
       : activeUser.name || 'Customer';
 
     const createdAddress: Address = {
@@ -1296,10 +1296,10 @@ export default function CustomerApp({
 
   const handleDeleteAddress = async (addressId: string, index?: number) => {
     if (!activeUser) return;
-    
+
     let nextAddrs = [];
     let deletedIndex = -1;
-    
+
     if (index !== undefined) {
       deletedIndex = index;
       nextAddrs = activeUser.savedAddresses.filter((_, idx) => idx !== index);
@@ -1318,7 +1318,7 @@ export default function CustomerApp({
       const res = await api.updateProfile(activeUser.phone, { savedAddresses: nextAddrs });
       if (res.user) {
         onLoginSuccess(res.user);
-        
+
         // Adjust selectedAddressIndex
         if (deletedIndex !== -1) {
           if (selectedAddressIndex === deletedIndex) {
@@ -1329,7 +1329,7 @@ export default function CustomerApp({
             setSelectedAddressIndex(prev => Math.max(0, prev - 1));
           }
         }
-        
+
         // Ensure index is within range of the updated list
         const newLen = res.user.savedAddresses.length;
         setSelectedAddressIndex(prev => {
@@ -1396,7 +1396,7 @@ export default function CustomerApp({
     e.preventDefault();
     setRequestError('');
     setRequestSuccess('');
-    
+
     if (!activeUser) {
       setRequestError('Please login before creating an advance booking.');
       setAuthMode('login');
@@ -1952,7 +1952,7 @@ export default function CustomerApp({
 
   const handleFinalizeUpiOrder = async (refVal?: string) => {
     const finalRef = (refVal || upiReference || '').trim();
-    
+
     try {
       if (!pendingUpiOrderPayload) {
         setUpiPaymentStep('idle');
@@ -2044,7 +2044,7 @@ export default function CustomerApp({
     const amount = Number(totals.finalTotal).toFixed(2);
     // Clean alphanumeric reference ID
     const referee = generateId('ref').replace(/[^a-zA-Z0-9]/g, '');
-    
+
     return `upi://pay?pa=${upiId}&pn=${merchantName}&am=${amount}&cu=INR&tn=OrderPayment&tr=${referee}`;
   }, [shop.name, shop.upiId, totals.finalTotal]);
 
@@ -2276,7 +2276,7 @@ export default function CustomerApp({
     <div className={`flex-1 flex flex-col pb-24 md:pb-12 overflow-x-clip ${isDarkMode ? 'bg-[#0f172a] text-[#f8fafc]' : 'bg-[#f8fafc] text-[#0f172a]'}`}>
 
       {/* Shared Common Header */}
-      <CustomerHeader 
+      <CustomerHeader
         shop={shop}
         activeUser={activeUser}
         cartCount={cart.length}
@@ -2330,10 +2330,10 @@ export default function CustomerApp({
       {/* Main Container */}
       <main className="flex-1 w-full px-4 py-6 flex flex-col">
         <Suspense fallback={<CustomerViewLoader />}>
-        
+
         {/* Tab views conditional mapping */}
         {selectedProduct ? (
-          <ProductDetailView 
+          <ProductDetailView
             selectedProduct={selectedProduct}
             products={products}
             setSelectedProduct={setSelectedProduct}
@@ -2357,7 +2357,7 @@ export default function CustomerApp({
         ) : (
           <>
             {activeTab === 'home' && (
-              <HomeView 
+              <HomeView
                 shop={shop}
                 isShopClosed={isShopClosed}
                 banners={banners}
@@ -2413,7 +2413,7 @@ export default function CustomerApp({
             )}
 
         {activeTab === 'categories' && (
-          <CategoriesView 
+          <CategoriesView
             categories={categories}
             products={products}
             selectedCategory={selectedCategory}
@@ -2431,7 +2431,7 @@ export default function CustomerApp({
         )}
 
         {activeTab === 'wishlist' && (
-          <WishlistView 
+          <WishlistView
             wishlistedProducts={wishlistedProducts}
             toggleWishlist={toggleWishlist}
             addToCart={(pId) => addToCart(pId, 1)}
@@ -2443,7 +2443,7 @@ export default function CustomerApp({
         )}
 
         {activeTab === 'cart' && (
-          <CartView 
+          <CartView
             cart={cart}
             products={products}
             totals={totals}
@@ -2478,7 +2478,7 @@ export default function CustomerApp({
         )}
 
         {activeTab === 'orders' && (
-          <OrdersView 
+          <OrdersView
             activeUser={activeUser}
             orders={orders}
             loadingOrders={loadingOrders}
@@ -2496,7 +2496,7 @@ export default function CustomerApp({
         )}
 
         {activeTab === 'profile' && (
-          <ProfileView 
+          <ProfileView
             activeUser={activeUser}
             setIsAuthOpen={setIsAuthOpen}
             categories={categories}
@@ -2553,15 +2553,15 @@ export default function CustomerApp({
           : 'border-slate-200 bg-white/95 shadow-[0_-12px_35px_rgba(15,23,42,0.10)]'
       }`}>
         <div className="max-w-md mx-auto flex justify-around items-center py-2 px-1">
-          <button 
+          <button
             onClick={() => setProtectedActiveTab('home')}
             className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'home' ? 'text-indigo-600' : 'text-slate-400'}`}
           >
             <Store className="h-5 w-5" />
             <span className="text-[10px] font-semibold">Store</span>
           </button>
-          
-          <button 
+
+          <button
             onClick={() => setProtectedActiveTab('categories')}
             className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'categories' ? 'text-indigo-600' : 'text-slate-400'}`}
           >
@@ -2569,7 +2569,7 @@ export default function CustomerApp({
             <span className="text-[10px] font-semibold">Categories</span>
           </button>
 
-          <button 
+          <button
             onClick={() => setProtectedActiveTab('cart')}
             className={`flex flex-col items-center gap-1 p-2 transition-colors relative ${activeTab === 'cart' ? 'text-indigo-600' : 'text-slate-400'}`}
           >
@@ -2580,7 +2580,7 @@ export default function CustomerApp({
             <span className="text-[10px] font-semibold">Bag</span>
           </button>
 
-          <button 
+          <button
             onClick={() => setProtectedActiveTab('orders')}
             className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'orders' ? 'text-indigo-600' : 'text-slate-400'}`}
           >
@@ -2588,7 +2588,7 @@ export default function CustomerApp({
             <span className="text-[10px] font-semibold">Orders</span>
           </button>
 
-          <button 
+          <button
             onClick={() => setProtectedActiveTab('profile')}
             className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'profile' ? 'text-indigo-600' : 'text-slate-400'}`}
           >
@@ -2599,7 +2599,7 @@ export default function CustomerApp({
       </nav>
 
       {/* Modular Modals */}
-      <AuthModal 
+      <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         isDarkMode={isDarkMode}
@@ -2640,7 +2640,7 @@ export default function CustomerApp({
         canResendOtp={!otpResendAt || Date.now() >= otpResendAt}
       />
 
-      <CheckoutModal 
+      <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         isDarkMode={isDarkMode}
@@ -2693,7 +2693,7 @@ export default function CustomerApp({
         onUseCoupon={handleUseCoupon}
       />
 
-      <AdvanceRequestModal 
+      <AdvanceRequestModal
         isOpen={isRequestOpen}
         onClose={() => {
           setIsRequestOpen(false);
@@ -2714,7 +2714,7 @@ export default function CustomerApp({
         handleRequestSubmit={handleRequestSubmit}
       />
 
-      <QrScannerModal 
+      <QrScannerModal
         isOpen={isQrScannerOpen}
         onClose={() => setIsQrScannerOpen(false)}
         shopName={shop.name}

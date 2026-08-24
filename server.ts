@@ -1658,6 +1658,31 @@ function normalizeBarcodeValue(value: any) {
   return String(value || '').trim().replace(/\s+/g, '').toUpperCase().slice(0, 100);
 }
 
+// Product labels are rendered as UPC-A. Keep the exact printed 12-digit value
+// in the database too, so scanners can resolve SVAYIRO's own labels as well as
+// externally supplied package barcodes.
+function generatedProductUpcValue(value: any) {
+  const source = String(value || '').replace(/\D/g, '');
+  let digits = source.length >= 11 ? source.slice(0, 11) : '';
+  if (!digits) {
+    const label = String(value || '');
+    const seed = [...label].reduce((total, char) => (total * 31 + char.charCodeAt(0)) % 100000000000, 0);
+    digits = String(seed).padStart(11, '0');
+  }
+  const checksum = [...digits].reduce((total, digit, index) => total + Number(digit) * (index % 2 === 0 ? 3 : 1), 0);
+  return `${digits}${(10 - (checksum % 10)) % 10}`;
+}
+
+async function syncGeneratedProductBarcode(client: any, productId: string, sku: any) {
+  const barcode = generatedProductUpcValue(sku);
+  await client.query(
+    `INSERT INTO product_barcodes(product_id, barcode_value, barcode_type, is_primary, created_at)
+     VALUES($1,$2,'SVAYIRO',true,now())
+     ON CONFLICT (barcode_value) DO NOTHING`,
+    [productId, barcode]
+  );
+}
+
 function normalizeExternalBarcodes(input: any) {
   const rows = Array.isArray(input) ? input : [];
   const values = rows
@@ -2492,7 +2517,9 @@ async function ensureInvoicePublicToken(client: any, invoice: any) {
 }
 
 function invoicePublicUrl(req: any, invoice: any) {
-  return `${getPublicBaseUrl(req)}/invoice/${encodeURIComponent(invoice.invoice_no)}?token=${encodeURIComponent(invoice.public_token)}`;
+  // Invoices are served by this API. The customer storefront can be in
+  // "Coming Soon" mode while POS billing still needs to remain available.
+  return `${getApiBaseUrl(req)}/invoice/${encodeURIComponent(invoice.invoice_no)}?token=${encodeURIComponent(invoice.public_token)}`;
 }
 
 async function createInvoiceRecord(client: any, order: any, invoiceType = 'online_order') {
@@ -5324,9 +5351,10 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
         slug = `${baseSlug}-${slugNumber++}`;
       }
       const ins = await client.query('INSERT INTO products(category_id, subcategory_id, sku, name, slug, description, base_price, offer_price, stock_count, weight_grams, is_enabled, low_stock_threshold, metadata, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now(),now()) RETURNING *', [productData.categoryId, productData.subcategoryId || null, generatedSku, productData.name, slug, productData.description || null, basePrice, offerPrice, stockCount, weightGrams, productData.isEnabled !== undefined ? productData.isEnabled : true, lowStockThreshold, metadata]);
-      const prod = ins.rows[0];
-      await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, productData.categoryId, productData.subcategoryId), productData.categoryId);
-      await syncProductBarcodes(client, prod.id, productData.externalBarcodes || []);
+       const prod = ins.rows[0];
+       await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, productData.categoryId, productData.subcategoryId), productData.categoryId);
+       await syncProductBarcodes(client, prod.id, productData.externalBarcodes || []);
+       await syncGeneratedProductBarcode(client, prod.id, prod.sku);
       // insert images
       if (Array.isArray(productData.images) && productData.images.length > 0) {
         for (let i = 0; i < productData.images.length; i++) {
@@ -5407,9 +5435,10 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
       const upd = await client.query('UPDATE products SET category_id = COALESCE($1,category_id), subcategory_id = $2, sku = COALESCE($3,sku), name = COALESCE($4,name), slug = $5, description = COALESCE($6,description), base_price = COALESCE($7,base_price), offer_price = COALESCE($8,offer_price), stock_count = $9, weight_grams = COALESCE($10,weight_grams), is_enabled = COALESCE($11,is_enabled), low_stock_threshold = COALESCE($12,low_stock_threshold), metadata = COALESCE($13,metadata), updated_at = now() WHERE id = $14 RETURNING *', [productData.categoryId, productData.subcategoryId || null, productData.sku, productData.name, slug, productData.description, productData.basePrice !== undefined ? nonNegativeNumber(productData.basePrice, 0) : null, productData.offerPrice !== undefined ? nonNegativeNumber(productData.offerPrice, 0) : null, newStock, productData.weight !== undefined ? nonNegativeNumber(productData.weight, 0) : null, productData.isEnabled, productData.lowStockAlertThreshold !== undefined ? nonNegativeInteger(productData.lowStockAlertThreshold, 0) : null, metadata, id]);
       const prod = upd.rows[0];
       await syncProductCategories(client, prod.id, uniqueCategoryIds(productData.categoryIds, prod.category_id, prod.subcategory_id), prod.category_id);
-      if (Array.isArray(productData.externalBarcodes)) {
-        await syncProductBarcodes(client, prod.id, productData.externalBarcodes);
-      }
+       if (Array.isArray(productData.externalBarcodes)) {
+         await syncProductBarcodes(client, prod.id, productData.externalBarcodes);
+         await syncGeneratedProductBarcode(client, prod.id, prod.sku);
+       }
       // handle images replacement
       if (Array.isArray(productData.images)) {
         await client.query('DELETE FROM product_images WHERE product_id = $1', [id]);
@@ -7943,6 +7972,10 @@ async function ensureRuntimeSchemaCompatibility() {
     )
   `);
   await pgQuery('CREATE INDEX IF NOT EXISTS idx_product_barcodes_product_id ON product_barcodes(product_id)');
+  const productsForOwnBarcode = await pgQuery("SELECT id, sku FROM products WHERE sku IS NOT NULL AND trim(sku) <> ''");
+  for (const product of productsForOwnBarcode.rows) {
+    await syncGeneratedProductBarcode({ query: pgQuery }, product.id, product.sku);
+  }
   await pgQuery(`
     CREATE TABLE IF NOT EXISTS payments (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

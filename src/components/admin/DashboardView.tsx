@@ -36,10 +36,10 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
   ];
 
   const colorMap: Record<string, { bg: string; text: string; iconBg: string }> = {
-    emerald: { bg: 'bg-emerald-50 dark:bg-emerald-950/30', text: 'text-emerald-700 dark:text-emerald-300', iconBg: 'bg-emerald-500' },
-    indigo: { bg: 'bg-indigo-50 dark:bg-indigo-950/30', text: 'text-indigo-700 dark:text-indigo-300', iconBg: 'bg-indigo-500' },
-    rose: { bg: 'bg-rose-50 dark:bg-rose-950/30', text: 'text-rose-700 dark:text-rose-300', iconBg: 'bg-rose-500' },
-    amber: { bg: 'bg-amber-50 dark:bg-amber-950/30', text: 'text-amber-700 dark:text-amber-300', iconBg: 'bg-amber-500' }
+    emerald: { bg: 'bg-emerald-50 ', text: 'text-emerald-700 ', iconBg: 'bg-emerald-500' },
+    indigo: { bg: 'bg-indigo-50 ', text: 'text-indigo-700 ', iconBg: 'bg-indigo-500' },
+    rose: { bg: 'bg-rose-50 ', text: 'text-rose-700 ', iconBg: 'bg-rose-500' },
+    amber: { bg: 'bg-amber-50 ', text: 'text-amber-700 ', iconBg: 'bg-amber-500' }
   };
 
   const salesAnalytics = reports.salesAnalytics || {
@@ -158,7 +158,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
             <AlertTriangle className="h-4 w-4 text-rose-500" />
             <h3 className="font-bold text-sm">Low Stock Products</h3>
           </div>
-          <span className="rounded-full bg-rose-50 px-3 py-1 text-[10px] font-semibold uppercase text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+          <span className="rounded-full bg-rose-50 px-3 py-1 text-[10px] font-semibold uppercase text-rose-700  ">
             {lowStockProducts.length} items
           </span>
         </div>
@@ -174,11 +174,11 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
           </div>
         )}
         {lowStockProducts.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs font-bold text-slate-500 dark:border-slate-800">
+          <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs font-bold text-slate-500 ">
             No products are below their low-stock threshold.
           </div>
         ) : filteredLowStockProducts.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs font-bold text-slate-500 dark:border-slate-800">
+          <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs font-bold text-slate-500 ">
             No low-stock products match this search.
           </div>
         ) : (
@@ -200,7 +200,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
                       <p className="truncate text-xs font-semibold">{product.name}</p>
                       <p className="mt-0.5 font-mono text-[10px] text-slate-400">{product.sku || product.id.slice(0, 8)}</p>
                     </div>
-                    <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${product.stockCount === 0 ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}>
+                    <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${product.stockCount === 0 ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-800  '}`}>
                       {product.stockCount === 0 ? 'Out' : product.stockCount}
                     </span>
                   </div>
@@ -292,7 +292,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
             </div>
           </div>
           {tomorrowBirthdays.length > 0 && (
-            <span className="rounded-full bg-rose-100 px-3 py-1 text-[10px] font-semibold uppercase text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+            <span className="rounded-full bg-rose-100 px-3 py-1 text-[10px] font-semibold uppercase text-rose-700  ">
               {tomorrowBirthdays.length} birthday tomorrow
             </span>
           )}
@@ -314,18 +314,18 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
           </div>
         )}
         {upcomingBirthdays.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500 dark:border-slate-800">
+          <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500 ">
             No birthdays scheduled for tomorrow.
           </div>
         ) : filteredBirthdays.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500 dark:border-slate-800">
+          <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500 ">
             No birthday alerts match this search.
           </div>
         ) : (
           <div className="max-h-[340px] overflow-y-auto pr-1">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filteredBirthdays.map((customer: any) => (
-              <div key={customer.id} className={`rounded-xl border p-3 ${customer.isToday ? 'border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/30' : isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-100 bg-slate-50'}`}>
+              <div key={customer.id} className={`rounded-xl border p-3 ${customer.isToday ? 'border-rose-200 bg-rose-50  ' : isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-100 bg-slate-50'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold">{customer.name}</p>
@@ -337,7 +337,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
                     Tomorrow
                   </span>
                 </div>
-                <div className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-[11px] font-bold dark:bg-slate-900/70">
+                <div className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-[11px] font-bold ">
                   Birthday: {customer.birthdayDayMonth || String(customer.dateOfBirth || '').slice(0, 5)}
                 </div>
               </div>
@@ -356,7 +356,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
               <p className="text-[10px] font-bold text-slate-400">Rewards unlock only after the referred customer completes Rs 100+ purchase.</p>
             </div>
           </div>
-          <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase text-emerald-700  ">
             {referralReport.referrals.filter((row) => row.status === 'qualified').length} qualified
           </span>
         </div>
@@ -378,11 +378,11 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
           <div className={`rounded-xl border p-3 ${isDarkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-100 bg-slate-50'}`}>
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Top referrers this year</p>
             {filteredLeaderboard.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500 dark:border-slate-800">No qualified referrals yet.</p>
+              <p className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500 ">No qualified referrals yet.</p>
             ) : (
               <div className="max-h-[260px] overflow-y-auto pr-1">
               {filteredLeaderboard.map((row, index) => (
-              <div key={row.id || row.phone} className="mb-2 flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-900">
+              <div key={row.id || row.phone} className="mb-2 flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs ">
                 <div>
                   <p className="font-semibold">#{index + 1} {row.name || 'Customer'}</p>
                   <p className="font-mono text-[10px] text-slate-500">+91 {row.phone}</p>
@@ -399,7 +399,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
           <div className="max-h-[380px] overflow-auto">
             <table className="w-full min-w-[640px] text-left text-xs">
               <thead className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>
-                <tr className="border-b border-slate-200 dark:border-slate-800">
+                <tr className="border-b border-slate-200 ">
                   <th className="py-2 font-semibold uppercase">Referrer</th>
                   <th className="py-2 font-semibold uppercase">Referred customer</th>
                   <th className="py-2 font-semibold uppercase">Status</th>
@@ -408,7 +408,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
               </thead>
               <tbody>
                 {filteredReferrals.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 dark:border-slate-800">
+                  <tr key={row.id} className="border-b border-slate-100 ">
                     <td className="py-2">
                       <p className="font-bold">{row.referrer_name || 'Customer'}</p>
                       <p className="font-mono text-[10px] text-slate-500">+91 {row.referrer_phone}</p>
@@ -418,7 +418,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
                       <p className="font-mono text-[10px] text-slate-500">+91 {row.referred_phone}</p>
                     </td>
                     <td className="py-2">
-                      <span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase ${row.status === 'qualified' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'}`}>
+                      <span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase ${row.status === 'qualified' ? 'bg-emerald-100 text-emerald-700  ' : 'bg-amber-100 text-amber-700  '}`}>
                         {row.status}
                       </span>
                     </td>
@@ -457,7 +457,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
                 className={`rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide transition ${
                   salesPeriod === period
                     ? 'bg-indigo-600 text-white shadow'
-                    : 'text-slate-500 hover:text-indigo-600 dark:text-slate-300'
+                    : 'text-slate-500 hover:text-indigo-600 '
                 }`}
               >
                 {period}
@@ -530,7 +530,7 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
                             x={point.x}
                             y={Math.max(14, point.y - 12)}
                             textAnchor="middle"
-                            className="fill-indigo-700 text-[10px] font-semibold dark:fill-indigo-300"
+                            className="fill-indigo-700 text-[10px] font-semibold "
                           >
                             {Math.round(Number(point.total || 0)).toLocaleString('en-IN')}
                           </text>
@@ -560,10 +560,10 @@ export default function DashboardView({ reportsLoading, isDarkMode, reports, low
                 <p className="text-sm font-semibold">{periodOrdersTotal.toLocaleString('en-IN')}</p>
               </div>
               {selectedPoint && (
-                <div className="rounded-lg bg-indigo-50 p-3 dark:bg-indigo-950/40">
+                <div className="rounded-lg bg-indigo-50 p-3 ">
                   <p className="text-[10px] font-semibold uppercase text-indigo-500">Marker Details</p>
                   <p className="mt-1 text-xs font-bold">{selectedPoint.label}</p>
-                  <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Rs {Number(selectedPoint.total || 0).toLocaleString('en-IN')}</p>
+                  <p className="text-sm font-bold text-indigo-700 ">Rs {Number(selectedPoint.total || 0).toLocaleString('en-IN')}</p>
                   <p className="text-[10px] font-semibold text-slate-500">{Number(selectedPoint.orders || 0)} orders</p>
                 </div>
               )}

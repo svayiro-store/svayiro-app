@@ -114,7 +114,7 @@ export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings 
   const [quantity, setQuantity] = useState('');
   const [copies, setCopies] = useState('1');
 
-  const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
+  const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100   ';
   const panelClass = `rounded-xl border p-4 shadow-sm ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`;
 
   const loadProducts = async (reset = false) => {
@@ -238,16 +238,16 @@ export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings 
     <div className="space-y-5">
       <div>
         <h2 className="font-serif text-2xl font-semibold">Loose Weighing Labels</h2>
-        <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-xs font-semibold text-slate-500 ">
           Weigh loose items here, print a PLU barcode label, then scan that label in Walk-In POS billing.
         </p>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(260px,0.9fr)_minmax(300px,1fr)]">
         <section className={panelClass}>
-          <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-3 dark:border-slate-800">
+          <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-3 ">
             <Scale className="h-4 w-4 text-emerald-700" />
-            <h3 className="text-xs font-semibold uppercase text-indigo-800 dark:text-indigo-300">Select Loose Product</h3>
+            <h3 className="text-xs font-semibold uppercase text-indigo-800 ">Select Loose Product</h3>
           </div>
           <label className="block">
             <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Search PLU / item name</span>
@@ -271,8 +271,8 @@ export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings 
                   onClick={() => setSelectedId(product.id)}
                   className={`grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-lg border p-3 text-left text-xs transition ${
                     active
-                      ? 'border-indigo-700 bg-indigo-50 text-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-100'
-                      : 'border-slate-200 bg-white hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-950'
+                      ? 'border-indigo-700 bg-indigo-50 text-indigo-900  '
+                      : 'border-slate-200 bg-white hover:border-indigo-200  '
                   }`}
                 >
                   <span className="min-w-0">
@@ -281,7 +281,7 @@ export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings 
                       Price per {product.packageQuantity || product.metadata?.packageQuantity || 1} {sellingUnit(product)} - Stock {product.stockCount} {stockUnit(product)}
                     </span>
                   </span>
-                  <span className="rounded bg-emerald-50 px-2 py-1 font-mono text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <span className="rounded bg-emerald-50 px-2 py-1 font-mono text-[11px] font-semibold text-emerald-700  ">
                     PLU {product.pluCode || product.metadata?.pluCode}
                   </span>
                 </button>
@@ -293,7 +293,7 @@ export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings 
               type="button"
               onClick={() => loadProducts(false)}
               disabled={loading}
-              className="mt-3 w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800 disabled:opacity-50 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200"
+              className="mt-3 w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800 disabled:opacity-50   "
             >
               {loading ? 'Loading...' : 'Load More Products'}
             </button>
@@ -301,8 +301,8 @@ export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings 
         </section>
 
         <section className={panelClass}>
-          <div className="mb-3 border-b border-slate-200 pb-3 dark:border-slate-800">
-            <h3 className="text-xs font-semibold uppercase text-indigo-800 dark:text-indigo-300">Generate Barcode Label</h3>
+          <div className="mb-3 border-b border-slate-200 pb-3 ">
+            <h3 className="text-xs font-semibold uppercase text-indigo-800 ">Generate Barcode Label</h3>
             <p className="mt-1 text-[10px] font-semibold text-slate-500">Label size: {labelPrintSettings.labelWidthMm}mm × {labelPrintSettings.labelHeightMm}mm, {labelPrintSettings.columnsPerRow} per row. Enter exact weighed quantity in the stock unit.</p>
           </div>
 
@@ -311,7 +311,7 @@ export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings 
               <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Weighed Quantity ({selectedProduct ? stockUnit(selectedProduct) : 'unit'})</span>
               <input className={inputClass} type="number" min="0" step="1" value={quantity} onChange={(event) => setQuantity(event.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 750" />
             </label>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-950">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs  ">
               <p className="text-[10px] font-semibold uppercase text-slate-500">Calculated Amount</p>
               <p className="mt-1 text-xl font-bold text-emerald-700">Rs. {amount.toFixed(2)}</p>
               <p className="text-[10px] font-semibold text-slate-500">{baseQuantity > 0 ? labelQuantity : 'Enter quantity'}</p>
@@ -323,7 +323,7 @@ export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings 
             </label>
           </div>
 
-          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3  ">
             {barcodeValue ? (
               <div className="mx-auto max-w-full rounded border border-slate-300 bg-white p-1 text-black shadow-sm" style={{ width: `${labelPrintSettings.labelWidthMm}mm` }}>
                 <div dangerouslySetInnerHTML={{ __html: labelHtml() }} />
@@ -349,7 +349,7 @@ export default function LooseLabelsView({ isDarkMode, barcodeLabelPrintSettings 
               type="button"
               onClick={downloadLabel}
               disabled={!barcodeValue}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-xs font-semibold uppercase text-slate-800 shadow-sm disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-xs font-semibold uppercase text-slate-800 shadow-sm disabled:opacity-50   "
             >
               <Download className="h-4 w-4" />
               Download Template

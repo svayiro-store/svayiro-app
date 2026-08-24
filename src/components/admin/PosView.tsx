@@ -82,15 +82,15 @@ interface Props {
   onClearCart?: () => void;
 }
 
-const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
-const panelClass = 'rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900';
+const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus-indigo-100   ';
+const panelClass = 'rounded-xl border border-slate-200 bg-white shadow-sm  ';
 const POS_PRODUCT_PAGE_SIZE = 50;
 
 /** Pre-texted WhatsApp message for POS Walk-In Customer */
 function buildPosWhatsAppMessage(
-  customerName: string, 
-  grandTotal: number, 
-  invoiceUrl?: string, 
+  customerName: string,
+  grandTotal: number,
+  invoiceUrl?: string,
   websiteUrl = 'https://svayiro.co.in'
 ) {
   const publicInvoiceLink = invoiceUrl || websiteUrl;
@@ -530,10 +530,6 @@ export default function PosView({
       alert('No cart items to print.');
       return;
     }
-    if (lastInvoiceUrl) {
-      window.open(lastInvoiceUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
     const billItems = lastCompletedOrder?.items || offlineCart;
     const billTotal = Number(lastCompletedOrder?.finalTotal ?? lastCompletedOrder?.final_amount ?? total);
     const billBagCost = Number(lastCompletedOrder?.bagCharge ?? lastCompletedOrder?.bag_charge ?? bagCost);
@@ -559,9 +555,12 @@ export default function PosView({
             td,th{border-bottom:1px solid #ddd;padding:6px;text-align:left;font-size:12px}
             .total{font-weight:800;text-align:right;margin-top:14px}
             .meta{font-size:12px;color:#475569}
+            .actions{margin-bottom:14px;text-align:right}.actions button{border:0;border-radius:6px;background:#12109b;color:#fff;padding:8px 12px;font-weight:700;cursor:pointer}
+            @media print{.actions{display:none}}
           </style>
         </head>
         <body>
+          <div class="actions"><button onclick="window.print()">Print / Save PDF</button></div>
           <h1>SVAYIRO POS Receipt</h1>
           <div class="meta">${formatDateTimeDDMMYYYY(new Date())}</div>
           <div class="meta">Customer: ${session.customerName || 'Walk-In Customer'} | ${session.customerPhone || '-'}</div>
@@ -575,7 +574,6 @@ export default function PosView({
     `);
     popup.document.close();
     popup.focus();
-    popup.print();
   };
 
   /** Action 2: Send WhatsApp Bill */
@@ -660,18 +658,18 @@ export default function PosView({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="font-serif text-2xl font-semibold">Walk-In Billing POS</h2>
-          <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs font-semibold text-slate-500 ">
             Scan, search, bill, print receipt, and send WhatsApp bill from one counter screen.
           </p>
         </div>
-        <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm  ">
           <button
             type="button"
             onClick={() => setPosPage('billing')}
             className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold uppercase transition ${
               posPage === 'billing'
                 ? 'bg-indigo-700 text-white'
-                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900'
+                : 'text-slate-600 hover:bg-slate-100  '
             }`}
           >
             <Receipt className="h-4 w-4" />
@@ -683,7 +681,7 @@ export default function PosView({
             className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold uppercase transition ${
               posPage === 'logs'
                 ? 'bg-indigo-700 text-white'
-                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900'
+                : 'text-slate-600 hover:bg-slate-100  '
             }`}
           >
             <ListChecks className="h-4 w-4" />
@@ -696,21 +694,21 @@ export default function PosView({
       <>
       <section className={`${panelClass} p-3 sm:p-4`}>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase text-indigo-800 dark:text-indigo-300">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase text-indigo-800 ">
             <ClipboardList className="h-4 w-4" />
             Active Billing Registers ({Math.max(1, registers.length)}):
           </div>
           {(registers.length ? registers : [{ id: activeRegisterId || 'register_1', name: 'Customer 1', itemCount: offlineCart.length, total }]).map((register) => {
             const isActive = register.id === activeRegisterId || (!activeRegisterId && register.name === activeRegisterName);
             return (
-              <div key={register.id} className="flex items-center overflow-hidden rounded-lg border border-violet-200 bg-white shadow-sm dark:border-violet-900 dark:bg-slate-950">
+              <div key={register.id} className="flex items-center overflow-hidden rounded-lg border border-violet-200 bg-white shadow-sm  ">
                 <button
                   type="button"
                   onClick={() => onSelectRegister?.(register.id)}
-                  className={`px-3 py-2 text-xs font-semibold ${isActive ? 'bg-violet-600 text-white' : 'text-violet-700 dark:text-violet-300'}`}
+                  className={`px-3 py-2 text-xs font-semibold ${isActive ? 'bg-violet-600 text-white' : 'text-violet-700 '}`}
                 >
                   {register.name}
-                  <span className={`ml-2 rounded-full px-2 py-0.5 ${isActive ? 'bg-white/20' : 'bg-violet-50 dark:bg-violet-950'}`}>
+                  <span className={`ml-2 rounded-full px-2 py-0.5 ${isActive ? 'bg-white/20' : 'bg-violet-50 '}`}>
                     {register.itemCount} items (Rs. {register.total.toFixed(0)})
                   </span>
                 </button>
@@ -727,7 +725,7 @@ export default function PosView({
               </div>
             );
           })}
-          <button type="button" onClick={onAddRegister} className="rounded-lg border border-dashed border-emerald-500 px-3 py-2 text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300">
+          <button type="button" onClick={onAddRegister} className="rounded-lg border border-dashed border-emerald-500 px-3 py-2 text-xs font-semibold uppercase text-emerald-700 ">
             + Parallel Queue
           </button>
         </div>
@@ -735,11 +733,11 @@ export default function PosView({
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(280px,0.9fr)_minmax(340px,1fr)_minmax(220px,0.55fr)] 2xl:grid-cols-[minmax(300px,0.85fr)_minmax(380px,1fr)_minmax(240px,0.5fr)]">
         <section className={`${panelClass} min-w-0 p-3 sm:p-4 xl:max-h-[calc(100vh-244px)] xl:overflow-hidden`}>
-          <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
-            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-800 dark:text-indigo-300">
+          <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 ">
+            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-800 ">
               <PackageSearch className="h-4 w-4" /> Product Entry
             </h3>
-            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${catalogAddFlash ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-950 dark:text-slate-400'}`}>
+            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${catalogAddFlash ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500  '}`}>
               {catalogAddFlash ? 'Added' : 'Ready'}
             </span>
           </div>
@@ -794,17 +792,17 @@ export default function PosView({
                 type="button"
                 onClick={() => setShowCustomPanel((open) => !open)}
                 disabled={!canOverridePrice}
-                className="mt-5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold uppercase text-indigo-800 disabled:opacity-50 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200"
+                className="mt-5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold uppercase text-indigo-800 disabled:opacity-50   "
               >
                 Custom Item
               </button>
             </div>
 
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3  ">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Direct Loose-Weight Billing</p>
-                  <p className="text-[10px] text-emerald-700 dark:text-emerald-300">Enter the measured weight for loose goods; no barcode label is required.</p>
+                  <p className="text-xs font-semibold text-emerald-900 ">Direct Loose-Weight Billing</p>
+                  <p className="text-[10px] text-emerald-700 ">Enter the measured weight for loose goods; no barcode label is required.</p>
                 </div>
                 <button type="button" onClick={() => setShowDirectLoosePanel((open) => !open)} className="rounded-lg bg-emerald-700 px-3 py-2 text-[10px] font-semibold uppercase text-white">
                   {showDirectLoosePanel ? 'Close' : 'Direct Weight'}
@@ -812,10 +810,10 @@ export default function PosView({
               </div>
               {showDirectLoosePanel && (
                 <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_0.8fr]">
-                  <div className="rounded-lg border border-emerald-200 bg-white p-3 dark:border-emerald-900 dark:bg-slate-950">
-                    <div className="mb-2 flex items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
+                  <div className="rounded-lg border border-emerald-200 bg-white p-3  ">
+                    <div className="mb-2 flex items-center gap-2 border-b border-slate-200 pb-2 ">
                       <Scale className="h-4 w-4 text-emerald-700" />
-                      <span className="text-[10px] font-semibold uppercase text-slate-600 dark:text-slate-300">Select Loose Product</span>
+                      <span className="text-[10px] font-semibold uppercase text-slate-600 ">Select Loose Product</span>
                     </div>
                     <label className="block">
                       <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Search PLU / item name</span>
@@ -832,21 +830,21 @@ export default function PosView({
                         const stockUnit = product.stockUnit || product.metadata?.stockUnit || 'g';
                         const saleUnit = product.sellingUnit || product.metadata?.sellingUnit || product.metadata?.unit || 'kg';
                         return (
-                          <button key={product.id} type="button" onClick={() => { setDirectLooseProductId(product.id); setDirectLooseWeight(''); }} className={`grid w-full grid-cols-[1fr_auto] items-center gap-2 rounded-lg border p-2 text-left transition ${active ? 'border-indigo-700 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-200 bg-white hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-950'}`}>
+                          <button key={product.id} type="button" onClick={() => { setDirectLooseProductId(product.id); setDirectLooseWeight(''); }} className={`grid w-full grid-cols-[1fr_auto] items-center gap-2 rounded-lg border p-2 text-left transition ${active ? 'border-indigo-700 bg-indigo-50 ' : 'border-slate-200 bg-white hover:border-indigo-300  '}`}>
                             <span className="min-w-0">
                               <span className="block truncate text-xs font-semibold">{product.name}</span>
                               <span className="block text-[10px] font-semibold text-slate-500">Price per {product.packageQuantity || product.metadata?.packageQuantity || 1} {saleUnit} · Stock {product.stockCount} {stockUnit}</span>
                             </span>
-                            <span className="rounded bg-emerald-50 px-2 py-1 font-mono text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">PLU {product.pluCode || product.metadata?.pluCode || '-'}</span>
+                            <span className="rounded bg-emerald-50 px-2 py-1 font-mono text-[10px] font-semibold text-emerald-700  ">PLU {product.pluCode || product.metadata?.pluCode || '-'}</span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-emerald-200 bg-white p-3 dark:border-emerald-900 dark:bg-slate-950">
-                    <div className="mb-2 border-b border-slate-200 pb-2 dark:border-slate-800">
-                      <p className="text-[10px] font-semibold uppercase text-slate-600 dark:text-slate-300">Add Weighed Item to Bill</p>
+                  <div className="rounded-lg border border-emerald-200 bg-white p-3  ">
+                    <div className="mb-2 border-b border-slate-200 pb-2 ">
+                      <p className="text-[10px] font-semibold uppercase text-slate-600 ">Add Weighed Item to Bill</p>
                       <p className="mt-1 text-[10px] text-slate-500">No barcode is generated or printed.</p>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
@@ -854,7 +852,7 @@ export default function PosView({
                         <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Weighed Quantity ({directLooseProduct ? directLooseStockUnit : 'unit'})</span>
                         <input className={`${inputClass} font-mono`} inputMode="decimal" value={directLooseWeight} onChange={(event) => setDirectLooseWeight(event.target.value.replace(/[^\d.]/g, ''))} placeholder="e.g. 750" disabled={!directLooseProduct} />
                       </label>
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-900">
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs  ">
                         <p className="text-[10px] font-semibold uppercase text-slate-500">Calculated Amount</p>
                         <p className="mt-1 text-xl font-bold text-emerald-700">Rs. {directLooseAmount.toFixed(2)}</p>
                         <p className="text-[10px] font-semibold text-slate-500">{directLooseQuantity > 0 ? directLooseLabel : 'Enter quantity'}</p>
@@ -867,7 +865,7 @@ export default function PosView({
             </div>
 
             {showCustomPanel && canOverridePrice && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3  ">
                 <label className="block">
                   <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Product name</span>
                   <input className={inputClass} value={session.customItemName} onChange={(event) => updateSession({ customItemName: event.target.value })} placeholder="Loose item / packing charge / service charge" />
@@ -905,7 +903,7 @@ export default function PosView({
                       type="button"
                       onClick={() => handleQuickAddProduct(product)}
                       disabled={outOfStock}
-                      className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-indigo-950/30"
+                      className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-55   "
                     >
                       <span className="min-w-0">
                         <span className="block truncate text-xs font-semibold">{product.name}</span>
@@ -928,7 +926,7 @@ export default function PosView({
                   type="button"
                   onClick={handleLoadMorePosProducts}
                   disabled={posProductsLoading || !posProductsHasMore}
-                  className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[10px] font-semibold uppercase text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200"
+                  className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[10px] font-semibold uppercase text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50   "
                 >
                   {posProductsLoading ? 'Loading...' : posProductsHasMore ? 'Load More' : 'All Loaded'}
                 </button>
@@ -938,8 +936,8 @@ export default function PosView({
         </section>
 
         <section className={`${panelClass} min-w-0 p-3 sm:p-4 xl:max-h-[calc(100vh-244px)] xl:overflow-y-auto xl:p-5`}>
-          <div className="mb-4 flex items-center justify-between border-b border-slate-900 pb-3 dark:border-slate-700">
-            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-800 dark:text-indigo-300">
+          <div className="mb-4 flex items-center justify-between border-b border-slate-900 pb-3 ">
+            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-800 ">
               <ShoppingIcon /> Selected Cart: {activeRegisterName}
             </h3>
             <button type="button" onClick={onClearCart} className="text-[11px] font-bold text-rose-600">Clear Cart</button>
@@ -952,7 +950,7 @@ export default function PosView({
               </div>
             )}
 
-            <div className="border-t border-slate-900 pt-3 dark:border-slate-700">
+            <div className="border-t border-slate-900 pt-3 ">
               <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase">
                 <span className="text-slate-500">Cart Items ({offlineCart.length})</span>
                 <span className="text-emerald-600">Total: Rs. {total.toFixed(0)}</span>
@@ -961,7 +959,7 @@ export default function PosView({
                 {offlineCart.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500">Cart is empty.</div>
                 ) : offlineCart.map((item) => (
-                  <div key={item.cartKey || item.productId} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950">
+                  <div key={item.cartKey || item.productId} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2  ">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-semibold">{item.name}</p>
                       <p className="text-[10px] text-slate-500">
@@ -970,14 +968,14 @@ export default function PosView({
                       </p>
                     </div>
                     {item.isLooseLabel ? (
-                      <span className="rounded bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      <span className="rounded bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700  ">
                         Rs. {item.price.toFixed(2)}
                       </span>
                     ) : (
                       <>
-                        <button type="button" onClick={() => onUpdateQuantity?.(item.cartKey || item.productId, -1)} className="rounded bg-slate-200 p-1 dark:bg-slate-800"><Minus className="h-3 w-3" /></button>
+                        <button type="button" onClick={() => onUpdateQuantity?.(item.cartKey || item.productId, -1)} className="rounded bg-slate-200 p-1 "><Minus className="h-3 w-3" /></button>
                         <span className="w-6 text-center text-xs font-semibold">{item.quantity}</span>
-                        <button type="button" onClick={() => onUpdateQuantity?.(item.cartKey || item.productId, 1)} className="rounded bg-slate-200 p-1 dark:bg-slate-800"><Plus className="h-3 w-3" /></button>
+                        <button type="button" onClick={() => onUpdateQuantity?.(item.cartKey || item.productId, 1)} className="rounded bg-slate-200 p-1 "><Plus className="h-3 w-3" /></button>
                       </>
                     )}
                     <button type="button" onClick={() => onRemoveItem?.(item.cartKey || item.productId)} className="rounded p-1 text-rose-500"><Trash2 className="h-4 w-4" /></button>
@@ -986,7 +984,7 @@ export default function PosView({
               </div>
             </div>
 
-            <div className="border-t border-slate-900 pt-3 dark:border-slate-700">
+            <div className="border-t border-slate-900 pt-3 ">
               <div className="grid grid-cols-2 gap-2">
                 <label>
                   <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Customer Name</span>
@@ -1001,19 +999,19 @@ export default function PosView({
               <div className="mt-3">
                 <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Payment Channel</span>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => updateSession({ paymentMethod: 'cod' })} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${session.paymentMethod === 'cod' ? 'border-indigo-700 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-500 dark:border-slate-800'}`}>
+                  <button type="button" onClick={() => updateSession({ paymentMethod: 'cod' })} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${session.paymentMethod === 'cod' ? 'border-indigo-700 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-500 '}`}>
                     <CreditCard className="mr-1 inline h-4 w-4" /> Cash/Card
                   </button>
-                  <button type="button" onClick={() => updateSession({ paymentMethod: 'upi' })} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${session.paymentMethod === 'upi' ? 'border-indigo-700 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-500 dark:border-slate-800'}`}>
+                  <button type="button" onClick={() => updateSession({ paymentMethod: 'upi' })} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${session.paymentMethod === 'upi' ? 'border-indigo-700 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-500 '}`}>
                     <QrCode className="mr-1 inline h-4 w-4" /> UPI Scan
                   </button>
                 </div>
               </div>
 
               {session.paymentMethod === 'upi' && (
-                <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3 dark:border-indigo-900 dark:bg-indigo-950/30">
+                <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3  ">
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold uppercase text-indigo-800 dark:text-indigo-200">UPI QR for Total</span>
+                    <span className="text-xs font-semibold uppercase text-indigo-800 ">UPI QR for Total</span>
                     <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-indigo-800">Rs. {total.toFixed(2)}</span>
                   </div>
                   {qrDataUrl ? (
@@ -1037,7 +1035,7 @@ export default function PosView({
                       className={`flex min-h-12 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-[11px] font-semibold uppercase shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${
                         session.bagOption === 'own'
                           ? 'border-emerald-500 bg-emerald-600 text-white'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300   '
                       }`}
                     >
                       <ShoppingBag className="h-4 w-4" />
@@ -1049,7 +1047,7 @@ export default function PosView({
                       className={`flex min-h-12 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-[11px] font-semibold uppercase shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${
                         session.bagOption === 'need'
                           ? 'border-indigo-600 bg-indigo-700 text-white'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300   '
                       }`}
                     >
                       <ShoppingBag className="h-4 w-4" />
@@ -1057,7 +1055,7 @@ export default function PosView({
                     </button>
                   </div>
                 </div>
-                <div className="rounded-lg border border-slate-200 px-3 py-2 text-xs dark:border-slate-800">
+                <div className="rounded-lg border border-slate-200 px-3 py-2 text-xs ">
                   <p className="font-semibold uppercase text-slate-500">Bag Charge</p>
                   <p className="mt-1 font-mono text-lg font-bold">Rs. {bagCost.toFixed(2)}</p>
                   <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{(cartWeightGrams / 1000).toFixed(2)} kg</p>
@@ -1065,15 +1063,15 @@ export default function PosView({
               </div>
 
               {session.bagOption === 'need' && (
-                <div className="mt-2 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3 text-[11px] dark:border-indigo-900 dark:bg-indigo-950/20">
+                <div className="mt-2 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3 text-[11px]  ">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="font-semibold uppercase text-indigo-800 dark:text-indigo-200">Smart bag selection</span>
-                    <span className="font-mono font-semibold text-indigo-700 dark:text-indigo-300">
+                    <span className="font-semibold uppercase text-indigo-800 ">Smart bag selection</span>
+                    <span className="font-mono font-semibold text-indigo-700 ">
                       {computedBags.length} type{computedBags.length === 1 ? '' : 's'}
                     </span>
                   </div>
                   {cartWeightGrams <= 0 ? (
-                    <p className="font-semibold text-amber-700 dark:text-amber-300">
+                    <p className="font-semibold text-amber-700 ">
                       Product weight is missing, so POS cannot calculate bag price. Add product weight in Product Catalogue.
                     </p>
                   ) : computedBags.length === 0 ? (
@@ -1081,7 +1079,7 @@ export default function PosView({
                   ) : (
                     <div className="space-y-1">
                       {computedBags.map((bag) => (
-                        <div key={bag.size} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 font-mono dark:bg-slate-950">
+                        <div key={bag.size} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 font-mono ">
                           <span className="min-w-0 truncate">{bag.count} x {bag.size}</span>
                           <span className="font-bold">Rs. {bag.cost.toFixed(2)}</span>
                         </div>
@@ -1108,15 +1106,15 @@ export default function PosView({
                 </button>
 
                 {lastCompletedOrder && offlineCart.length === 0 && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3  ">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-semibold uppercase text-emerald-800 dark:text-emerald-200">Sale completed</p>
-                        <p className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        <p className="text-xs font-semibold uppercase text-emerald-800 ">Sale completed</p>
+                        <p className="mt-1 text-[11px] font-semibold text-emerald-700 ">
                           Invoice is ready. Print it or send the invoice link to the customer's WhatsApp.
                         </p>
                       </div>
-                      <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-slate-950 dark:text-emerald-200">
+                      <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-emerald-800  ">
                         Rs. {Number(lastCompletedOrder?.finalTotal ?? lastCompletedOrder?.final_amount ?? 0).toFixed(2)}
                       </span>
                     </div>
@@ -1124,7 +1122,7 @@ export default function PosView({
                       <button
                         type="button"
                         onClick={printReceipt}
-                        className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-xs font-semibold uppercase text-slate-800 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                        className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-xs font-semibold uppercase text-slate-800 transition hover:bg-slate-100    "
                       >
                         <Printer className="h-4 w-4" />
                         Print Receipt
@@ -1144,7 +1142,7 @@ export default function PosView({
                         type="button"
                         onClick={handleCopyInvoiceLink}
                         disabled={!lastInvoiceUrl}
-                        className="flex items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-xs font-semibold uppercase text-indigo-900 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-55 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200 dark:hover:bg-indigo-950"
+                        className="flex items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-xs font-semibold uppercase text-indigo-900 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-55    "
                       >
                         <Copy className="h-4 w-4" />
                         Copy Link
@@ -1158,24 +1156,24 @@ export default function PosView({
         </section>
 
         <section className={`${panelClass} min-w-0 p-3 sm:p-4 xl:max-h-[calc(100vh-244px)] xl:p-4`}>
-          <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
-            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-800 dark:text-indigo-300">
+          <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 ">
+            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-800 ">
               <Keyboard className="h-4 w-4" /> Counter Keypad
             </h3>
-            <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+            <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase text-slate-500  ">
               {session.keypadTarget}
             </span>
           </div>
 
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => updateSession({ keypadTarget: 'qty' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase ${session.keypadTarget === 'qty' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-950 dark:text-slate-300'}`}>Qty</button>
-              <button type="button" disabled={!canOverridePrice} onClick={() => updateSession({ keypadTarget: 'price' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase disabled:opacity-40 ${session.keypadTarget === 'price' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-950 dark:text-slate-300'}`}>Price</button>
-              <button type="button" onClick={() => updateSession({ keypadTarget: 'phone' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase ${session.keypadTarget === 'phone' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-950 dark:text-slate-300'}`}>Phone</button>
+              <button type="button" onClick={() => updateSession({ keypadTarget: 'qty' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase ${session.keypadTarget === 'qty' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600  '}`}>Qty</button>
+              <button type="button" disabled={!canOverridePrice} onClick={() => updateSession({ keypadTarget: 'price' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase disabled:opacity-40 ${session.keypadTarget === 'price' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600  '}`}>Price</button>
+              <button type="button" onClick={() => updateSession({ keypadTarget: 'phone' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase ${session.keypadTarget === 'phone' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600  '}`}>Phone</button>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
-              <p className="mb-2 truncate rounded-lg bg-white px-3 py-2 text-center font-mono text-sm font-semibold text-slate-900 dark:bg-slate-900 dark:text-white">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3  ">
+              <p className="mb-2 truncate rounded-lg bg-white px-3 py-2 text-center font-mono text-sm font-semibold text-slate-900  ">
                 {session.keypadTarget === 'qty' ? session.qtyInput : session.keypadTarget === 'phone' ? session.customerPhone || 'phone' : session.priceOverride || 'price'}
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -1191,7 +1189,7 @@ export default function PosView({
                           ? 'border-amber-200 bg-amber-50 text-amber-600'
                           : key.startsWith('+')
                             ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
-                            : 'border-slate-300 bg-white text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-white'
+                            : 'border-slate-300 bg-white text-slate-950   '
                     }`}
                   >
                     {key === 'back' ? <Delete className="mx-auto h-4 w-4" /> : key === 'clear' ? 'C' : key}
@@ -1200,7 +1198,7 @@ export default function PosView({
               </div>
             </div>
 
-            <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold leading-relaxed text-slate-500 dark:border-slate-800 dark:bg-slate-950">
+            <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold leading-relaxed text-slate-500  ">
               Focus Qty, Price, or Phone to control this keypad. Product names use normal keyboard input.
             </p>
           </div>
@@ -1210,23 +1208,23 @@ export default function PosView({
       </>
       ) : (
         <section className={`${panelClass} min-w-0 p-3 sm:p-5`}>
-          <div className="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
+          <div className="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 ">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <PackageSearch className="h-4 w-4 text-indigo-700" />
-                <h3 className="text-sm font-semibold uppercase text-indigo-900 dark:text-indigo-300">Real-Time Warehouse Inventory Log Book</h3>
+                <h3 className="text-sm font-semibold uppercase text-indigo-900 ">Real-Time Warehouse Inventory Log Book</h3>
               </div>
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setCleanupOpen((open) => !open)}
-                  className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold uppercase text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+                  className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold uppercase text-rose-700 hover:bg-rose-100   "
                 >
                   <Trash2 className="h-3 w-3" />
                   Delete
                 </button>
                 {cleanupOpen && (
-                  <div className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-950">
+                  <div className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-xl  ">
                     <p className="px-2 pb-2 text-[10px] font-semibold uppercase text-slate-400">Cleanup old logs</p>
                     {cleanupOptions.map((option) => (
                       <button
@@ -1234,7 +1232,7 @@ export default function PosView({
                         type="button"
                         disabled={cleanupBusy}
                         onClick={() => handleCleanupLogs(option.value)}
-                        className="block w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-rose-950/30"
+                        className="block w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50  "
                       >
                         {option.label}
                       </button>
@@ -1269,15 +1267,15 @@ export default function PosView({
                   setLogDate('');
                   onFilterInventoryLogs?.();
                 }}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase text-slate-600 dark:border-slate-800 dark:text-slate-300"
+                className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold uppercase text-slate-600  "
               >
                 All recent
               </button>
             </div>
           </div>
-          <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="overflow-hidden rounded-xl border border-slate-200 ">
             {recentLogs.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500 dark:border-slate-700">
+              <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500 ">
                 No inventory logs recorded yet.
               </div>
             ) : (
@@ -1302,7 +1300,7 @@ export default function PosView({
                       const orderId = log.orderId || log.order_id || log.referenceId || log.reference_id || metadata.orderId;
                       const orderRef = log.orderRef || log.order_ref || metadata.orderRef;
                       return (
-                        <tr key={log.id} className="border-t border-slate-100 dark:border-slate-800">
+                        <tr key={log.id} className="border-t border-slate-100 ">
                           <td className="px-3 py-2 font-mono text-[10px] text-slate-500">
                             {createdAt ? formatDateTimeDDMMYYYY(createdAt) : 'Just now'}
                           </td>
@@ -1311,11 +1309,11 @@ export default function PosView({
                             <p className="font-mono text-[10px] text-slate-400">{log.product_sku || log.sku || log.product_id || 'custom / system'}</p>
                           </td>
                           <td className="px-3 py-2">
-                            <p className="font-mono text-[10px] font-semibold text-slate-700 dark:text-slate-200">{orderRef || '-'}</p>
+                            <p className="font-mono text-[10px] font-semibold text-slate-700 ">{orderRef || '-'}</p>
                             <p className="max-w-[170px] truncate font-mono text-[10px] text-slate-400" title={orderId || ''}>{orderId || '-'}</p>
                           </td>
                           <td className="px-3 py-2">
-                            <span className="rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                            <span className="rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-700  ">
                               {log.reason || log.type || 'inventory update'}
                             </span>
                             {log.source && <p className="mt-1 text-[10px] text-slate-500">Source: {log.source}</p>}
@@ -1323,7 +1321,7 @@ export default function PosView({
                           <td className={`px-3 py-2 text-right font-semibold ${delta < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                             {delta > 0 ? '+' : ''}{delta}
                           </td>
-                          <td className="px-3 py-2 text-right font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                          <td className="px-3 py-2 text-right font-mono text-[11px] text-slate-600 ">
                             {log.stockAfter ?? log.stock_after ?? '-'}
                           </td>
                         </tr>

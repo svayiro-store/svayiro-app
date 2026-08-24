@@ -128,20 +128,20 @@ export default function CustomerHeader({
     offer: {
       label: 'Offer',
       icon: Tag,
-      badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
-      iconClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+      badgeClass: 'bg-emerald-50 text-emerald-700  ',
+      iconClass: 'bg-emerald-100 text-emerald-700  '
     },
     holiday: {
       label: 'Holiday',
       icon: CalendarClock,
-      badgeClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
-      iconClass: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+      badgeClass: 'bg-amber-50 text-amber-700  ',
+      iconClass: 'bg-amber-100 text-amber-700  '
     },
     announcement: {
       label: 'Notice',
       icon: Megaphone,
-      badgeClass: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300',
-      iconClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+      badgeClass: 'bg-indigo-50 text-indigo-700  ',
+      iconClass: 'bg-indigo-100 text-indigo-700  '
     }
   };
 
@@ -222,7 +222,7 @@ export default function CustomerHeader({
             {!isCategoryRailCompact && (
               <span className={`flex h-8 w-8 items-center justify-center rounded-xl border shadow-sm transition ${
                 !selectedCategory
-                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/10 dark:bg-indigo-950/40 dark:text-indigo-300'
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/10  '
                   : isDarkMode
                     ? 'border-slate-800 bg-slate-900 text-slate-300'
                     : 'border-slate-200 bg-white text-slate-500'
@@ -231,7 +231,7 @@ export default function CustomerHeader({
               </span>
             )}
             <span className={`block max-w-full truncate rounded-full px-1 py-0.5 text-[9px] font-normal leading-tight ${
-              !selectedCategory ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'
+              !selectedCategory ? 'text-indigo-700 ' : 'text-slate-600 '
             }`}>
               All
             </span>
@@ -249,8 +249,8 @@ export default function CustomerHeader({
                 title={category.name}
               >
                 {!isCategoryRailCompact && (
-                  <span className={`relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl border bg-white text-[8px] font-semibold uppercase text-indigo-700 shadow-sm transition group-hover:-translate-y-0.5 dark:bg-slate-900 dark:text-indigo-300 ${
-                    isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/10' : 'border-slate-200 group-hover:border-indigo-300 dark:border-slate-800'
+                  <span className={`relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl border bg-white text-[8px] font-semibold uppercase text-indigo-700 shadow-sm transition group-hover:-translate-y-0.5   ${
+                    isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/10' : 'border-slate-200 group-hover:border-indigo-300 '
                   }`}>
                     {category.name.substring(0, 2)}
                     {category.imageUrl && (
@@ -267,7 +267,7 @@ export default function CustomerHeader({
                   </span>
                 )}
                 <span className={`block max-w-full truncate rounded-full px-1 py-0.5 text-[9px] font-normal leading-tight ${
-                  isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'
+                  isSelected ? 'text-indigo-700 ' : 'text-slate-600 '
                 }`}>
                   {category.name}
                 </span>
@@ -292,7 +292,7 @@ export default function CustomerHeader({
         <button
           type="button"
           onClick={() => onMarkNotificationsRead?.(customerNotifications.map((notification) => notification.id))}
-          className="flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950"
+          className="flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold text-indigo-600 hover:bg-indigo-50  "
         >
           <CheckCheck className="h-3.5 w-3.5" />
           Read
@@ -332,7 +332,7 @@ export default function CustomerHeader({
                       {isUnread && <span className="h-2 w-2 rounded-full bg-indigo-600" />}
                     </div>
                     <h3 className="line-clamp-1 text-xs font-semibold">{notification.title}</h3>
-                    <p className="mt-1 line-clamp-3 text-[11px] font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+                    <p className="mt-1 line-clamp-3 text-[11px] font-medium leading-relaxed text-slate-600 ">
                       {notification.message}
                     </p>
                     <p className="mt-2 text-[10px] font-semibold text-slate-400">
@@ -369,7 +369,7 @@ export default function CustomerHeader({
             }`}
           >
             <Clock className="h-4 w-4 shrink-0 text-slate-400" />
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700 dark:text-slate-200">{term}</span>
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700 ">{term}</span>
             <span
               role="button"
               tabIndex={0}
@@ -378,7 +378,7 @@ export default function CustomerHeader({
                 e.stopPropagation();
                 onRemoveHistory?.(term);
               }}
-              className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800"
+              className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600 "
               aria-label={`Remove ${term} from search history`}
             >
               <X className="h-3.5 w-3.5" />
@@ -413,18 +413,18 @@ export default function CustomerHeader({
                 src={product.images?.[0] || productImageFallback}
                 alt={product.name}
                 referrerPolicy="no-referrer"
-                className="h-11 w-11 shrink-0 rounded-lg border border-slate-200 object-cover dark:border-slate-800"
+                className="h-11 w-11 shrink-0 rounded-lg border border-slate-200 object-cover "
                 onError={(e) => {
                   e.currentTarget.src = productImageFallback;
                 }}
               />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-semibold text-slate-900 dark:text-white">{product.name}</span>
-                <span className="mt-0.5 block truncate text-[10px] text-slate-500 dark:text-slate-400">
+                <span className="block truncate text-xs font-semibold text-slate-900 ">{product.name}</span>
+                <span className="mt-0.5 block truncate text-[10px] text-slate-500 ">
                   {product.description || product.sku || 'Related item'}
                 </span>
               </span>
-              <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+              <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-700  ">
                 Rs {price}
               </span>
             </button>
@@ -440,7 +440,7 @@ export default function CustomerHeader({
       <header className={`fixed inset-x-0 top-0 z-50 border-b ${isDarkMode ? 'border-[#1e293b] bg-[#0f172a]/95 shadow-[0_12px_35px_rgba(0,0,0,0.35)]' : 'border-slate-200 bg-white/95 shadow-[0_12px_35px_rgba(15,23,42,0.10)]'} transition-all backdrop-blur-xl`}>
         <div className="w-full px-4 py-3 flex flex-col gap-2.5">
           <div className="flex items-center justify-between gap-4">
-            
+
             {/* Logo & Info */}
             <div className="flex items-center gap-3">
               <div className="relative shrink-0" title={isStoreOpen ? 'Store open' : 'Store closed'}>
@@ -451,7 +451,7 @@ export default function CustomerHeader({
                     className={`w-10 h-10 rounded-full object-cover border-2 shadow ${logoStatusClass}`}
                   />
                 ) : (
-                  <div className={`flex w-10 h-10 items-center justify-center rounded-full border-2 bg-indigo-50 text-sm font-semibold text-indigo-700 shadow dark:bg-indigo-950 dark:text-indigo-200 ${logoStatusClass}`}>
+                  <div className={`flex w-10 h-10 items-center justify-center rounded-full border-2 bg-indigo-50 text-sm font-semibold text-indigo-700 shadow   ${logoStatusClass}`}>
                     {(shop.name || 'S').slice(0, 1).toUpperCase()}
                   </div>
                 )}
@@ -461,17 +461,17 @@ export default function CustomerHeader({
                 <h1 className="leading-none">
                   <SvayiroWordmark name={shop.name} className="text-2xl uppercase" />
                 </h1>
-                <p className="hidden text-xs font-mono italic text-slate-500 dark:text-slate-300 sm:block">{shop.tagline}</p>
+                <p className="hidden text-xs font-mono italic text-slate-500  sm:block">{shop.tagline}</p>
               </div>
             </div>
 
             {/* Search bar (Desktop View) */}
             <div className="flex-1 max-w-md relative hidden md:block">
               <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-              <input 
+              <input
                 id="customer_desktop_search"
                 name="customer_desktop_search"
-                type="text" 
+                type="text"
                 placeholder={activeSearchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -489,7 +489,7 @@ export default function CustomerHeader({
                     setSearchQuery('');
                     onClearSearch?.();
                   }}
-                  className="absolute right-14 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-white"
+                  className="absolute right-14 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700  "
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
@@ -498,7 +498,7 @@ export default function CustomerHeader({
               <button
                 type="button"
                 onClick={submitSearch}
-                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl bg-indigo-700 text-white shadow-sm hover:bg-indigo-600 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl bg-indigo-700 text-white shadow-sm hover:bg-indigo-600  "
                 aria-label="Search"
               >
                 <Search className="h-4 w-4" />
@@ -521,7 +521,7 @@ export default function CustomerHeader({
                 >
                   <Bell className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex min-w-[18px] items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-semibold text-white ring-2 ring-white dark:ring-slate-950">
+                    <span className="absolute -right-1 -top-1 flex min-w-[18px] items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-semibold text-white ring-2 ring-white ">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -530,21 +530,21 @@ export default function CustomerHeader({
               </div>
 
               {activeUser ? (
-                <button 
+                <button
                   onClick={() => setActiveTab('wishlist')}
-                  className="relative flex h-9 w-9 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-rose-600 shadow-sm transition hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full border border-rose-100 bg-rose-50 text-rose-600 shadow-sm transition hover:bg-rose-100   "
                   aria-label="Open wishlist"
                   title="Wishlist"
                 >
                   <Heart className="h-4 w-4" />
                   {wishlistCount > 0 && (
-                    <span className="absolute bottom-0 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[8px] font-semibold leading-none text-white ring-2 ring-white dark:ring-slate-950">
+                    <span className="absolute bottom-0 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[8px] font-semibold leading-none text-white ring-2 ring-white ">
                       {wishlistCount > 9 ? '9+' : wishlistCount}
                     </span>
                   )}
                 </button>
               ) : (
-                <button 
+                <button
                   onClick={() => setIsAuthOpen(true)}
                   className="bg-indigo-600 text-white px-3 py-2 rounded-full text-[9px] font-semibold hover:bg-indigo-500 shadow flex items-center gap-1.5"
                 >
@@ -554,7 +554,7 @@ export default function CustomerHeader({
               )}
 
               {/* Direct Future product booking activator */}
-              <button 
+              <button
                 onClick={() => setIsRequestOpen(true)}
                 className="bg-indigo-600 hover:bg-violet-600 text-white px-3 sm:px-3.5 py-2 rounded-full text-[10px] sm:text-xs font-semibold shadow flex items-center gap-1.5"
               >
@@ -567,10 +567,10 @@ export default function CustomerHeader({
           {(activeTab === 'home' || activeTab === 'search') && (
             <div className="relative md:hidden pb-1 w-full animate-fade-in">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input 
+              <input
                 id="customer_mobile_search"
                 name="customer_mobile_search"
-                type="text" 
+                type="text"
                 placeholder={activeSearchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -588,13 +588,13 @@ export default function CustomerHeader({
                     setSearchQuery('');
                     onClearSearch?.();
                   }}
-                  className="absolute right-14 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-white"
+                  className="absolute right-14 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700  "
                   aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
-              <button type="button" onClick={submitSearch} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl bg-indigo-700 text-white shadow-sm dark:bg-indigo-600" aria-label="Search">
+              <button type="button" onClick={submitSearch} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl bg-indigo-700 text-white shadow-sm " aria-label="Search">
                 <Search className="h-4 w-4" />
               </button>
               {isSearchLoading && <span className="absolute -bottom-4 left-3 text-[9px] font-semibold text-slate-400">Searching...</span>}
@@ -604,7 +604,7 @@ export default function CustomerHeader({
           )}
 
           {/* Desktop Navigation Tabs (Horizontal Menu) */}
-          <div className="hidden md:flex items-center justify-between border-t border-slate-200/80 dark:border-slate-800/80 pt-2.5 mt-1">
+          <div className="hidden md:flex items-center justify-between border-t border-slate-200/80  pt-2.5 mt-1">
             <div className="flex items-center gap-1">
               {[
                 { id: 'home', label: 'Storefront', icon: Store },
@@ -621,11 +621,11 @@ export default function CustomerHeader({
                     onClick={() => setActiveTab(tab.id as any)}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[9px] font-semibold transition-all ${
                       isActive
-                        ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/60 shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+                        ? 'bg-indigo-50  text-indigo-600  border border-indigo-200  shadow-sm'
+                        : 'text-slate-500  hover:bg-slate-100  hover:text-slate-900 '
                     }`}
                   >
-                    <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                    <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-indigo-600 ' : 'text-slate-400'}`} />
                     <span>{tab.label}</span>
                     {tab.count && tab.count > 0 ? (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${tab.pulse ? 'bg-indigo-600 text-white animate-pulse' : 'bg-rose-600 text-white'}`}>

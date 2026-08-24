@@ -26,17 +26,17 @@ const nextStatusMap: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  pending_delivery_approval: 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200',
-  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  accepted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  packed: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
-  out_for_delivery: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
-  delivered: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-  cancelled: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
-  delivery_rejected: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
+  pending_delivery_approval: 'bg-amber-100 text-amber-900  ',
+  pending: 'bg-amber-100 text-amber-800  ',
+  accepted: 'bg-blue-100 text-blue-800  ',
+  packed: 'bg-indigo-100 text-indigo-800  ',
+  out_for_delivery: 'bg-violet-100 text-violet-800  ',
+  delivered: 'bg-emerald-100 text-emerald-800  ',
+  cancelled: 'bg-rose-100 text-rose-800  ',
+  delivery_rejected: 'bg-rose-100 text-rose-800  '
 };
 
-const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
+const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100   ';
 
 const money = (value: any) => `Rs. ${Number(value || 0).toFixed(2)}`;
 
@@ -246,7 +246,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
   const [queueLoading, setQueueLoading] = useState(false);
   const [codChoiceOrder, setCodChoiceOrder] = useState<Order | null>(null);
   const [codCollection, setCodCollection] = useState<{ order: Order; qrDataUrl: string; upiUrl: string; providerRef: string } | null>(null);
-  
+
   const normalizedRoles = useMemo(() => roles.map((role) => String(role).trim()), [roles]);
   const isOwner = normalizedRoles.includes('admin');
   const isCustomerCare = normalizedRoles.includes('customer_care') && !isOwner;
@@ -536,10 +536,10 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
     paymentPending: invoiceQueue.filter((order) => (order.paymentStatus || order.paymentDetails?.status) !== 'paid').length
   };
   const priorityBadgeClass = (order: Order) => {
-    if (order.invoiceQueue?.isDelayed) return 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300';
-    if (order.invoiceQueue?.isDueSoon) return 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300';
-    if (order.invoiceQueue?.scheduledDay === 'today') return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300';
-    return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+    if (order.invoiceQueue?.isDelayed) return 'bg-rose-100 text-rose-800  ';
+    if (order.invoiceQueue?.isDueSoon) return 'bg-amber-100 text-amber-800  ';
+    if (order.invoiceQueue?.scheduledDay === 'today') return 'bg-indigo-100 text-indigo-800  ';
+    return 'bg-slate-100 text-slate-700  ';
   };
 
   return (
@@ -578,7 +578,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                 className={`rounded-lg px-3 py-2 text-[10px] font-semibold uppercase transition ${
                   queueDateFilter === filter
                     ? 'bg-indigo-700 text-white shadow'
-                    : 'border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+                    : 'border border-slate-200 text-slate-600 hover:bg-slate-50   '
                 }`}
               >
                 {filter}
@@ -588,32 +588,32 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
         </div>
 
         <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
-            <p className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Due Soon</p>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3  ">
+            <p className="text-[10px] font-semibold uppercase text-amber-700 ">Due Soon</p>
             <p className="mt-1 text-xl font-semibold">{queueCounts.dueSoon}</p>
           </div>
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-900 dark:bg-rose-950/20">
-            <p className="text-[10px] font-semibold uppercase text-rose-700 dark:text-rose-300">Delayed</p>
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3  ">
+            <p className="text-[10px] font-semibold uppercase text-rose-700 ">Delayed</p>
             <p className="mt-1 text-xl font-semibold">{queueCounts.delayed}</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3  ">
             <p className="text-[10px] font-semibold uppercase text-slate-500">Payment Pending</p>
             <p className="mt-1 text-xl font-semibold">{queueCounts.paymentPending}</p>
           </div>
         </div>
 
         {queueLoading ? (
-          <div className="flex items-center justify-center rounded-xl border border-dashed border-slate-200 py-8 text-xs font-bold text-slate-500 dark:border-slate-800">
+          <div className="flex items-center justify-center rounded-xl border border-dashed border-slate-200 py-8 text-xs font-bold text-slate-500 ">
             Loading invoice priority queue...
           </div>
         ) : invoiceQueue.length === 0 ? (
-          <div className="flex items-center justify-center rounded-xl border border-dashed border-slate-200 py-8 text-xs font-bold text-slate-500 dark:border-slate-800">
+          <div className="flex items-center justify-center rounded-xl border border-dashed border-slate-200 py-8 text-xs font-bold text-slate-500 ">
             No active orders for this queue.
           </div>
         ) : (
-          <div className="max-h-[420px] overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="max-h-[420px] overflow-auto rounded-xl border border-slate-200 ">
             <table className="w-full min-w-[920px] text-left text-xs">
-              <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-950">
+              <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase text-slate-500 ">
                 <tr>
                   <th className="px-3 py-2 font-semibold">Priority</th>
                   <th className="px-3 py-2 font-semibold">Slot</th>
@@ -634,7 +634,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                   const nextStatus = nextStatusMap[order.status] || 'delivered';
 
                   const canProgress = canUpdateOrderStatus(order) && !((isUpi || isCashfree) && nextStatus === 'accepted' && paymentStatus !== 'paid') && !(nextStatus === 'delivered' && isCod && paymentStatus !== 'paid');
-                  
+
                   const canCollectCodDelivery = (isDeliveryPartner || isOwner)
                     && isCod
                     && paymentStatus !== 'paid'
@@ -652,10 +652,10 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                     && order.status !== 'cancelled';
 
                   return (
-                    <tr key={order.id} className="border-t border-slate-100 dark:border-slate-800">
+                    <tr key={order.id} className="border-t border-slate-100 ">
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-semibold text-indigo-700  ">
                             {index + 1}
                           </span>
                           <span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase ${priorityBadgeClass(order)}`}>
@@ -694,7 +694,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                             <button
                               type="button"
                               onClick={() => handlePrintInvoice(order)}
-                              className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                              className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-semibold hover:bg-slate-50  "
                             >
                               Print
                             </button>
@@ -704,7 +704,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                               type="button"
                               disabled={loadingId === order.id}
                               onClick={() => handleRejectExtendedDelivery(order)}
-                              className="rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-[10px] font-semibold text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+                              className="rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-[10px] font-semibold text-rose-700 disabled:opacity-50   "
                             >
                               Reject
                             </button>
@@ -735,7 +735,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                               type="button"
                               disabled={loadingId === order.id || !isOwner}
                               onClick={() => handleRefreshCashfreePayment(order)}
-                              className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[10px] font-semibold text-amber-700 disabled:opacity-50 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                              className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[10px] font-semibold text-amber-700 disabled:opacity-50   "
                             >
                               Refresh Cashfree
                             </button>
@@ -794,7 +794,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
       </div>
 
       {filteredOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border py-12 text-sm opacity-70 dark:border-slate-700">
+        <div className="flex flex-col items-center justify-center rounded-xl border py-12 text-sm opacity-70 ">
           <Package className="h-10 w-10 mb-3 opacity-30" />
           <p>{searchQuery || statusFilter !== 'all' ? 'No orders match your filters.' : 'No orders found yet.'}</p>
         </div>
@@ -814,13 +814,13 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
               && paymentStatus !== 'paid'
               && order.status !== 'cancelled'
               && (order.status === 'out_for_delivery' || order.deliveryMethod === 'pickup' || order.status === 'packed');
-            
+
             const canCollectCod = (isDeliveryPartner || isOwner)
               && isCod
               && paymentStatus !== 'paid'
               && order.deliveryMethod === 'delivery'
               && ['packed', 'out_for_delivery', 'delivered'].includes(order.status);
-            
+
             const canVerifyUpiPaid = isOwner && isUpi && paymentStatus !== 'paid';
 
             return (
@@ -835,7 +835,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
 
                     {/* Store Verification Pending Badge for UPI */}
                     {(isUpi || isCashfree) && paymentStatus !== 'paid' && (
-                      <span className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 animate-pulse">
+                      <span className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase bg-amber-100 text-amber-800   animate-pulse">
                         Verification Pending from Store Side
                       </span>
                     )}
@@ -850,7 +850,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
 
                 {/* Expanded Detail */}
                 {isExpanded && (
-                  <div className="border-t border-slate-200 p-4 dark:border-slate-700">
+                  <div className="border-t border-slate-200 p-4 ">
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       <div>
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider opacity-70">Order Identity</p>
@@ -885,7 +885,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                     </div>
 
                     {/* Order Items */}
-                    <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-700">
+                    <div className="mt-4 border-t border-slate-200 pt-4 ">
                       <p className="text-[10px] font-semibold uppercase tracking-wider opacity-70 mb-2">Items</p>
                       <div className="space-y-1">
                         {order.items?.map((item: any, idx: number) => (
@@ -895,7 +895,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                           </div>
                         ))}
                       </div>
-                      <div className="mt-3 space-y-1 border-t border-slate-200 pt-2 text-xs dark:border-slate-700">
+                      <div className="mt-3 space-y-1 border-t border-slate-200 pt-2 text-xs ">
                         <div className="flex justify-between">
                           <span className="opacity-70">Product subtotal</span>
                           <span className="font-bold">{money(order.amountTotal ?? order.productTotal)}</span>
@@ -920,7 +920,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                     </div>
 
                     {/* Actions */}
-                    <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+                    <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4 ">
                       {canUpdateOrderStatus(order) ? (
                         <>
                           <button
@@ -943,7 +943,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                             <button
                               disabled={loadingId === order.id}
                               onClick={() => handleRejectExtendedDelivery(order)}
-                              className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200"
+                              className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 disabled:opacity-50   "
                             >
                               Reject Delivery Request
                             </button>
@@ -952,9 +952,9 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       ) : (
                         <span className="text-xs font-bold opacity-70 py-2">Order {order.status === 'delivered' ? 'completed' : 'cancelled'}</span>
                       )}
-                      
+
                       {canPrintBill(order) && (
-                        <button className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold flex items-center gap-1.5 dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
+                        <button className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold flex items-center gap-1.5 " onClick={() => handlePrintInvoice(order)}>
                           <Printer className="h-3.5 w-3.5" /> Print Bill
                         </button>
                       )}
@@ -980,7 +980,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       {isOwner && isCashfree && paymentStatus !== 'paid' && (
                         <button
                           disabled={loadingId === order.id}
-                          className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                          className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 disabled:opacity-50   "
                           onClick={() => handleRefreshCashfreePayment(order)}
                         >
                           {loadingId === order.id ? 'Checking...' : 'Refresh Cashfree Status'}
@@ -988,9 +988,9 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       )}
 
                       {canSendWhatsAppBill(order) && (
-                        <button 
-                          disabled={loadingId === order.id} 
-                          className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 flex items-center gap-1.5" 
+                        <button
+                          disabled={loadingId === order.id}
+                          className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50    flex items-center gap-1.5"
                           onClick={() => handleSendWhatsAppInvoice(order)}
                         >
                           <Send className="w-3.5 h-3.5" />
@@ -1001,7 +1001,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       {isOwner && (
                         <button
                           disabled={loadingId === order.id}
-                          className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200 flex items-center gap-1.5"
+                          className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 disabled:opacity-50    flex items-center gap-1.5"
                           onClick={() => handleDeleteOrder(order)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1023,13 +1023,13 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                   <h3 className="text-sm font-semibold">Completed Delivered Invoices</h3>
                   <p className="text-[11px] text-slate-500">Delivered orders are stored here.</p>
                 </div>
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase text-emerald-700  ">
                   {completedFilteredOrders.length} Completed
                 </span>
               </div>
-              <div className="max-h-[340px] overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="max-h-[340px] overflow-auto rounded-xl border border-slate-200 ">
                 <table className="w-full min-w-[760px] text-left text-xs">
-                  <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-950">
+                  <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] uppercase text-slate-500 ">
                     <tr>
                       <th className="px-3 py-2 font-semibold">Invoice</th>
                       <th className="px-3 py-2 font-semibold">Customer</th>
@@ -1044,7 +1044,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                       const paymentStatus = order.paymentStatus || order.paymentDetails?.status || 'pending';
                       const paymentMethod = order.paymentMethod || order.paymentDetails?.method || 'cod';
                       return (
-                        <tr key={order.id} className="border-t border-slate-100 dark:border-slate-800">
+                        <tr key={order.id} className="border-t border-slate-100 ">
                           <td className="px-3 py-3">
                             <p className="font-mono font-semibold">{order.orderRef || order.id.slice(0, 8)}</p>
                             <p className="break-all font-mono text-[10px] text-slate-500">{order.id}</p>
@@ -1063,17 +1063,17 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                           <td className="px-3 py-3">
                             <div className="flex justify-end gap-2">
                               {canPrintBill(order) && (
-                                <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-semibold dark:border-slate-600" onClick={() => handlePrintInvoice(order)}>
+                                <button className="rounded-lg border border-slate-300 px-3 py-1.5 text-[10px] font-semibold " onClick={() => handlePrintInvoice(order)}>
                                   Print
                                 </button>
                               )}
                               {canSendWhatsAppBill(order) && (
-                                <button disabled={loadingId === order.id} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[10px] font-semibold text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 flex items-center gap-1" onClick={() => handleSendWhatsAppInvoice(order)}>
+                                <button disabled={loadingId === order.id} className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[10px] font-semibold text-emerald-800 disabled:opacity-50    flex items-center gap-1" onClick={() => handleSendWhatsAppInvoice(order)}>
                                   <Send className="w-3 h-3" /> WhatsApp Bill
                                 </button>
                               )}
                               {isOwner && (
-                                <button disabled={loadingId === order.id} className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[10px] font-semibold text-rose-700 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200" onClick={() => handleDeleteOrder(order)}>
+                                <button disabled={loadingId === order.id} className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[10px] font-semibold text-rose-700 disabled:opacity-50   " onClick={() => handleDeleteOrder(order)}>
                                   Archive
                                 </button>
                               )}
@@ -1100,12 +1100,12 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                 <h3 className="mt-1 font-serif text-xl font-semibold">{codChoiceOrder.orderRef || codChoiceOrder.id.slice(0, 8)}</h3>
                 <p className="text-xs text-slate-500">Ask customer how they want to pay the COD amount.</p>
               </div>
-              <button type="button" onClick={() => setCodChoiceOrder(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <button type="button" onClick={() => setCodChoiceOrder(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 ">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center dark:border-slate-800 dark:bg-slate-950">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center  ">
               <p className="text-[10px] font-semibold uppercase text-slate-500">Amount to collect</p>
               <p className="mt-1 text-3xl font-bold">{money(codChoiceOrder.finalTotal)}</p>
             </div>
@@ -1124,7 +1124,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                 type="button"
                 disabled={loadingId === codChoiceOrder.id}
                 onClick={() => openCodCollectionQr(codChoiceOrder)}
-                className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-4 text-sm font-semibold text-indigo-800 shadow-sm disabled:opacity-50 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200"
+                className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-4 text-sm font-semibold text-indigo-800 shadow-sm disabled:opacity-50   "
               >
                 Show QR Code
                 <span className="mt-1 block text-[10px] font-bold opacity-80">Submit UTR after payment</span>
@@ -1144,13 +1144,13 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
                 <h3 className="mt-1 font-serif text-xl font-semibold">{codCollection.order.orderRef || codCollection.order.id.slice(0, 8)}</h3>
                 <p className="text-xs text-slate-500">Show this exact amount QR to the customer.</p>
               </div>
-              <button type="button" onClick={() => setCodCollection(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <button type="button" onClick={() => setCodCollection(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 ">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center dark:border-emerald-900 dark:bg-emerald-950/30">
-              <p className="mb-2 text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300">Fixed payable amount</p>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center  ">
+              <p className="mb-2 text-xs font-semibold uppercase text-emerald-700 ">Fixed payable amount</p>
               <p className="mb-3 text-3xl font-bold">{money(codCollection.order.finalTotal)}</p>
               <img src={codCollection.qrDataUrl} alt="COD UPI QR" className="mx-auto h-56 w-56 rounded-xl bg-white p-2 shadow-sm" />
             </div>
@@ -1166,7 +1166,7 @@ export default function OrdersView({ orders, shop, roles = [], isDarkMode, refre
             </label>
 
             <div className="mt-5 flex gap-2">
-              <button type="button" onClick={() => setCodCollection(null)} className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold dark:border-slate-700">
+              <button type="button" onClick={() => setCodCollection(null)} className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold ">
                 Cancel
               </button>
               <button type="button" disabled={loadingId === codCollection.order.id} onClick={submitCodCollection} className="flex-1 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">

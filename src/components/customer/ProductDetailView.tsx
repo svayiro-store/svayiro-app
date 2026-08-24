@@ -120,23 +120,23 @@ export default function ProductDetailView({
   };
 
   return (
-    <div className="mx-auto mb-6 flex w-full max-w-6xl flex-col rounded-2xl border border-slate-200/60 bg-white p-3 font-sans shadow-sm animate-fadeIn select-none dark:border-slate-800/60 dark:bg-slate-900 md:p-5">
-      
+    <div className="mx-auto mb-6 flex w-full max-w-6xl flex-col rounded-2xl border border-slate-200/60 bg-white p-3 font-sans shadow-sm animate-fadeIn select-none   md:p-5">
+
       {/* Back Button and Actions Header */}
-      <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-850">
-        <button 
+      <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 ">
+        <button
           onClick={() => setSelectedProduct(null)}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+          className="flex items-center gap-2 text-xs font-semibold text-slate-700  hover:text-indigo-600  transition"
         >
           <ArrowLeft className="h-4.5 w-4.5" />
           <span>Back to Store</span>
         </button>
-        
+
         <div className="flex items-center gap-3">
             {/* Share product */}
             <button
               onClick={() => onShareProduct?.(selectedProduct)}
-              className="p-2 rounded-full border bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all"
+              className="p-2 rounded-full border bg-slate-100  border-slate-200  text-slate-500 hover:text-indigo-600  transition-all"
               title="Share Product"
             >
               <Share2 className="h-4.5 w-4.5" />
@@ -148,8 +148,8 @@ export default function ProductDetailView({
                 onClick={() => toggleWishlist(selectedProduct.id)}
                 className={`p-2 rounded-full border transition-all ${
                   activeUser?.wishlist.includes(selectedProduct.id)
-                    ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-500'
-                    : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 hover:text-rose-500'
+                    ? 'bg-rose-50  border-rose-200  text-rose-500'
+                    : 'bg-slate-100  border-slate-200  text-slate-400 hover:text-rose-500'
                 }`}
                 title="Toggle Bookmark"
               >
@@ -157,9 +157,9 @@ export default function ProductDetailView({
               </button>
             )}
 
-            <button 
-              onClick={() => setSelectedProduct(null)} 
-              className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+            <button
+              onClick={() => setSelectedProduct(null)}
+              className="p-1.5 rounded-full hover:bg-slate-100  text-slate-400"
               title="Close viewer"
             >
               <X className="h-5 w-5" />
@@ -169,14 +169,14 @@ export default function ProductDetailView({
 
       {/* Main Content Area */}
       <div className="grid w-full flex-1 grid-cols-1 gap-5 py-2 md:py-4 lg:grid-cols-[minmax(280px,390px)_minmax(0,1fr)] lg:items-start">
-        
+
         {/* Left Side: Gorgeous Image Presentation */}
         <div className="flex w-full max-w-[390px] flex-col gap-3 justify-self-center lg:sticky lg:top-24">
-          <div className="relative aspect-[1/1.02] w-full overflow-hidden rounded-2xl border border-slate-200/50 bg-slate-100 shadow-sm group dark:border-slate-800/50 dark:bg-[#111827]">
-            <img 
-              src={productImages[activeImageIndex] || productImages[0]} 
-              alt={selectedProduct.name} 
-              className="h-full w-full object-contain p-1 transition-all duration-500 group-hover:scale-[1.02]" 
+          <div className="relative aspect-[1/1.02] w-full overflow-hidden rounded-2xl border border-slate-200/50 bg-slate-100 shadow-sm group  ">
+            <img
+              src={productImages[activeImageIndex] || productImages[0]}
+              alt={selectedProduct.name}
+              className="h-full w-full object-contain p-1 transition-all duration-500 group-hover:scale-[1.02]"
               referrerPolicy="no-referrer"
             />
             {hasDiscount && (
@@ -192,7 +192,7 @@ export default function ProductDetailView({
                 <button
                   type="button"
                   onClick={goToPreviousImage}
-                  className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-slate-800 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white dark:border-slate-700 dark:bg-slate-950/85 dark:text-white"
+                  className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-slate-800 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white   "
                   aria-label="Previous product image"
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -200,7 +200,7 @@ export default function ProductDetailView({
                 <button
                   type="button"
                   onClick={goToNextImage}
-                  className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-slate-800 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white dark:border-slate-700 dark:bg-slate-950/85 dark:text-white"
+                  className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/90 text-slate-800 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white   "
                   aria-label="Next product image"
                 >
                   <ChevronRight className="h-5 w-5" />
@@ -218,7 +218,7 @@ export default function ProductDetailView({
                 </div>
               </>
             )}
-            
+
             {/* Dynamic tag */}
             {isLowStock && (
               <div className={`absolute ${hasDiscount ? 'left-3 top-12' : 'left-3 top-3'} z-10 flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1.5 text-[10px] font-semibold uppercase text-white shadow-lg`}>
@@ -237,16 +237,16 @@ export default function ProductDetailView({
           {hasMultipleImages && (
             <div className="flex gap-3 overflow-x-auto py-1 scrollbar-none">
               {productImages.map((img, idx) => (
-                <button 
-                  key={idx} 
+                <button
+                  key={idx}
                   onClick={() => setActiveImageIndex(idx)}
                   className={`h-14 w-14 overflow-hidden rounded-xl border-2 transition-all sm:h-16 sm:w-16 ${
-                    activeImageIndex === idx 
-                      ? 'border-indigo-600 ring-2 ring-indigo-600/20 bg-white scale-105 shadow-md' 
-                      : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600'
+                    activeImageIndex === idx
+                      ? 'border-indigo-600 ring-2 ring-indigo-600/20 bg-white scale-105 shadow-md'
+                      : 'border-slate-200  hover:border-slate-400 '
                   }`}
                 >
-                  <img src={img} alt="" className="h-full w-full object-contain bg-white p-1 dark:bg-slate-950" referrerPolicy="no-referrer" />
+                  <img src={img} alt="" className="h-full w-full object-contain bg-white p-1 " referrerPolicy="no-referrer" />
                 </button>
               ))}
             </div>
@@ -255,46 +255,46 @@ export default function ProductDetailView({
 
         {/* Right Side: Product Description, Action Controllers & Custom Reviews */}
         <div className="flex min-w-0 flex-col justify-between space-y-6">
-          
+
           <div className="space-y-6 text-left">
-            
+
             {/* Breadcrumbs or Category block */}
             <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1 rounded-full">
+              <span className="text-xs font-mono font-semibold text-indigo-600  uppercase tracking-widest bg-indigo-50  px-3 py-1 rounded-full">
                 {categories.find(c => c.id === selectedProduct.categoryId)?.name || 'Chakki Specialty'}
               </span>
-              
-              <span className={`text-xs font-semibold ${selectedProduct.stockCount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+
+              <span className={`text-xs font-semibold ${selectedProduct.stockCount > 0 ? 'text-emerald-600 ' : 'text-rose-500'}`}>
                 {selectedProduct.stockCount === 0 ? 'Out of stock' : isLowStock ? `Only ${selectedProduct.stockCount} left` : 'In stock'}
               </span>
             </div>
 
             {/* Title & Stats */}
             <div className="space-y-2">
-              <h1 className="font-serif text-2xl font-semibold tracking-normal text-slate-900 dark:text-white sm:text-3xl">
+              <h1 className="font-serif text-2xl font-semibold tracking-normal text-slate-900  sm:text-3xl">
                 {selectedProduct.name}
               </h1>
-              
+
               <div className="flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1 text-amber-500 font-semibold bg-amber-50 dark:bg-amber-950/20 px-3 py-1 rounded-full border border-amber-200/40 dark:border-amber-800/40">
+                <div className="flex items-center gap-1 text-amber-500 font-semibold bg-amber-50  px-3 py-1 rounded-full border border-amber-200/40 ">
                   <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
                   <span>{selectedProduct.ratingAverage || 'New'} Avg Rating</span>
                 </div>
-                <span className="text-slate-500 dark:text-slate-400 font-medium">({selectedProduct.ratingCount} Customer Reviews)</span>
+                <span className="text-slate-500  font-medium">({selectedProduct.ratingCount} Customer Reviews)</span>
               </div>
             </div>
 
             {/* Sizable Price Box */}
-            <div className="space-y-2 rounded-2xl border border-slate-200/40 bg-slate-100/50 p-4 dark:border-slate-800/40 dark:bg-[#111827]/40">
+            <div className="space-y-2 rounded-2xl border border-slate-200/40 bg-slate-100/50 p-4  ">
               <div className="flex justify-between items-baseline">
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-black text-slate-900 dark:text-white">
+                  <span className="text-3xl font-black text-slate-900 ">
                     {money(activePrice)}
                   </span>
                   {hasDiscount && (
                     <>
                       <span className="text-slate-400 line-through text-sm">{money(selectedProduct.basePrice)}</span>
-                      <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold px-2.5 py-0.5 rounded-md">
+                      <span className="bg-emerald-500/10  text-emerald-600  text-xs font-semibold px-2.5 py-0.5 rounded-md">
                         Save {discountPercent}%
                       </span>
                     </>
@@ -305,31 +305,31 @@ export default function ProductDetailView({
 
             {/* Net weight description */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50">
+              <div className="p-4 rounded-2xl bg-white  border border-slate-200/50 ">
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Product Package Weight</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1">{formatProductMeasure(selectedProduct).toLowerCase()}</p>
+                <p className="text-sm font-semibold text-slate-900  mt-1">{formatProductMeasure(selectedProduct).toLowerCase()}</p>
               </div>
-              <div className="p-4 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50">
+              <div className="p-4 rounded-2xl bg-white  border border-slate-200/50 ">
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Store Product Quality</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1">100% Hand-Selected Quality</p>
+                <p className="text-sm font-semibold text-slate-900  mt-1">100% Hand-Selected Quality</p>
               </div>
             </div>
 
             {/* Product Description */}
             <div className="space-y-2 text-left">
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Sourcing & Quality Standards</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="text-sm text-slate-600  leading-relaxed">
                 {selectedProduct.description}
               </p>
             </div>
 
             {/* Interactive Qty Counter (if in stock) */}
             {selectedProduct.stockCount > 0 && (
-              <div className="p-4 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between gap-4">
+              <div className="p-4 rounded-2xl bg-white  border border-slate-200/50  flex items-center justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Select Quantity</p>
-                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-900 dark:text-white">
-                    <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-900 ">
+                    <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700   ">
                       {cartQuantityLabel(selectedProduct, detailQty).toLowerCase()}
                     </span>
                     <span>Total: {money(detailTotal)}</span>
@@ -346,7 +346,7 @@ export default function ProductDetailView({
                         className={`rounded-xl border px-3 py-2 text-xs font-semibold transition disabled:opacity-40 ${
                           detailQty === option.value
                             ? 'border-indigo-600 bg-indigo-600 text-white shadow'
-                            : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                            : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-indigo-300   '
                         }`}
                       >
                         {option.label}
@@ -354,18 +354,18 @@ export default function ProductDetailView({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/30 dark:border-slate-700/30">
+                  <div className="flex items-center gap-2 bg-slate-100  p-1 rounded-xl border border-slate-200/30 ">
                     <button
                       onClick={() => setDetailQty(prev => Math.max(1, prev - 1))}
-                      className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:shadow-sm transition"
+                      className="p-1.5 rounded-lg hover:bg-white  text-slate-600  hover:shadow-sm transition"
                       title="Reduce quantity"
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </button>
-                    <span className="w-8 text-center text-xs font-semibold text-slate-800 dark:text-white">{detailQty}</span>
+                    <span className="w-8 text-center text-xs font-semibold text-slate-800 ">{detailQty}</span>
                     <button
                       onClick={() => setDetailQty(prev => Math.min(selectedProduct.stockCount, prev + 1))}
-                      className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:shadow-sm transition"
+                      className="p-1.5 rounded-lg hover:bg-white  text-slate-600  hover:shadow-sm transition"
                       title="Increase quantity"
                     >
                       <Plus className="h-3.5 w-3.5" />
@@ -380,9 +380,9 @@ export default function ProductDetailView({
           {/* ATC Buttons panel */}
           <div className="space-y-4 text-left">
             {selectedProduct.stockCount === 0 ? (
-              <button disabled className="w-full bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-semibold py-4 text-xs rounded-2xl cursor-not-allowed uppercase tracking-wider">Product out of stock</button>
+              <button disabled className="w-full bg-slate-200  text-slate-400  font-semibold py-4 text-xs rounded-2xl cursor-not-allowed uppercase tracking-wider">Product out of stock</button>
             ) : (
-              <button 
+              <button
                 onClick={() => {
                   addToCart(selectedProduct.id, detailQty);
                   setSelectedProduct(null);
@@ -396,21 +396,21 @@ export default function ProductDetailView({
           </div>
 
           {/* Review submit sub-component inside Drawer */}
-          <div className="border-t border-slate-200/50 dark:border-slate-800/50 pt-8 mt-8 space-y-6 text-left">
+          <div className="border-t border-slate-200/50  pt-8 mt-8 space-y-6 text-left">
             <div className="flex justify-between items-center">
-              <h4 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Customer Reviews</h4>
-              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{selectedProduct.ratingCount} verified ratings</span>
+              <h4 className="font-serif text-lg font-semibold text-slate-900 ">Customer Reviews</h4>
+              <span className="text-xs text-indigo-600  font-semibold">{selectedProduct.ratingCount} verified ratings</span>
             </div>
-            
+
             <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
-              <ReviewList pId={selectedProduct.id} reviews={reviews} isDark={isDarkMode} />
+              <ReviewList pId={selectedProduct.id} reviews={reviews} />
             </div>
-            
+
             {/* Submit review */}
-            <div className="bg-white dark:bg-[#111827] border border-slate-200/50 dark:border-slate-800/50 p-5 rounded-3xl space-y-4">
+            <div className="bg-white  border border-slate-200/50  p-5 rounded-3xl space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h5 className="font-semibold text-xs text-slate-800 dark:text-slate-200">
+                  <h5 className="font-semibold text-xs text-slate-800 ">
                     {ownReview ? 'Edit your product review' : 'How was your product quality?'}
                   </h5>
                   <p className="text-[10px] text-slate-400 mt-0.5">
@@ -423,22 +423,22 @@ export default function ProductDetailView({
                 </div>
                 <div className="flex gap-1.5">
                   {[1,2,3,4,5].map(star => (
-                    <Star 
-                      key={star} 
-                      onClick={() => setTempRating(star)} 
-                      className={`h-5 w-5 cursor-pointer transition ${tempRating >= star ? 'text-amber-500 fill-amber-500' : 'text-slate-300 hover:scale-110'}`} 
+                    <Star
+                      key={star}
+                      onClick={() => setTempRating(star)}
+                      className={`h-5 w-5 cursor-pointer transition ${tempRating >= star ? 'text-amber-500 fill-amber-500' : 'text-slate-300 hover:scale-110'}`}
                     />
                   ))}
                 </div>
               </div>
               <div className="flex gap-3">
-                <input 
+                <input
                   id="product_review_comment"
                   name="product_review_comment"
-                  type="text" 
+                  type="text"
                   disabled={!activeUser}
                   placeholder={activeUser ? 'Optional: write a short review...' : 'Please sign in to rate this product'}
-                  value={tempComment} 
+                  value={tempComment}
                   onChange={(e) => setTempComment(e.target.value)}
                   className={`flex-1 ${commonStyles.input}`}
                 />
@@ -454,11 +454,11 @@ export default function ProductDetailView({
           </div>
 
           {similarProducts.length > 0 && (
-            <div className="border-t border-slate-200/50 dark:border-slate-800/50 pt-8 mt-8 space-y-4 text-left">
+            <div className="border-t border-slate-200/50  pt-8 mt-8 space-y-4 text-left">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h4 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">Similar Products</h4>
-                  <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Based on category, product name, and description.</p>
+                  <h4 className="font-serif text-lg font-semibold text-slate-900 ">Similar Products</h4>
+                  <p className="text-[10px] font-semibold text-slate-500 ">Based on category, product name, and description.</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -476,7 +476,7 @@ export default function ProductDetailView({
                       }}
                       className={`overflow-hidden rounded-2xl border text-left transition hover:-translate-y-0.5 hover:shadow-md ${isDarkMode ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-white'}`}
                     >
-                      <div className="aspect-square overflow-hidden bg-slate-100 dark:bg-slate-900">
+                      <div className="aspect-square overflow-hidden bg-slate-100 ">
                         <img
                           src={product.images?.[0] || productImageFallback}
                           alt={product.name}
@@ -485,9 +485,9 @@ export default function ProductDetailView({
                         />
                       </div>
                       <div className="space-y-1 p-2">
-                        <p className="line-clamp-2 text-[11px] font-medium text-slate-900 dark:text-white">{product.name}</p>
+                        <p className="line-clamp-2 text-[11px] font-medium text-slate-900 ">{product.name}</p>
                         <div className="flex items-baseline gap-1">
-                          <span className="text-xs font-black text-indigo-600 dark:text-indigo-300">{money(price)}</span>
+                          <span className="text-xs font-black text-indigo-600 ">{money(price)}</span>
                           {hasDiscount && <span className="text-[9px] text-slate-400 line-through">{money(product.basePrice)}</span>}
                         </div>
                         <p className="text-[9px] font-semibold text-slate-500">{categories.find(c => c.id === product.categoryId)?.name || 'Product'}</p>

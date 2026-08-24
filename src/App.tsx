@@ -202,7 +202,7 @@ export default function App() {
     }
     return 'customer';
   });
-  
+
   // Toast notifications state
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -216,7 +216,7 @@ export default function App() {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, type === 'error' ? 4200 : 2600);
   };
-  
+
   // Dark mode has been disabled. Keep these values for existing component props.
   const isDarkMode = false;
 
@@ -518,7 +518,7 @@ export default function App() {
         api.getActiveCampaigns(),
         api.getNotifications()
       ]);
-      
+
       setShop(normalizeShop(shopRes));
       setCategories(categoriesRes.map(normalizeCategory));
       const normalizedProducts = productsRes.map(normalizeProduct);
@@ -568,7 +568,7 @@ export default function App() {
   useEffect(() => {
     const splashTimer = window.setTimeout(() => setStartupSplashDone(true), 3000);
     loadCentralResources();
-    
+
     // Check if URL has ?mode=admin or ?mode=customer and clean it up
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -582,7 +582,7 @@ export default function App() {
         window.history.replaceState({}, '', newUrl);
       }
     }
-    
+
     const restoreSession = async () => {
       const cachedToken = localStorage.getItem('svayiro_auth_token');
       const cachedPhone = localStorage.getItem('svayiro_active_phone');
@@ -645,7 +645,7 @@ export default function App() {
       if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const latestNotifs = await api.getNotifications();
-        
+
         // Match brand new 'order' type items that have not been registered in the seen list
         const newOrders = latestNotifs.filter(
           n => n.type === 'order' && !seenNotifIdsRef.current.has(n.id)
@@ -877,11 +877,11 @@ export default function App() {
         <AlertCircle className="h-12 w-12 text-rose-500" />
         <p className="font-bold text-lg">Backend Communication Error</p>
         <p className="text-xs max-w-md opacity-80">{errorMessage}</p>
-        <button 
+        <button
           onClick={() => {
             setLoading(true);
             loadCentralResources();
-          }} 
+          }}
           className="bg-indigo-600 text-white font-bold text-xs px-4 py-2 rounded-full"
         >
           Retry Connection
@@ -933,7 +933,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowAdminPassword((prev) => !prev)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100  "
                 aria-label={showAdminPassword ? 'Hide password' : 'Show password'}
                 title={showAdminPassword ? 'Hide password' : 'Show password'}
               >
@@ -972,11 +972,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen min-h-dvh flex flex-col overflow-x-clip bg-[#f8fafc] text-[#0f172a]">
-      
+
       {/* Render selected app configuration modes */}
       <Suspense fallback={renderRouteLoader()}>
         {currentMode === 'customer' && shop && CustomerApp ? (
-          <CustomerApp 
+          <CustomerApp
             shop={shop}
             categories={categories}
             products={products}
@@ -1001,7 +1001,7 @@ export default function App() {
             onLogout={handleLogout}
           />
         ) : shop && isConsoleUser(activeUser) && AdminApp ? (
-          <AdminApp 
+          <AdminApp
             shop={shop}
             categories={categories}
             products={products}
@@ -1024,12 +1024,12 @@ export default function App() {
             key={toast.id}
             className={`pointer-events-auto flex w-full items-start gap-2.5 rounded-xl border px-3 py-2.5 shadow-lg backdrop-blur-md transition-all duration-200 ${
               toast.type === 'success'
-                ? 'border-emerald-200 bg-emerald-50/95 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/95 dark:text-emerald-100'
+                ? 'border-emerald-200 bg-emerald-50/95 text-emerald-950   '
                 : toast.type === 'warning'
-                ? 'border-amber-200 bg-amber-50/95 text-amber-950 dark:border-amber-900 dark:bg-amber-950/95 dark:text-amber-100'
+                ? 'border-amber-200 bg-amber-50/95 text-amber-950   '
                 : toast.type === 'error'
-                ? 'border-rose-200 bg-rose-50/95 text-rose-950 dark:border-rose-900 dark:bg-rose-950/95 dark:text-rose-100'
-                : 'border-indigo-200 bg-indigo-50/95 text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/95 dark:text-indigo-100'
+                ? 'border-rose-200 bg-rose-50/95 text-rose-950   '
+                : 'border-indigo-200 bg-indigo-50/95 text-indigo-950   '
             }`}
           >
             <div className="mt-0.5 shrink-0">
@@ -1043,7 +1043,7 @@ export default function App() {
             </div>
             <button
               onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-              className="shrink-0 rounded-full p-0.5 text-current opacity-50 transition hover:bg-black/5 hover:opacity-90 dark:hover:bg-white/10"
+              className="shrink-0 rounded-full p-0.5 text-current opacity-50 transition hover:bg-black/5 hover:opacity-90 "
               aria-label="Dismiss notification"
             >
               <X className="h-3.5 w-3.5" />

@@ -67,19 +67,19 @@ export default function SearchResultsView({
 
   return (
     <div className={`rounded-xl border ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
-      <div className={`border-b border-slate-200 dark:border-slate-800 ${compactMobile ? 'p-2 sm:p-4' : 'p-4'}`}>
-        <div className="mb-2 flex flex-wrap items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+      <div className={`border-b border-slate-200  ${compactMobile ? 'p-2 sm:p-4' : 'p-4'}`}>
+        <div className="mb-2 flex flex-wrap items-center gap-1 text-xs text-slate-500 ">
           <button className="hover:text-indigo-600">Home</button>
           <span>/</span>
           <span>Search</span>
           <span>/</span>
           <span className="truncate">{query}</span>
         </div>
-        <h2 className={`${compactMobile ? 'text-xs sm:text-base' : 'text-base'} font-semibold text-slate-900 dark:text-white`}>
+        <h2 className={`${compactMobile ? 'text-xs sm:text-base' : 'text-base'} font-semibold text-slate-900 `}>
           Showing {products.length ? `1 - ${products.length}` : '0'} results for "{query}"
         </h2>
         <div className="mt-4 flex items-center justify-between gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Sort results</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 ">Sort results</span>
           <div className="relative" ref={sortWrapRef}>
             <button
               type="button"
@@ -110,8 +110,8 @@ export default function SearchResultsView({
                     }}
                     className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
                       searchSort === option.id
-                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
-                        : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900'
+                        ? 'bg-indigo-50 text-indigo-700  '
+                        : 'text-slate-700 hover:bg-slate-50  '
                     }`}
                   >
                     <span>{option.label}</span>
@@ -127,8 +127,8 @@ export default function SearchResultsView({
       {products.length === 0 ? (
         <div className="p-12 text-center">
           <Compass className="mx-auto mb-2 h-12 w-12 text-slate-400" />
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">No related items found</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Try another spelling or a broader search word.</p>
+          <p className="text-sm font-semibold text-slate-800 ">No related items found</p>
+          <p className="mt-1 text-xs text-slate-500 ">Try another spelling or a broader search word.</p>
         </div>
       ) : (
         <div className={compactMobile
@@ -194,17 +194,17 @@ export default function SearchResultsView({
                 <div className="p-1.5 sm:p-2 flex-1 flex flex-col justify-between gap-1 text-left">
                   <div className="space-y-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="max-w-[70%] truncate font-mono text-[8px] font-semibold uppercase text-slate-500 dark:text-slate-400 sm:text-[9px]">
+                      <span className="max-w-[70%] truncate font-mono text-[8px] font-semibold uppercase text-slate-500  sm:text-[9px]">
                         {categoryName}
                       </span>
                       <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                         <Star className="h-2.5 w-2.5 text-amber-500 fill-amber-500" />
-                        <span className="text-[9px] font-semibold text-slate-700 dark:text-slate-200 sm:text-[10px]">{prod.ratingAverage || 'New'}</span>
+                        <span className="text-[9px] font-semibold text-slate-700  sm:text-[10px]">{prod.ratingAverage || 'New'}</span>
                       </div>
                     </div>
                     <h4
                       onClick={() => setSelectedProduct(prod)}
-                      className="cursor-pointer text-left text-[11px] font-medium leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-xs"
+                      className="cursor-pointer text-left text-[11px] font-medium leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500   sm:text-xs"
                     >
                       {prod.name}
                     </h4>
@@ -212,17 +212,17 @@ export default function SearchResultsView({
                       <button
                         type="button"
                         onClick={() => setSelectedProduct(prod)}
-                        className="block text-left text-[9px] leading-tight text-slate-500 line-clamp-1 hover:text-indigo-500 dark:text-slate-400 dark:hover:text-indigo-300"
+                        className="block text-left text-[9px] leading-tight text-slate-500 line-clamp-1 hover:text-indigo-500  "
                       >
                         {prod.description.length > 40 ? `${prod.description.slice(0, 40)}... ` : prod.description}
-                        {prod.description.length > 40 && <span className="font-semibold text-indigo-600 dark:text-indigo-400">more...</span>}
+                        {prod.description.length > 40 && <span className="font-semibold text-indigo-600 ">more...</span>}
                       </button>
                     )}
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-baseline justify-between flex-wrap gap-0.5">
                       <div className="flex items-baseline gap-1 sm:gap-2">
-                        <span className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400">
+                        <span className="text-xs sm:text-sm font-black text-indigo-600 ">
                           Rs {hasDiscount ? prod.offerPrice : prod.basePrice}
                         </span>
                         {hasDiscount && (
@@ -230,26 +230,26 @@ export default function SearchResultsView({
                         )}
                       </div>
                     {measure && (
-                      <span className="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[9px] font-semibold tracking-wide text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+                      <span className="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[9px] font-semibold tracking-wide text-indigo-700   ">
                         <span className="hidden sm:inline">{measure.toLowerCase()}</span>
                         <span className="sm:hidden">{compactMeasure.toLowerCase()}</span>
                       </span>
                     )}
                     </div>
                     {isLowStock && (
-                      <div className="flex items-center gap-1 text-[8px] text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-1.5 py-0.5 rounded-md">
+                      <div className="flex items-center gap-1 text-[8px] text-amber-600 bg-amber-50  px-1.5 py-0.5 rounded-md">
                         <AlertTriangle className="h-3 w-3 shrink-0" />
                         <span className="truncate">Only {prod.stockCount} left</span>
                       </div>
                     )}
                     <div className="pt-0.5">
                       {itemInCart ? (
-                        <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900 rounded-full px-1.5 sm:px-2.5 py-0.5 text-indigo-600 dark:text-indigo-400">
-                          <button onClick={() => updateCartQty(prod.id, itemInCart.quantity - (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))} className="p-0.5 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-full">
+                        <div className="flex items-center justify-between bg-indigo-50  border border-indigo-200  rounded-full px-1.5 sm:px-2.5 py-0.5 text-indigo-600 ">
+                          <button onClick={() => updateCartQty(prod.id, itemInCart.quantity - (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))} className="p-0.5 hover:bg-indigo-100  rounded-full">
                             <Minus className="h-3.5 w-3.5" />
                           </button>
                           <span className="min-w-10 px-1 text-center text-[10px] sm:text-xs font-semibold font-mono">{cartQuantityLabel(prod, itemInCart.quantity)}</span>
-                          <button onClick={() => updateCartQty(prod.id, itemInCart.quantity + (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))} className="p-0.5 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-full">
+                          <button onClick={() => updateCartQty(prod.id, itemInCart.quantity + (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))} className="p-0.5 hover:bg-indigo-100  rounded-full">
                             <Plus className="h-3.5 w-3.5" />
                           </button>
                         </div>
@@ -268,7 +268,7 @@ export default function SearchResultsView({
                                     className={`rounded-full border px-1 py-1 text-[9px] font-semibold transition disabled:opacity-40 ${
                                       isSelected
                                         ? 'border-indigo-600 bg-indigo-600 text-white shadow'
-                                        : 'border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300'
+                                        : 'border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100   '
                                     }`}
                                   >
                                     {option.label}

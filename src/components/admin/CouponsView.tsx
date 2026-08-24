@@ -9,9 +9,9 @@ interface Props {
   showToast: (message: string, type: 'success' | 'info' | 'warning' | 'error') => void;
 }
 
-const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
+const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100   ';
 const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
-const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900';
+const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm  ';
 
 function normalizeCouponRow(row: any): Coupon {
   const metadata = row?.metadata || {};
@@ -149,7 +149,7 @@ export default function CouponsView({ isDarkMode, showToast }: Props) {
 
       {showForm && (
         <div className={sectionClass}>
-          <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
+          <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 ">
             <Gift className="h-4 w-4" /> Create New Coupon
           </h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -175,12 +175,12 @@ export default function CouponsView({ isDarkMode, showToast }: Props) {
             <label className="block"><span className={labelClass}>{couponKind === 'birthday' ? 'Birthday Usage Rule' : couponKind === 'welcome' ? 'Welcome Usage Rule' : 'Usage Limit'}</span><input className={inputClass} type={couponKind === 'birthday' || couponKind === 'welcome' ? 'text' : 'number'} min={0} value={couponKind === 'birthday' ? '1 use per customer per birthday year' : couponKind === 'welcome' ? '1 use per customer account' : usageLimit} onChange={(e) => setUsageLimit(e.target.value)} placeholder="Leave empty = unlimited" disabled={couponKind === 'birthday' || couponKind === 'welcome'} /></label>
           </div>
           {couponKind === 'birthday' && (
-            <p className="mt-3 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-700 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-300">
+            <p className="mt-3 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-700   ">
               Birthday coupons are reusable for different customers. Each customer can redeem it only once in their birthday year.
             </p>
           )}
           {couponKind === 'welcome' && (
-            <p className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-300">
+            <p className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700   ">
               Welcome coupons do not expire from global usage. Every customer account can redeem this coupon code once.
             </p>
           )}
@@ -191,7 +191,7 @@ export default function CouponsView({ isDarkMode, showToast }: Props) {
       {loading ? (
         <div className="p-6 border rounded text-center">Loading coupons...</div>
       ) : coupons.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border py-12 text-sm opacity-70 dark:border-slate-700">
+        <div className="flex flex-col items-center justify-center rounded-xl border py-12 text-sm opacity-70 ">
           <Gift className="h-10 w-10 mb-3 opacity-30" />
           <p>No coupons configured yet.</p>
         </div>
@@ -204,16 +204,16 @@ export default function CouponsView({ isDarkMode, showToast }: Props) {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm font-semibold tracking-wider">{coupon.code}</span>
-                    <button onClick={() => handleCopy(coupon.code, coupon.id)} className="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <button onClick={() => handleCopy(coupon.code, coupon.id)} className="rounded p-1 hover:bg-slate-100 ">
                       {copiedId === coupon.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
-                  {expired && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Expired</span>}
+                  {expired && <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-bold text-rose-700  ">Expired</span>}
                 </div>
                 <div className="text-lg font-semibold text-indigo-600">
                   {coupon.discountType === 'percentage' ? `${coupon.discountValue}% OFF` : `₹${coupon.discountValue} OFF`}
                 </div>
-                <span className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-semibold uppercase text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                <span className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-1 text-[9px] font-semibold uppercase text-indigo-700  ">
                   {String(coupon.metadata?.couponType || 'normal')}
                 </span>
                 <div className="mt-2 space-y-1 text-[10px] opacity-70">

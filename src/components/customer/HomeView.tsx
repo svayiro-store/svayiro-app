@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Compass, Heart, Plus, Minus,
   ShoppingCart, Star, AlertTriangle, Share2, Gift, ArrowRight
@@ -154,7 +154,7 @@ export default function HomeView({
     const compactMeasure = formatProductMeasure(prod, { compact: true });
     if (!measure) return null;
     return (
-      <span className="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[9px] font-semibold tracking-wide text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+      <span className="inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[9px] font-semibold tracking-wide text-indigo-700   ">
         <span className="hidden sm:inline">{measure.toLowerCase()}</span>
         <span className="sm:hidden">{compactMeasure.toLowerCase()}</span>
       </span>
@@ -386,7 +386,7 @@ export default function HomeView({
       >
         <div className="mb-3 flex items-end justify-between gap-3 text-left">
           <div>
-            <h3 className="sv-heading text-[15px] font-bold tracking-normal text-slate-950 dark:text-white sm:text-base md:text-lg">{title}</h3>
+            <h3 className="sv-heading text-[15px] font-bold tracking-normal text-slate-950  sm:text-base md:text-lg">{title}</h3>
           </div>
         </div>
 
@@ -434,17 +434,17 @@ export default function HomeView({
                 <div className="min-h-0 flex-1 space-y-1 p-1.5 pb-2 text-left">
                   <h4
                     onClick={() => setSelectedProduct(prod)}
-                    className="line-clamp-2 min-h-[24px] cursor-pointer text-[10px] font-medium leading-tight text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-[11px]"
+                    className="line-clamp-2 min-h-[24px] cursor-pointer text-[10px] font-medium leading-tight text-slate-900 hover:text-indigo-600   sm:text-[11px]"
                   >
                     {prod.name}
                   </h4>
                   <div className="min-h-4 origin-left scale-90">{productQtyBadge(prod)}</div>
                   <div className="flex min-h-7 flex-wrap items-baseline gap-1 pr-8">
-                    <span className="text-sm font-black text-indigo-700 dark:text-indigo-300">₹{hasDiscount ? prod.offerPrice : prod.basePrice}</span>
+                    <span className="text-sm font-black text-indigo-700 ">₹{hasDiscount ? prod.offerPrice : prod.basePrice}</span>
                     {hasDiscount && <span className="text-[9px] font-mono text-slate-400 line-through">₹{prod.basePrice}</span>}
                   </div>
                   {itemInCart ? (
-                    <div className="absolute bottom-1.5 right-1.5 flex items-center justify-between rounded-full border border-indigo-100 bg-indigo-50 px-1 py-0.5 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+                    <div className="absolute bottom-1.5 right-1.5 flex items-center justify-between rounded-full border border-indigo-100 bg-indigo-50 px-1 py-0.5 text-indigo-700   ">
                       <button type="button" onClick={() => updateCartQty(prod.id, itemInCart.quantity - 1)}>
                         <Minus className="h-3 w-3" />
                       </button>
@@ -528,41 +528,41 @@ export default function HomeView({
               <button
                 type="button"
                 onClick={() => setBirthdayCouponOpen(true)}
-                className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-amber-400 text-white shadow-2xl ring-4 ring-white/60 transition hover:scale-105 dark:ring-slate-950/80"
+                className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-amber-400 text-white shadow-2xl ring-4 ring-white/60 transition hover:scale-105 "
                 aria-label="Open birthday coupon"
               >
                 <span className="absolute inset-0 animate-ping rounded-full bg-rose-400/40" />
                 <Gift className="relative h-6 w-6" />
               </button>
             ) : (
-              <div className="relative w-[min(340px,calc(100vw-32px))] overflow-hidden rounded-3xl border border-rose-200 bg-white p-4 text-slate-950 shadow-2xl animate-birthday-pop dark:border-rose-900 dark:bg-slate-950 dark:text-white">
-                <div className="relative rounded-2xl bg-gradient-to-br from-rose-50 via-amber-50 to-white p-4 dark:from-rose-950/40 dark:via-amber-950/20 dark:to-slate-950">
+              <div className="relative w-[min(340px,calc(100vw-32px))] overflow-hidden rounded-3xl border border-rose-200 bg-white p-4 text-slate-950 shadow-2xl animate-birthday-pop   ">
+                <div className="relative rounded-2xl bg-gradient-to-br from-rose-50 via-amber-50 to-white p-4   ">
                   <div className="flex items-start gap-3">
-                    <div className="rounded-2xl bg-white p-3 text-rose-600 shadow-sm ring-1 ring-rose-100 dark:bg-slate-900 dark:text-rose-300 dark:ring-rose-900/60">
+                    <div className="rounded-2xl bg-white p-3 text-rose-600 shadow-sm ring-1 ring-rose-100   ">
                       <Gift className="h-6 w-6" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.22em] text-rose-500">Birthday celebration</p>
                       <h3 className="mt-1 text-xl font-black leading-tight">Happy Birthday, {activeUser?.name || 'Customer'}!</h3>
-                      <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      <p className="mt-1 text-xs font-semibold text-slate-600 ">
                         We have a small gift for your special day.
                       </p>
                     </div>
                   </div>
-                  <div className="mt-4 rounded-2xl border border-dashed border-rose-300 bg-white/80 p-3 shadow-inner dark:border-rose-900 dark:bg-slate-900/70">
+                  <div className="mt-4 rounded-2xl border border-dashed border-rose-300 bg-white/80 p-3 shadow-inner  ">
                     {!birthdayCouponApplied ? (
                       <>
                         <p className="text-[10px] font-black uppercase tracking-wide text-rose-500">Gift coupon</p>
-                        <p className="mt-1 font-mono text-lg font-black text-slate-950 dark:text-white">
+                        <p className="mt-1 font-mono text-lg font-black text-slate-950 ">
                           {birthdayCoupon?.code || 'Birthday wishes unlocked'}
                         </p>
-                        <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <p className="mt-1 text-xs font-semibold text-slate-600 ">
                           {birthdayCoupon
                             ? `${couponValueText(birthdayCoupon)} for this account only. It cannot be used by another customer.`
                             : 'The birthday greeting is active. A redeemable birthday coupon will appear here when the store owner enables one.'}
                         </p>
                         {birthdayCoupon && (
-                          <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-900/60">
+                          <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800 ring-1 ring-amber-100   ">
                             {birthdayMinOrder > 0
                               ? `Add items worth at least Rs ${birthdayMinOrder.toFixed(0)} to redeem this birthday gift.`
                               : 'You can apply this birthday gift on your birthday order.'}
@@ -570,10 +570,10 @@ export default function HomeView({
                         )}
                       </>
                     ) : (
-                      <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-center ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/60">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">Coupon Applied</p>
-                        <p className="mt-2 text-lg font-black text-emerald-800 dark:text-emerald-100">Yay! You have used your birthday coupon.</p>
-                        <p className="mt-1 text-xs font-bold leading-relaxed text-emerald-700 dark:text-emerald-200">
+                      <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-center ring-1 ring-emerald-100  ">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 ">Coupon Applied</p>
+                        <p className="mt-2 text-lg font-black text-emerald-800 ">Yay! You have used your birthday coupon.</p>
+                        <p className="mt-1 text-xs font-bold leading-relaxed text-emerald-700 ">
                           {birthdayRedeemMessage || 'Celebrate the day with your special SVAYIRO birthday saving.'}
                         </p>
                       </div>
@@ -601,7 +601,7 @@ export default function HomeView({
                   <button
                     type="button"
                     onClick={() => setBirthdayCouponOpen(false)}
-                    className="rounded-full border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
+                    className="rounded-full border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 hover:bg-slate-50   "
                   >
                     Later
                   </button>
@@ -648,9 +648,9 @@ export default function HomeView({
                   setExpandedCategoryId(parentCat.id);
                   scrollToProducts();
                 }}
-                className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-normal transition sm:min-w-[68px] ${selectedCategory === parentCat.id ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
+                className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-normal transition sm:min-w-[68px] ${selectedCategory === parentCat.id ? 'text-indigo-700 ' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
               >
-                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${selectedCategory === parentCat.id ? 'bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/40 dark:bg-indigo-950/40 dark:text-indigo-300' : isDarkMode ? 'bg-slate-900 text-slate-300' : 'bg-slate-50 text-slate-600'}`}>
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${selectedCategory === parentCat.id ? 'bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/40  ' : isDarkMode ? 'bg-slate-900 text-slate-300' : 'bg-slate-50 text-slate-600'}`}>
                   <Compass className="h-5 w-5" />
                 </span>
                 <span className="line-clamp-2 max-w-[68px] leading-tight">View All</span>
@@ -668,9 +668,9 @@ export default function HomeView({
                       setExpandedCategoryId(parentCat.id);
                       scrollToProducts();
                     }}
-                    className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-normal transition sm:min-w-[76px] ${isSubSelected ? 'text-indigo-700 dark:text-indigo-300' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
+                    className={`group relative flex min-w-0 flex-col items-center justify-start gap-1 text-center text-[8px] font-normal transition sm:min-w-[76px] ${isSubSelected ? 'text-indigo-700 ' : isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}
                   >
-                    <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[8px] font-semibold uppercase shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${isSubSelected ? 'bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/40 dark:bg-indigo-950/40 dark:text-indigo-300' : isDarkMode ? 'bg-slate-900 text-indigo-300' : 'bg-slate-50 text-indigo-700'}`}>
+                    <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-[8px] font-semibold uppercase shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${isSubSelected ? 'bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/40  ' : isDarkMode ? 'bg-slate-900 text-indigo-300' : 'bg-slate-50 text-indigo-700'}`}>
                       {sub.name.substring(0, 2)}
                       {sub.imageUrl && (
                         <img
@@ -712,7 +712,7 @@ export default function HomeView({
                   ref={(element) => { bannerCardRefs.current[idx] = element; }}
                   className={`relative aspect-[16/9] w-[calc(100vw-48px)] flex-none snap-center overflow-hidden rounded-2xl border shadow-sm transition sm:w-[360px] lg:w-[420px] xl:w-[440px] ${
                     clickable ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-md' : ''
-                  } ${isActive ? 'border-indigo-500 ring-2 ring-indigo-500/15' : 'border-slate-200 dark:border-slate-800'}`}
+                  } ${isActive ? 'border-indigo-500 ring-2 ring-indigo-500/15' : 'border-slate-200 '}`}
                   onClick={() => {
                     setCurrentBannerIndex(idx);
                     handleBannerClick(banner);
@@ -765,7 +765,7 @@ export default function HomeView({
                   type="button"
                   aria-label={`Show banner ${idx + 1}`}
                   onClick={() => setCurrentBannerIndex(idx)}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${currentBannerIndex === idx ? 'w-6 bg-indigo-700' : 'w-1.5 bg-slate-300 hover:bg-slate-400 dark:bg-slate-700'}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${currentBannerIndex === idx ? 'w-6 bg-indigo-700' : 'w-1.5 bg-slate-300 hover:bg-slate-400 '}`}
                 />
               ))}
             </div>
@@ -777,9 +777,9 @@ export default function HomeView({
       <div>
         <div className="mb-3 flex items-end justify-between gap-3 text-left">
           <div>
-            <h3 className="sv-heading text-[16px] font-bold tracking-normal text-emerald-700 dark:text-emerald-300 sm:text-lg">Daily Quick-Pick</h3>
+            <h3 className="sv-heading text-[16px] font-bold tracking-normal text-emerald-700  sm:text-lg">Daily Quick-Pick</h3>
           </div>
-          <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-[8px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 sm:inline-flex">
+          <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-[8px] font-semibold uppercase tracking-wide text-emerald-700   sm:inline-flex">
             Quick add
           </span>
         </div>
@@ -799,7 +799,7 @@ export default function HomeView({
                     : 'border-emerald-100 bg-white hover:border-emerald-300'
                 }`}
               >
-                <div className="relative h-20 shrink-0 overflow-hidden rounded-lg border border-emerald-100/70 bg-white shadow-inner dark:border-emerald-950 dark:bg-slate-900">
+                <div className="relative h-20 shrink-0 overflow-hidden rounded-lg border border-emerald-100/70 bg-white shadow-inner  ">
                   <img
                     src={prod.images?.[0] || productImageFallback}
                     alt={prod.name}
@@ -813,24 +813,24 @@ export default function HomeView({
                   )}
                 </div>
                 <div className="mt-1.5 min-w-0 space-y-0.5 pr-7 text-left">
-                  <h4 className="line-clamp-1 text-[10px] font-medium leading-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-slate-100 dark:group-hover:text-emerald-300">
+                  <h4 className="line-clamp-1 text-[10px] font-medium leading-tight text-slate-900 transition-colors group-hover:text-emerald-700  ">
                     {prod.name}
                   </h4>
                   <div className="min-h-4 scale-[0.88] origin-left">
                     {productQtyBadge(prod)}
                   </div>
                   <div className="flex flex-wrap items-baseline gap-1">
-                    <span className="text-xs font-black text-emerald-700 dark:text-emerald-300">
+                    <span className="text-xs font-black text-emerald-700 ">
                       ₹{hasDiscount ? prod.offerPrice : prod.basePrice}
                     </span>
                     {hasDiscount && (
-                      <span className="text-slate-400 dark:text-slate-500 line-through text-[8px] font-mono">
+                      <span className="text-slate-400  line-through text-[8px] font-mono">
                         ₹{prod.basePrice}
                       </span>
                     )}
                   </div>
                   {isLowStock && (
-                    <span className="flex items-center gap-1 text-[8px] font-semibold text-amber-600 dark:text-amber-500">
+                    <span className="flex items-center gap-1 text-[8px] font-semibold text-amber-600 ">
                       <AlertTriangle className="h-2.5 w-2.5" /> Only {prod.stockCount} left
                     </span>
                   )}
@@ -1051,8 +1051,8 @@ export default function HomeView({
           <div className="flex items-center gap-2">
             <span className="p-1 rounded bg-indigo-500 text-white font-mono uppercase text-[9px] font-black">Section View</span>
             <span>
-              You are shopping in <strong className="text-indigo-600 dark:text-indigo-400">"{selectedParentCategory?.name || selectedCategoryDetails?.name}"</strong>
-              {selectedCategoryDetails?.parentId && <> / <strong className="text-indigo-600 dark:text-indigo-400">"{selectedCategoryDetails.name}"</strong></>}
+              You are shopping in <strong className="text-indigo-600 ">"{selectedParentCategory?.name || selectedCategoryDetails?.name}"</strong>
+              {selectedCategoryDetails?.parentId && <> / <strong className="text-indigo-600 ">"{selectedCategoryDetails.name}"</strong></>}
             </span>
           </div>
           <button
@@ -1081,7 +1081,7 @@ export default function HomeView({
 
         {filteredProducts.length === 0 && isProductPageLoading ? (
           <div className={`p-10 text-center rounded-2xl border ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-slate-50'}`}>
-            <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-indigo-100 bg-white px-4 py-2 text-xs font-normal lowercase text-indigo-700 shadow-sm dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300">
+            <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-indigo-100 bg-white px-4 py-2 text-xs font-normal lowercase text-indigo-700 shadow-sm   ">
               <span className="relative h-7 w-7">
                 <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 shadow-[0_0_14px_rgba(253,224,71,0.70)]" />
                 <span className="absolute inset-0 animate-spin rounded-full">
@@ -1162,17 +1162,17 @@ export default function HomeView({
                     <div className="p-1.5 sm:p-2 flex-1 flex flex-col justify-between gap-1 text-left">
                       <div className="space-y-0.5">
                         <div className="flex items-center justify-between gap-1">
-                          <span className="max-w-[70%] truncate font-mono text-[8px] font-semibold uppercase text-slate-500 dark:text-slate-400 sm:text-[9px]">
+                          <span className="max-w-[70%] truncate font-mono text-[8px] font-semibold uppercase text-slate-500  sm:text-[9px]">
                             {categories.find(c => c.id === prod.categoryId)?.name || 'Grocery'}
                           </span>
                           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                             <Star className="h-2.5 w-2.5 text-amber-500 fill-amber-500" />
-                            <span className="text-[9px] font-semibold text-slate-700 dark:text-slate-200 sm:text-[10px]">{prod.ratingAverage || 'New'}</span>
+                            <span className="text-[9px] font-semibold text-slate-700  sm:text-[10px]">{prod.ratingAverage || 'New'}</span>
                           </div>
                         </div>
                         <h4
                           onClick={() => setSelectedProduct(prod)}
-                          className="cursor-pointer text-left text-[11px] font-medium leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500 dark:text-slate-100 dark:hover:text-indigo-300 sm:text-xs"
+                          className="cursor-pointer text-left text-[11px] font-medium leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500   sm:text-xs"
                         >
                           {prod.name}
                         </h4>
@@ -1180,17 +1180,17 @@ export default function HomeView({
                           <button
                             type="button"
                             onClick={() => setSelectedProduct(prod)}
-                            className="block text-left text-[9px] leading-tight text-slate-500 line-clamp-1 hover:text-indigo-500 dark:text-slate-400 dark:hover:text-indigo-300"
+                            className="block text-left text-[9px] leading-tight text-slate-500 line-clamp-1 hover:text-indigo-500  "
                           >
                             {prod.description.length > 40 ? `${prod.description.slice(0, 40)}... ` : prod.description}
-                            {prod.description.length > 40 && <span className="font-semibold text-indigo-600 dark:text-indigo-400">more...</span>}
+                            {prod.description.length > 40 && <span className="font-semibold text-indigo-600 ">more...</span>}
                           </button>
                         )}
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-baseline justify-between flex-wrap gap-0.5">
                           <div className="flex items-baseline gap-1 sm:gap-2">
-                            <span className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400">
+                            <span className="text-xs sm:text-sm font-black text-indigo-600 ">
                               ₹{hasDiscount ? prod.offerPrice : prod.basePrice}
                             </span>
                             {hasDiscount && (
@@ -1201,7 +1201,7 @@ export default function HomeView({
                         </div>
                         {/* Stock and Low Stock notices */}
                         {isLowStock && (
-                          <div className="flex items-center gap-1 text-[8px] text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-1.5 py-0.5 rounded-md">
+                          <div className="flex items-center gap-1 text-[8px] text-amber-600 bg-amber-50  px-1.5 py-0.5 rounded-md">
                             <AlertTriangle className="h-3 w-3 shrink-0" />
                             <span className="truncate">Only {prod.stockCount} left</span>
                           </div>
@@ -1209,17 +1209,17 @@ export default function HomeView({
                         {/* Add to Cart controller */}
                         <div className="pt-0.5">
                           {itemInCart ? (
-                            <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900 rounded-full px-1.5 sm:px-2.5 py-0.5 text-indigo-600 dark:text-indigo-400">
+                            <div className="flex items-center justify-between bg-indigo-50  border border-indigo-200  rounded-full px-1.5 sm:px-2.5 py-0.5 text-indigo-600 ">
                               <button
                                 onClick={() => updateCartQty(prod.id, itemInCart.quantity - (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))}
-                                className="p-0.5 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-full"
+                                className="p-0.5 hover:bg-indigo-100  rounded-full"
                               >
                                 <Minus className="h-3.5 w-3.5" />
                               </button>
                               <span className="min-w-10 px-1 text-center text-[10px] sm:text-xs font-semibold font-mono">{cartQuantityLabel(prod, itemInCart.quantity)}</span>
                               <button
                                 onClick={() => updateCartQty(prod.id, itemInCart.quantity + (isLooseProduct(prod) ? looseQuantityOptions(prod)[0]?.value || 1 : 1))}
-                                className="p-0.5 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-full"
+                                className="p-0.5 hover:bg-indigo-100  rounded-full"
                               >
                                 <Plus className="h-3.5 w-3.5" />
                               </button>
@@ -1239,7 +1239,7 @@ export default function HomeView({
                                         className={`rounded-full border px-1 py-1 text-[9px] font-semibold transition disabled:opacity-40 ${
                                           isSelected
                                             ? 'border-indigo-600 bg-indigo-600 text-white shadow'
-                                            : 'border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300'
+                                            : 'border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100   '
                                         }`}
                                       >
                                         {option.label}
@@ -1265,12 +1265,12 @@ export default function HomeView({
                 );
               })}
             </div>
-            <div className="mt-5 flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-xs shadow-sm sm:flex-row dark:border-slate-800 dark:bg-slate-950">
-              <span className="font-mono font-semibold text-slate-500 dark:text-slate-400">
+            <div className="mt-5 flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-xs shadow-sm sm:flex-row  ">
+              <span className="font-mono font-semibold text-slate-500 ">
                 {totalProducts > 0 ? `Page ${currentPage} of ${totalPages}` : 'No product pages'}
               </span>
               {isProductPageLoading ? (
-                <div className="flex items-center gap-3 rounded-full border border-indigo-100 bg-white px-4 py-2 text-xs font-normal lowercase text-indigo-700 shadow-sm dark:border-indigo-900 dark:bg-slate-950 dark:text-indigo-300">
+                <div className="flex items-center gap-3 rounded-full border border-indigo-100 bg-white px-4 py-2 text-xs font-normal lowercase text-indigo-700 shadow-sm   ">
                   <span className="relative h-7 w-7">
                     <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 shadow-[0_0_14px_rgba(253,224,71,0.70)]" />
                     <span className="absolute inset-0 animate-spin rounded-full">
@@ -1285,18 +1285,18 @@ export default function HomeView({
                     type="button"
                     onClick={() => goToProductPage(currentPage - 1)}
                     disabled={currentPage <= 1 || !onChangeProductPage}
-                    className="rounded-full border border-slate-200 px-4 py-2 font-black uppercase text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:text-slate-300"
+                    className="rounded-full border border-slate-200 px-4 py-2 font-black uppercase text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40  "
                   >
                     Previous
                   </button>
-                  <span className="rounded-full bg-indigo-50 px-3 py-2 font-black text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                  <span className="rounded-full bg-indigo-50 px-3 py-2 font-black text-indigo-700  ">
                     {currentPage}/{totalPages}
                   </span>
                   <button
                     type="button"
                     onClick={() => goToProductPage(currentPage + 1)}
                     disabled={currentPage >= totalPages || !onChangeProductPage}
-                    className="rounded-full border border-slate-200 px-4 py-2 font-black uppercase text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:text-slate-300"
+                    className="rounded-full border border-slate-200 px-4 py-2 font-black uppercase text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-40  "
                   >
                     Next
                   </button>

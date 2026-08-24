@@ -1,6 +1,6 @@
 import React from 'react';
-import { 
-  ShoppingBag, Minus, Plus, Trash2, ArrowRight, MapPin, Loader2, AlertCircle, Building, Check 
+import {
+  ShoppingBag, Minus, Plus, Trash2, ArrowRight, MapPin, Loader2, AlertCircle, Building, Check
 } from 'lucide-react';
 import { CustomerTab, Product, Coupon, CheckoutBagInfo, ShopProfile } from '../../types';
 import { cartQuantityLabel, formatProductMeasure, isLooseProduct, loosePriceFactor, looseQuantityOptions } from '../../utils/productMeasure';
@@ -106,8 +106,8 @@ export default function CartView({
 
   return (
     <div className="space-y-6">
-      <h2 className="font-serif text-2xl font-semibold text-left text-slate-950 dark:text-white">Shopping Bag Summary</h2>
-      
+      <h2 className="font-serif text-2xl font-semibold text-left text-slate-950 ">Shopping Bag Summary</h2>
+
       {cart.length === 0 ? (
         <div className={`p-12 text-center rounded-2xl border ${isDarkMode ? 'border-[#1e293b] bg-[#1e293b]/20' : 'border-slate-200 bg-slate-50'}`}>
           <ShoppingBag className="h-12 w-12 text-slate-400 mx-auto mb-2" />
@@ -117,7 +117,7 @@ export default function CartView({
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Cart items list */}
           <div className="lg:col-span-2 space-y-4">
             {totals.itemsList.map(({ product, quantity }) => {
@@ -125,15 +125,15 @@ export default function CartView({
               const lineFactor = loose ? loosePriceFactor(product, quantity) : quantity;
               const lineTotal = (product.offerPrice > 0 ? product.offerPrice : product.basePrice) * lineFactor;
               return (
-              <div 
+              <div
                 key={product.id}
                 className={`flex gap-4 p-4 border rounded-2xl relative ${isDarkMode ? 'border-slate-700 bg-slate-900/95 shadow-[0_10px_24px_rgba(0,0,0,0.24)]' : 'border-slate-200 bg-white'}`}
               >
                 <img src={product.images?.[0] || productImageFallback} alt={product.name} className="w-20 h-20 rounded-xl object-cover" referrerPolicy="no-referrer" />
                 <div className="flex-1 space-y-1.5 min-w-0 text-left">
-                  <h4 className="truncate pr-8 text-sm font-semibold tracking-normal text-slate-950 dark:text-slate-100">{product.name}</h4>
+                  <h4 className="truncate pr-8 text-sm font-semibold tracking-normal text-slate-950 ">{product.name}</h4>
                   <p className="text-xs opacity-70">Price: ₹{product.offerPrice > 0 ? product.offerPrice : product.basePrice} | Size: {formatProductMeasure(product)}</p>
-                  
+
                   <div className="flex items-center gap-3 mt-2">
                     {loose ? (
                       <div className="flex flex-wrap gap-1">
@@ -146,7 +146,7 @@ export default function CartView({
                             className={`rounded-full border px-2 py-1 text-[10px] font-semibold transition disabled:opacity-40 ${
                               quantity === option.value
                                 ? 'border-indigo-600 bg-indigo-600 text-white'
-                                : 'border-indigo-100 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300'
+                                : 'border-indigo-100 bg-indigo-50 text-indigo-700   '
                             }`}
                           >
                             {option.label}
@@ -154,7 +154,7 @@ export default function CartView({
                         ))}
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 border border-slate-300 dark:border-slate-700 rounded-full py-0.5 px-2 bg-slate-50 dark:bg-slate-900">
+                      <div className="flex items-center gap-1 border border-slate-300  rounded-full py-0.5 px-2 bg-slate-50 ">
                         <button onClick={() => updateCartQty(product.id, quantity - 1)} className="p-1"><Minus className="h-3 w-3" /></button>
                         <span className="text-xs font-bold min-w-10 text-center">{cartQuantityLabel(product, quantity)}</span>
                         <button onClick={() => updateCartQty(product.id, quantity + 1)} className="p-1"><Plus className="h-3 w-3" /></button>
@@ -168,10 +168,10 @@ export default function CartView({
                 </div>
 
                 <div className="text-right flex flex-col justify-between">
-                  <span className="font-extrabold text-sm text-indigo-600 dark:text-indigo-400">
+                  <span className="font-extrabold text-sm text-indigo-600 ">
                     Rs {lineTotal.toFixed(2)}
                   </span>
-                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{cartQuantityLabel(product, quantity)}</span>
+                  <span className="text-[10px] font-mono text-slate-500 ">{cartQuantityLabel(product, quantity)}</span>
                 </div>
               </div>
               );
@@ -190,21 +190,21 @@ export default function CartView({
 
           {/* Bill Summary and smart bag estimates */}
           <div className={`p-6 border rounded-2xl h-fit space-y-5 text-left ${isDarkMode ? 'border-slate-700 bg-slate-900/95 shadow-[0_12px_30px_rgba(0,0,0,0.24)]' : 'border-slate-200 bg-slate-50'}`}>
-            <h3 className="font-serif text-lg font-semibold text-slate-950 dark:text-white">Bill Summary</h3>
+            <h3 className="font-serif text-lg font-semibold text-slate-950 ">Bill Summary</h3>
 
             {activeUser && (
               <div className={`rounded-xl border p-3 text-xs ${isDarkMode ? 'border-indigo-900/70 bg-indigo-950/30' : 'border-indigo-100 bg-indigo-50'}`}>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-semibold uppercase text-indigo-700 dark:text-indigo-300">Savings Points</span>
-                  <span className="font-mono text-lg font-semibold text-indigo-700 dark:text-indigo-300">{loyaltySummary?.points || 0}</span>
+                  <span className="font-semibold uppercase text-indigo-700 ">Savings Points</span>
+                  <span className="font-mono text-lg font-semibold text-indigo-700 ">{loyaltySummary?.points || 0}</span>
                 </div>
-                <p className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-[10px] font-semibold text-slate-500 ">
                   Earn 1 point for every Rs {(loyaltySummary?.earnRateAmount || 200).toLocaleString('en-IN')} purchase.
                 </p>
                 {maxRedeemBlocks > 0 ? (
                   <div className={`mt-3 rounded-lg p-2 ${isDarkMode ? 'bg-slate-950/80' : 'bg-white'}`}>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Redeem</span>
+                      <span className="text-[10px] font-semibold uppercase text-slate-500 ">Redeem</span>
                       <span className="text-[10px] font-bold text-emerald-600">
                         {redeemBlockPoints} pts = Rs {redeemBlockValue}
                       </span>
@@ -212,7 +212,7 @@ export default function CartView({
                     <select
                       id="cart_loyalty_redeem"
                       name="cart_loyalty_redeem"
-                      className="mt-1 w-full rounded-lg border border-indigo-100 bg-indigo-50 px-2 py-2 text-xs font-bold text-indigo-900 outline-none dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-100"
+                      className="mt-1 w-full rounded-lg border border-indigo-100 bg-indigo-50 px-2 py-2 text-xs font-bold text-indigo-900 outline-none   "
                       value={activeRedeemBlocks}
                       onChange={(event) => setLoyaltyRedeemPoints?.(Number(event.target.value) * redeemBlockPoints)}
                     >
@@ -228,7 +228,7 @@ export default function CartView({
                     </select>
                   </div>
                 ) : (
-                  <p className="mt-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                  <p className="mt-2 text-[10px] font-semibold text-slate-500 ">
                     Collect {redeemBlockPoints} points to redeem Rs {redeemBlockValue} on a future bill.
                   </p>
                 )}
@@ -236,15 +236,15 @@ export default function CartView({
             )}
 
             {suggestedCoupons.length > 0 && (
-              <div className="space-y-2 rounded-xl border border-emerald-100 bg-white p-3 dark:border-emerald-900 dark:bg-slate-950">
-                <p className="text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-300">Available Offers</p>
+              <div className="space-y-2 rounded-xl border border-emerald-100 bg-white p-3  ">
+                <p className="text-[10px] font-semibold uppercase text-emerald-700 ">Available Offers</p>
                 <div className="flex flex-wrap gap-2">
                   {suggestedCoupons.slice(0, 3).map((coupon) => (
                     <button
                       key={coupon.id || coupon.code}
                       type="button"
                       onClick={() => onUseCoupon?.(coupon.code)}
-                      className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+                      className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100   "
                     >
                       Apply {coupon.code}
                     </button>
@@ -255,18 +255,18 @@ export default function CartView({
 
             {/* FULFILLMENT MODE CHOICE */}
             <div className={`space-y-3 rounded-xl border p-4 ${isDarkMode ? 'border-slate-700 bg-slate-950/80' : 'border-slate-200 bg-white'}`}>
-              <span className="text-xs font-bold leading-none text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
+              <span className="text-xs font-bold leading-none text-slate-800  uppercase tracking-wider block">
                 🚚 Choose Fulfillment Method
               </span>
-              
+
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setDeliveryMethod('delivery')}
                   className={`flex flex-col items-center justify-center p-3 border rounded-xl transition-all gap-1 text-center ${
                     deliveryMethod === 'delivery'
-                      ? 'border-indigo-600 bg-indigo-50/25 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-bold'
-                      : 'border-slate-150 bg-slate-50/20 dark:bg-slate-900/10 text-slate-600 dark:text-slate-400 opacity-80'
+                      ? 'border-indigo-600 bg-indigo-50/25  text-indigo-600  font-bold'
+                      : 'border-slate-150 bg-slate-50/20  text-slate-600  opacity-80'
                   }`}
                 >
                   <MapPin className="h-4.5 w-4.5" />
@@ -278,8 +278,8 @@ export default function CartView({
                   onClick={() => setDeliveryMethod('pickup')}
                   className={`flex flex-col items-center justify-center p-3 border rounded-xl transition-all gap-1 text-center ${
                     deliveryMethod === 'pickup'
-                      ? 'border-indigo-600 bg-indigo-50/25 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-bold'
-                      : 'border-slate-150 bg-slate-50/20 dark:bg-slate-900/10 text-slate-600 dark:text-slate-400 opacity-80'
+                      ? 'border-indigo-600 bg-indigo-50/25  text-indigo-600  font-bold'
+                      : 'border-slate-150 bg-slate-50/20  text-slate-600  opacity-80'
                   }`}
                 >
                   <Building className="h-4.5 w-4.5" />
@@ -289,7 +289,7 @@ export default function CartView({
 
               {/* DETAILS FOR DELIVERY */}
               {deliveryMethod === 'delivery' && (
-                <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-850">
+                <div className="space-y-2.5 pt-2 border-t border-slate-100 ">
                   {activeUser ? (
                     activeUser.savedAddresses && activeUser.savedAddresses.length > 0 ? (
                       <div className="space-y-2">
@@ -301,7 +301,7 @@ export default function CartView({
                           name="cart_delivery_address"
                           value={selectedAddressIndex}
                           onChange={(e) => setSelectedAddressIndex(Number(e.target.value))}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-indigo-500"
+                          className="w-full bg-slate-50  border border-slate-200  p-2 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-indigo-500"
                         >
                           {activeUser.savedAddresses.map((addr: any, index: number) => (
                             <option key={addr.id || index} value={index}>
@@ -311,32 +311,32 @@ export default function CartView({
                         </select>
 
                         {/* LIVE DISTANCE CALCULATION SUMMARY */}
-                        <div className="p-3 rounded-lg bg-indigo-50/20 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-950/30 space-y-1">
+                        <div className="p-3 rounded-lg bg-indigo-50/20  border border-indigo-100/50  space-y-1">
                           {isCalculatingDistance ? (
-                            <div className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-bold">
+                            <div className="flex items-center gap-1.5 text-xs text-indigo-600  font-bold">
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               <span>Calculating real-time distance...</span>
                             </div>
                           ) : (
                             <>
                               <div className="flex justify-between items-center">
-                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Google Maps Route:</span>
-                                <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                                <span className="text-[11px] font-bold text-slate-700 ">Google Maps Route:</span>
+                                <span className="text-[11px] font-semibold text-indigo-600 ">
                                   {googleMapsDistanceText || `${totals.deliveryDistanceKm?.toFixed(1)} km`}
                                 </span>
                               </div>
                               {googleMapsDurationText && (
                                 <p className="text-[10px] opacity-70">Estimated travel time: {googleMapsDurationText}</p>
                               )}
-                              
+
                               {/* Range constraint check */}
                               {isOutOfRange ? (
-                                <div className="flex gap-1.5 mt-1.5 p-1.5 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded border border-rose-100 dark:border-rose-950/40 text-[10px] font-semibold leading-normal">
+                                <div className="flex gap-1.5 mt-1.5 p-1.5 bg-rose-50  text-rose-600  rounded border border-rose-100  text-[10px] font-semibold leading-normal">
                                   <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                                   <span>Out of Delivery Range! Maximum allowed delivery radius is {shop.deliveryRadius || 10} km. Please select another address or choose self-pickup.</span>
                                 </div>
                               ) : (
-                                <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 mt-1">
+                                <p className="text-[9px] text-emerald-600  font-bold flex items-center gap-1 mt-1">
                                   <Check className="h-3 w-3" /> Within delivery range ({shop.deliveryRadius || 10} km limit)
                                 </p>
                               )}
@@ -345,8 +345,8 @@ export default function CartView({
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3 text-center bg-amber-50/40 dark:bg-amber-950/10 border border-amber-200/50 rounded-xl space-y-2">
-                        <p className="text-[10px] text-amber-700 dark:text-amber-400 font-bold">⚠️ No saved delivery addresses found.</p>
+                      <div className="p-3 text-center bg-amber-50/40  border border-amber-200/50 rounded-xl space-y-2">
+                        <p className="text-[10px] text-amber-700  font-bold">⚠️ No saved delivery addresses found.</p>
                         <button
                           type="button"
                           onClick={() => setActiveTab('profile')}
@@ -357,7 +357,7 @@ export default function CartView({
                       </div>
                     )
                   ) : (
-                    <div className="p-3 text-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+                    <div className="p-3 text-center bg-slate-100  border border-slate-200  rounded-xl space-y-2">
                       <p className="text-[10px] opacity-80 font-semibold">Please log in to register/select your delivery address and see maps distance charges.</p>
                       <button
                         type="button"
@@ -373,7 +373,7 @@ export default function CartView({
 
               {/* DETAILS FOR SELF PICKUP */}
               {deliveryMethod === 'pickup' && (
-                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-850">
+                <div className="space-y-2 pt-2 border-t border-slate-100 ">
                   {shop.addresses && shop.addresses.length > 0 ? (
                     <div className="space-y-2">
                       <label className="block text-[10px] font-bold uppercase opacity-80">
@@ -384,7 +384,7 @@ export default function CartView({
                         name="cart_pickup_branch"
                         value={selectedShopBranchId}
                         onChange={(e) => setSelectedShopBranchId(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-indigo-500"
+                        className="w-full bg-slate-50  border border-slate-200  p-2 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-indigo-500"
                       >
                         {shop.addresses.map((addr) => (
                           <option key={addr.id} value={addr.id}>
@@ -398,10 +398,10 @@ export default function CartView({
                         const activeBranch = shop.addresses.find(b => b.id === selectedShopBranchId) || shop.addresses.find(b => b.isDefault) || shop.addresses[0];
                         if (!activeBranch) return null;
                         return (
-                          <div className="p-2.5 bg-emerald-50/10 dark:bg-emerald-950/10 border border-emerald-100/50 dark:border-emerald-950/30 rounded-lg text-[10px] leading-relaxed">
-                            <p className="font-bold text-slate-800 dark:text-slate-200">🏠 Store: {activeBranch.flatAndHouse}, {activeBranch.areaAndStreet}</p>
+                          <div className="p-2.5 bg-emerald-50/10  border border-emerald-100/50  rounded-lg text-[10px] leading-relaxed">
+                            <p className="font-bold text-slate-800 ">🏠 Store: {activeBranch.flatAndHouse}, {activeBranch.areaAndStreet}</p>
                             <p className="opacity-75">Landmark: {activeBranch.landmark || 'N/A'} | {activeBranch.cityOrVillage}, {activeBranch.pincode}</p>
-                            {activeBranch.phone && <p className="font-bold text-slate-600 dark:text-slate-350 mt-0.5">📞 Contact: {activeBranch.phone}</p>}
+                            {activeBranch.phone && <p className="font-bold text-slate-600  mt-0.5">📞 Contact: {activeBranch.phone}</p>}
                           </div>
                         );
                       })()}
@@ -414,35 +414,35 @@ export default function CartView({
             </div>
 
             {/* Smart Packaging Estimation */}
-            <div className="space-y-3 bg-indigo-50/50 dark:bg-indigo-950/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900">
+            <div className="space-y-3 bg-indigo-50/50  p-4 rounded-xl border border-indigo-100 ">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Smart Bag packing optimizer</span>
+                <span className="text-xs font-bold text-indigo-600 ">Smart Bag packing optimizer</span>
                 <span className="text-[10px] font-mono opacity-80">{(totals.totalWeightGrams / 1000).toFixed(2)} kg order weight</span>
               </div>
 
               <div className="space-y-1.5">
                 <div className="space-y-2 text-xs">
-                  <span className="block font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Do you need carrier bags?</span>
+                  <span className="block font-semibold uppercase tracking-wide text-indigo-700 ">Do you need carrier bags?</span>
                   <div className="grid grid-cols-2 gap-2 text-[11px] sm:text-xs">
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setBagOption('own')}
                       className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 py-3 font-semibold shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${
                         bagOption === 'own'
                           ? 'border-emerald-500 bg-emerald-600 text-white shadow-emerald-600/20'
-                          : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300   '
                       }`}
                     >
                       {bagOption === 'own' ? <Check className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
                       Own bag
                     </button>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setBagOption('need')}
                       className={`flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 py-3 font-semibold shadow-sm transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${
                         bagOption === 'need'
                           ? 'border-indigo-500 bg-indigo-600 text-white shadow-indigo-600/20'
-                          : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300   '
                       }`}
                     >
                       {bagOption === 'need' ? <Check className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
@@ -452,7 +452,7 @@ export default function CartView({
                 </div>
 
                 {bagOption === 'need' && (
-                  <div className="space-y-1 pt-1.5 border-t border-slate-200/50 dark:border-slate-800/50">
+                  <div className="space-y-1 pt-1.5 border-t border-slate-200/50 ">
                     {totals.computedBags.map((bag, i) => (
                       <div key={i} className="flex justify-between text-[10px] opacity-80 font-mono">
                         <span>+ {bag.count}x {bag.size}</span>
@@ -464,48 +464,48 @@ export default function CartView({
               </div>
             </div>
 
-            <div className="space-y-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
+            <div className="space-y-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm  ">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Order Savings Review</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-emerald-700 ">Order Savings Review</span>
                 {(totals.totalSavings || 0) > 0 && (
                   <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">
                     Saved {formatMoney(totals.totalSavings)}
                   </span>
                 )}
               </div>
-              <div className="flex justify-between text-slate-700 dark:text-slate-200">
+              <div className="flex justify-between text-slate-700 ">
                 <span>MRP total</span>
                 <span>{formatMoney(totals.mrpTotal || totals.productTotal)}</span>
               </div>
               {(totals.offerSavings || 0) > 0 && (
-                <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
+                <div className="flex justify-between text-emerald-700 ">
                   <span>Product offer saving</span>
                   <span>-{formatMoney(totals.offerSavings)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-slate-700 dark:text-slate-200">
+              <div className="flex justify-between text-slate-700 ">
                 <span>Offer price subtotal</span>
                 <span>{formatMoney(totals.productTotal)}</span>
               </div>
               {appliedCoupon && (
-                <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
+                <div className="flex justify-between text-emerald-700 ">
                   <span>Coupon saving ({appliedCoupon.code})</span>
                   <span>-{formatMoney(totals.discount)}</span>
                 </div>
               )}
               {(totals.loyaltyDiscount || 0) > 0 && (
-                <div className="flex justify-between text-indigo-700 dark:text-indigo-300">
+                <div className="flex justify-between text-indigo-700 ">
                   <span>Savings Points redeemed</span>
                   <span>-{formatMoney(totals.loyaltyDiscount)}</span>
                 </div>
               )}
-              <p className="border-t border-emerald-200 pt-2 text-[11px] font-medium text-emerald-800 dark:border-emerald-900 dark:text-emerald-200">
+              <p className="border-t border-emerald-200 pt-2 text-[11px] font-medium text-emerald-800  ">
                 Final payable is shown below. Online payment is verified by the secure gateway. COD can be paid to the owner or delivery partner.
               </p>
             </div>
 
             {/* Calculations */}
-            <div className="space-y-2 text-sm border-t border-slate-200 dark:border-slate-800 pt-4">
+            <div className="space-y-2 text-sm border-t border-slate-200  pt-4">
               <div className="flex justify-between">
                 <span className="opacity-75">Items Net Subtotal</span>
                 <span>₹{totals.productTotal}</span>
@@ -533,22 +533,22 @@ export default function CartView({
                 </div>
               )}
 
-              <div className="flex justify-between font-semibold text-base border-t border-dashed border-slate-300 dark:border-slate-700 pt-3">
+              <div className="flex justify-between font-semibold text-base border-t border-dashed border-slate-300  pt-3">
                 <span>Store Checkout Total</span>
-                <span className="text-indigo-600 dark:text-indigo-400">₹{totals.finalTotal}</span>
+                <span className="text-indigo-600 ">₹{totals.finalTotal}</span>
               </div>
             </div>
 
             {/* Checkout buttons */}
             {isShopClosed ? (
-              <button 
+              <button
                 disabled
-                className="w-full py-3 rounded-full text-center text-xs font-bold bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed"
+                className="w-full py-3 rounded-full text-center text-xs font-bold bg-slate-300  text-slate-500 cursor-not-allowed"
               >
                 Store is Closed
               </button>
             ) : (
-              <button 
+              <button
                 disabled={isOutOfRange}
                 onClick={() => {
                   if (!activeUser) {
@@ -558,8 +558,8 @@ export default function CartView({
                   }
                 }}
                 className={`w-full py-3 rounded-full text-xs font-bold shadow text-center flex items-center justify-center gap-1.5 ${
-                  isOutOfRange 
-                    ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
+                  isOutOfRange
+                    ? 'bg-slate-300  text-slate-500 cursor-not-allowed'
                     : 'bg-indigo-600 hover:bg-indigo-500 text-white'
                 }`}
               >

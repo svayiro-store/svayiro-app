@@ -362,13 +362,13 @@ export default function AdminApp({ shop, categories, products, banners, notifica
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-sm font-semibold uppercase tracking-[0.16em] text-indigo-800 dark:text-indigo-300">SVAYIRO Console</h1>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${shop.isOpen ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'}`}>
+                <h1 className="text-sm font-semibold uppercase tracking-[0.16em] text-indigo-800 ">SVAYIRO Console</h1>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase ${shop.isOpen ? 'bg-emerald-50 text-emerald-700  ' : 'bg-rose-50 text-rose-700  '}`}>
                   <span className={`h-2 w-2 rounded-full ${shop.isOpen ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                   {shop.isOpen ? 'Store Open' : 'Store Closed'}
                 </span>
               </div>
-              <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-xs font-semibold text-slate-500 ">
                 {menuTitles[activeMenu]} - Logged in as {activeUser?.name || 'Console User'} - {roleLabel}
               </p>
             </div>
@@ -391,13 +391,13 @@ export default function AdminApp({ shop, categories, products, banners, notifica
                   <span className="text-slate-400">Pending</span>
                   <span>{activeOrdersCount}</span>
                 </span>
-                <span className="hidden h-4 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
+                <span className="hidden h-4 w-px bg-slate-200  sm:block" />
                 <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                   <PackageSearch className="h-3.5 w-3.5 text-amber-500" />
                   <span className="text-slate-400">Low / Out</span>
                   <span>{lowStockCount}</span>
                 </span>
-                <span className="hidden h-4 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
+                <span className="hidden h-4 w-px bg-slate-200  sm:block" />
                 <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                   <UserCircle className="h-3.5 w-3.5 text-indigo-600" />
                   <span className="text-slate-400">Role</span>

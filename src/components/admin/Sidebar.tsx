@@ -70,7 +70,7 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
           <Settings className="h-5 w-5" />
         </div>
         <div className={`min-w-0 ${isExpanded ? 'md:block' : 'md:hidden'}`}>
-          <h2 className="truncate font-extrabold text-indigo-800 text-sm font-mono tracking-wider dark:text-indigo-300">SVAYIRO CONSOLE</h2>
+          <h2 className="truncate font-extrabold text-indigo-800 text-sm font-mono tracking-wider ">SVAYIRO CONSOLE</h2>
           <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">Operator panel</p>
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
                 <span className="absolute -left-1 top-1/2 hidden h-7 w-1 -translate-y-1/2 rounded-r-full bg-emerald-400 md:block" />
               )}
               <div className="flex items-center gap-2">
-                <Icon className={`h-5 w-5 shrink-0 ${activeMenu === item.id ? 'text-white' : 'text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300'}`} />
+                <Icon className={`h-5 w-5 shrink-0 ${activeMenu === item.id ? 'text-white' : 'text-slate-400 group-hover:text-indigo-600 '}`} />
                 <span className={`font-bold ${isExpanded ? '' : 'md:hidden'}`}>{item.label}</span>
               </div>
               {!isExpanded && (
@@ -129,15 +129,15 @@ export default function Sidebar({ activeMenu, setActiveMenu, ordersCount = 0, ad
       </nav>
 
       {(canOpenCustomerStorefront || onLogout) && (
-        <div className="mt-2 grid shrink-0 grid-cols-2 gap-2 border-t border-slate-200 pt-2 dark:border-slate-800/80 md:mt-auto md:grid-cols-1">
+        <div className="mt-2 grid shrink-0 grid-cols-2 gap-2 border-t border-slate-200 pt-2  md:mt-auto md:grid-cols-1">
           {canOpenCustomerStorefront && (
-            <button onClick={openCustomerStorefront} title="Preview Storefront" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50 px-3 text-[10px] font-semibold uppercase text-indigo-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 ${isExpanded ? '' : 'md:px-0'}`}>
+            <button onClick={openCustomerStorefront} title="Preview Storefront" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-indigo-100 bg-indigo-50 px-3 text-[10px] font-semibold uppercase text-indigo-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-100    ${isExpanded ? '' : 'md:px-0'}`}>
               <ExternalLink className="h-4 w-4 shrink-0" />
               <span className={`truncate ${isExpanded ? '' : 'md:hidden'}`}>Preview Storefront</span>
             </button>
           )}
           {onLogout && (
-            <button onClick={onLogout} title="Logout" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-3 text-[10px] font-semibold uppercase text-rose-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 ${isExpanded ? '' : 'md:px-0'}`}>
+            <button onClick={onLogout} title="Logout" className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-3 text-[10px] font-semibold uppercase text-rose-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-100    ${isExpanded ? '' : 'md:px-0'}`}>
               <LogOut className="h-4 w-4 shrink-0" />
               <span className={`truncate ${isExpanded ? '' : 'md:hidden'}`}>Logout</span>
             </button>

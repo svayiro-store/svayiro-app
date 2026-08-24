@@ -446,7 +446,10 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
     let externalBarcodes = Array.isArray(prod.externalBarcodes) ? prod.externalBarcodes : [];
     try {
       const barcodeRows = await api.getProductBarcodes(prod.id);
-      externalBarcodes = barcodeRows.map((row) => row.barcodeValue).filter(Boolean);
+      // SVAYIRO-generated UPC labels are maintained by the server. Show only
+      // package barcodes here, otherwise saving the form could treat an own
+      // label as an external package barcode.
+      externalBarcodes = barcodeRows.filter((row) => row.barcodeType !== 'SVAYIRO').map((row) => row.barcodeValue).filter(Boolean);
     } catch {
       externalBarcodes = Array.isArray(prod.externalBarcodes) ? prod.externalBarcodes : [];
     }
@@ -834,9 +837,9 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
     return categories.filter(c => c.parentId === productCategoryFilter);
   }, [productCategoryFilter, categories]);
 
-  const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
+  const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100   ';
   const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
-  const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900';
+  const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm  ';
 
   const categoryLabel = (categoryId: string, subcategoryId?: string) => {
     const cat = categories.find(c => c.id === categoryId);
@@ -863,18 +866,18 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
         <p className="text-xs opacity-70">Create and manage your product inventory with multiple images (carousel).</p>
       </div>
 
-      <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 text-xs font-semibold dark:border-slate-800 dark:bg-slate-900">
+      <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 text-xs font-semibold  ">
         <button
           type="button"
           onClick={() => setCatalogueView('products')}
-          className={`rounded-lg px-4 py-2 ${catalogueView === 'products' ? 'bg-indigo-700 text-white shadow' : 'text-slate-600 dark:text-slate-300'}`}
+          className={`rounded-lg px-4 py-2 ${catalogueView === 'products' ? 'bg-indigo-700 text-white shadow' : 'text-slate-600 '}`}
         >
           Product Management
         </button>
         <button
           type="button"
           onClick={() => setCatalogueView('codes')}
-          className={`rounded-lg px-4 py-2 ${catalogueView === 'codes' ? 'bg-indigo-700 text-white shadow' : 'text-slate-600 dark:text-slate-300'}`}
+          className={`rounded-lg px-4 py-2 ${catalogueView === 'codes' ? 'bg-indigo-700 text-white shadow' : 'text-slate-600 '}`}
         >
           Product Codes
         </button>
@@ -882,7 +885,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
 
       {catalogueView === 'products' && (
       <div id="admin-product-edit-form" className={`${sectionClass} scroll-mt-6`}>
-        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
+        <h3 className="mb-4 flex items-center gap-2 border-b border-indigo-700 pb-2 text-xs font-semibold uppercase text-indigo-700 ">
           {editingId ? <><Plus className="h-4 w-4" /> Edit Product</> : <><Plus className="h-4 w-4" /> Add New Product</>}
         </h3>
         <div className="grid gap-6 lg:grid-cols-3">
@@ -895,13 +898,13 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               </label>
               <div>
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Product Code</span>
-                <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs font-semibold text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
+                <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs font-semibold text-indigo-800   ">
                   Auto-generated after saving
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3  ">
               <span className={labelClass}>External Package Barcodes</span>
               <p className="mb-2 text-[10px] font-semibold text-slate-500">
                 Add branded packet barcodes here. POS scanner will auto-add this product when that barcode is scanned.
@@ -930,7 +933,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               {form.externalBarcodes.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {form.externalBarcodes.map((barcode) => (
-                    <span key={barcode} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-mono font-bold text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+                    <span key={barcode} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-mono font-bold text-slate-800   ">
                       {barcode}
                       <button
                         type="button"
@@ -946,7 +949,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               )}
             </div>
 
-            <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+            <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-3  ">
               <div className="mb-3">
                 <span className={labelClass}>Show Product In Categories *</span>
                 <p className="text-[10px] font-semibold text-slate-500">Choose every category or subcategory where this product should appear on the customer storefront.</p>
@@ -954,7 +957,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               <button
                 type="button"
                 onClick={() => setCategoryDropdownOpen((open) => !open)}
-                className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs font-bold text-slate-800 shadow-sm transition hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs font-bold text-slate-800 shadow-sm transition hover:border-indigo-300   "
               >
                 <span className="min-w-0 flex-1 truncate">
                   {selectedFormCategoryNames.length > 0
@@ -962,15 +965,15 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                     : '-- Select product categories --'}
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700  ">
                     {form.categoryIds.length}
                   </span>
                   <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
                 </span>
               </button>
               {categoryDropdownOpen && (
-                <div className="absolute left-3 right-3 top-[calc(100%-0.75rem)] z-30 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-950">
-                  <div className="mb-2 flex items-center justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-800">
+                <div className="absolute left-3 right-3 top-[calc(100%-0.75rem)] z-30 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-xl  ">
+                  <div className="mb-2 flex items-center justify-between gap-2 border-b border-slate-100 pb-2 ">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Selected: {form.categoryIds.length}</span>
                     <button
                       type="button"
@@ -986,8 +989,8 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                     {parentCategories.map((cat) => {
                       const childCategories = categories.filter((subcat) => subcat.parentId === cat.id);
                       return (
-                        <div key={cat.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
-                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-100">
+                        <div key={cat.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3  ">
+                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 ">
                             <input
                               type="checkbox"
                               checked={form.categoryIds.includes(cat.id)}
@@ -997,9 +1000,9 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                             {cat.name}
                           </label>
                           {childCategories.length > 0 && (
-                            <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+                            <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 ">
                               {childCategories.map((subcat) => (
-                                <label key={subcat.id} className="flex items-center gap-2 pl-2 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                                <label key={subcat.id} className="flex items-center gap-2 pl-2 text-[11px] font-semibold text-slate-600 ">
                                   <input
                                     type="checkbox"
                                     checked={form.categoryIds.includes(subcat.id)}
@@ -1020,12 +1023,12 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               {selectedFormCategoryNames.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {selectedFormCategoryNames.slice(0, 6).map((name) => (
-                    <span key={name} className="rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                    <span key={name} className="rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700  ">
                       {name}
                     </span>
                   ))}
                   {selectedFormCategoryNames.length > 6 && (
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 dark:bg-slate-800">
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 ">
                       +{selectedFormCategoryNames.length - 6} more
                     </span>
                   )}
@@ -1039,11 +1042,11 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             </label>
 
             {/* Pricing Section */}
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3  ">
               <label className="block">
                 <span className={labelClass}>Real Item Cost / Purchase Price (Rs) * Admin Only</span>
                 <input className={inputClass} type="number" min="0" step="0.01" value={form.purchasePrice} onChange={(e) => updateForm('purchasePrice', e.target.value)} placeholder="e.g. 120" />
-                <span className="text-[9px] text-amber-700 dark:text-amber-200">Hidden from customers - used for profit margins</span>
+                <span className="text-[9px] text-amber-700 ">Hidden from customers - used for profit margins</span>
               </label>
             </div>
 
@@ -1096,7 +1099,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               </label>
             </div>
 
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/25">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3  ">
               <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
@@ -1105,8 +1108,8 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                   className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
                 />
                 <span>
-                  <span className="block text-xs font-semibold text-emerald-900 dark:text-emerald-100">Loose / weighed item with PLU barcode</span>
-                  <span className="block text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                  <span className="block text-xs font-semibold text-emerald-900 ">Loose / weighed item with PLU barcode</span>
+                  <span className="block text-[10px] font-semibold text-emerald-700 ">
                     Use for vegetables, fruits, grains, and loose products weighed before POS billing.
                   </span>
                 </span>
@@ -1148,7 +1151,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                       onChange={(event) => updateForm('pluCode', event.target.value.replace(/\D/g, '').slice(0, 4))}
                       placeholder="Auto after save"
                     />
-                    <span className="text-[9px] font-semibold text-emerald-700 dark:text-emerald-300">Leave blank to auto-generate.</span>
+                    <span className="text-[9px] font-semibold text-emerald-700 ">Leave blank to auto-generate.</span>
                   </label>
                 </div>
               )}
@@ -1173,7 +1176,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
 
           {/* Right column: image carousel */}
           <div className="space-y-3">
-            <div className="relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
+            <div className="relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-100  ">
               {form.images.length > 0 ? (
                 <>
                   <img src={form.images[carouselIndex]} alt={`Product image ${carouselIndex + 1}`} className="h-full w-full object-cover" />
@@ -1196,7 +1199,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               )}
             </div>
             <div className="flex gap-2">
-              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-100   ">
                 <Upload className="h-3 w-3" />
                 Upload
                 <input
@@ -1212,7 +1215,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               </label>
               <button
                 onClick={handleImageUrlAdd}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-100   "
               >
                 <Link2 className="h-3 w-3" />
                 Paste URL
@@ -1223,11 +1226,11 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                 <span className="text-[10px] font-bold">Images ({form.images.length})</span>
                 <div className="max-h-32 space-y-1 overflow-y-auto">
                   {form.images.map((img, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-2 rounded bg-slate-100 p-1.5 dark:bg-slate-800">
-                      <span className="text-[9px] truncate text-slate-600 dark:text-slate-400">{idx + 1}. {img.substring(0, 20)}...</span>
+                    <div key={idx} className="flex items-center justify-between gap-2 rounded bg-slate-100 p-1.5 ">
+                      <span className="text-[9px] truncate text-slate-600 ">{idx + 1}. {img.substring(0, 20)}...</span>
                       <button
                         onClick={() => handleRemoveImage(idx)}
-                        className="p-0.5 hover:bg-rose-100 dark:hover:bg-rose-900 rounded"
+                        className="p-0.5 hover:bg-rose-100  rounded"
                       >
                         <X className="h-3 w-3 text-rose-600" />
                       </button>
@@ -1261,7 +1264,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
       {/* Products List */}
       <div className="space-y-4">
         {catalogueView === 'products' && (
-          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3   lg:flex-row lg:items-end lg:justify-between">
             <div className="grid flex-1 gap-3 md:grid-cols-[1fr_190px_220px_220px]">
               <label>
                 <span className={labelClass}>Search listed products</span>
@@ -1329,16 +1332,16 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                 setProductCategoryFilter('');
                 setProductSubcategoryFilter('');
               }}
-              className="rounded border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-950"
+              className="rounded border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50   "
             >
               Clear Search
             </button>
           </div>
         )}
         {catalogueView === 'codes' && (
-          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3   lg:flex-row lg:items-end lg:justify-between">
             <div className="grid flex-1 gap-3 sm:grid-cols-[1fr_200px]">
-              <div className="sm:col-span-2 flex flex-wrap gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
+              <div className="sm:col-span-2 flex flex-wrap gap-2 rounded-lg bg-slate-100 p-1 ">
                 {[
                   { value: 'product', label: 'Product Codes' },
                   { value: 'plu', label: 'PLU Codes' }
@@ -1353,7 +1356,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                     className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
                       codeListType === option.value
                         ? 'bg-indigo-700 text-white shadow'
-                        : 'text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-900'
+                        : 'text-slate-600 hover:bg-white  '
                     }`}
                   >
                     {option.label}
@@ -1404,7 +1407,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                 setCodeCategoryFilter('');
                 setSelectedCodeIds(new Set());
               }}
-              className="rounded border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-950"
+              className="rounded border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50   "
             >
               Clear Search
             </button>
@@ -1412,9 +1415,9 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
         )}
 
         {catalogueView === 'codes' && codeListType === 'product' && (
-          <div className="flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3 dark:border-indigo-900 dark:bg-indigo-950/30 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3   lg:flex-row lg:items-center lg:justify-between">
             <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <label className="flex items-start gap-3 text-xs font-bold text-slate-700 dark:text-slate-200">
+              <label className="flex items-start gap-3 text-xs font-bold text-slate-700 ">
                 <input
                   type="checkbox"
                   checked={includePriceOnSticker}
@@ -1426,7 +1429,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                   <span className="block text-[10px] font-semibold text-slate-500">Off by default. Keep off when prices change often.</span>
                 </span>
               </label>
-              <label className="flex items-start gap-3 text-xs font-bold text-slate-700 dark:text-slate-200">
+              <label className="flex items-start gap-3 text-xs font-bold text-slate-700 ">
                 <input
                   type="checkbox"
                   checked={includeMfdOnSticker}
@@ -1438,7 +1441,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                   <span className="block text-[10px] font-semibold text-slate-500">Manufactured/packed date per product.</span>
                 </span>
               </label>
-              <div className="space-y-2 rounded-lg border border-indigo-100 bg-white/70 p-2 text-xs font-bold text-slate-700 dark:border-indigo-900 dark:bg-slate-950/50 dark:text-slate-200 xl:col-span-2">
+              <div className="space-y-2 rounded-lg border border-indigo-100 bg-white/70 p-2 text-xs font-bold text-slate-700    xl:col-span-2">
                 <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Shelf-life text</span>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <label className="flex items-center gap-2">
@@ -1484,7 +1487,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                 <span className="block text-[10px] font-semibold text-slate-500">Choose either strict expiry date or quality best-before text, not both.</span>
               </div>
             </div>
-            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 lg:max-w-[140px]">
+            <p className="text-[10px] font-bold text-slate-500  lg:max-w-[140px]">
               Prints ${labelPrintSettings.labelWidthMm}mm × ${labelPrintSettings.labelHeightMm}mm thermal labels in ${labelPrintSettings.columnsPerRow}-column rows using the saved print settings.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -1498,7 +1501,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               <button
                 type="button"
                 onClick={() => printBarcodeLabels(codeProducts)}
-                className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
+                className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50   "
               >
                 <Printer className="h-4 w-4" /> Print All Showing
               </button>
@@ -1508,7 +1511,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                   const selectedProducts = codeProducts.filter((product) => selectedCodeIds.has(product.id));
                   downloadBarcodeLabelTemplate(selectedProducts.length > 0 ? selectedProducts : codeProducts);
                 }}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm hover:bg-slate-50   "
               >
                 <Download className="h-4 w-4" /> Download Template
               </button>
@@ -1517,10 +1520,10 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
         )}
 
         {catalogueView === 'codes' && codeListType === 'plu' && (
-          <div className="flex flex-col gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3   sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">PLU reference list</h3>
-              <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-800 ">PLU reference list</h3>
+              <p className="text-[11px] font-semibold text-slate-600 ">
                 This is for staff reference while weighing loose products. No barcode labels are printed here.
               </p>
             </div>
@@ -1544,7 +1547,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             <button
               type="button"
               onClick={showMoreRowsInCurrentView}
-              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
+              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50   "
             >
               Show More Rows
             </button>
@@ -1553,7 +1556,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               type="button"
               onClick={loadMoreProductsForCurrentView}
               disabled={loadingMoreProducts}
-              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-300"
+              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60   "
             >
               {loadingMoreProducts ? 'Loading...' : 'Load More Products'}
             </button>
@@ -1563,12 +1566,12 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
 
         {catalogueView === 'products' && (
           filteredProducts.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No products found matching your search criteria.</p>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center  ">
+              <p className="text-xs font-bold text-slate-600 ">No products found matching your search criteria.</p>
             </div>
           ) : (
-            <div className="max-h-[70vh] overflow-auto rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
-              <div className="grid min-w-[760px] grid-cols-6 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+            <div className="max-h-[70vh] overflow-auto rounded border bg-white  border-slate-200 ">
+              <div className="grid min-w-[760px] grid-cols-6 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100  text-slate-600 ">
                 <span className="col-span-2">Product</span>
                 <span>Category</span>
                 <span>Price</span>
@@ -1583,13 +1586,13 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                   <div
                     key={product.id}
                     id={`admin-product-${product.id}`}
-                    className="grid min-w-[760px] grid-cols-6 gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center"
+                    className="grid min-w-[760px] grid-cols-6 gap-4 px-4 py-3 border-t border-slate-200  items-center"
                   >
                     <div className="col-span-2 flex items-center gap-3">
                       {thumbnail ? (
                         <img src={thumbnail} alt={product.name} className="h-10 w-10 rounded-lg object-cover border border-slate-200" referrerPolicy="no-referrer" />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 ">
                           <ImageIcon className="h-4 w-4 text-slate-400" />
                         </div>
                       )}
@@ -1599,7 +1602,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                         <div className="text-[10px] text-slate-500">Slug: {product.slug || 'not set'}</div>
                         <div className="text-[10px] font-semibold text-slate-500">{formatProductMeasure(product)}</div>
                         {(product.isLooseItem || product.metadata?.isLooseItem) && (
-                          <div className="mt-1 inline-flex rounded bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                          <div className="mt-1 inline-flex rounded bg-emerald-50 px-2 py-0.5 text-[9px] font-semibold uppercase text-emerald-700  ">
                             PLU {product.pluCode || product.metadata?.pluCode || 'auto'}
                           </div>
                         )}
@@ -1617,11 +1620,11 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                       )}
                     </div>
                     <div className="text-xs">
-                      <span className={`rounded px-2 py-1 font-bold ${product.stockCount === 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400' : product.stockCount <= ((product as any).lowStockAlertThreshold || 5) ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'}`}>
+                      <span className={`rounded px-2 py-1 font-bold ${product.stockCount === 0 ? 'bg-rose-50 text-rose-600  ' : product.stockCount <= ((product as any).lowStockAlertThreshold || 5) ? 'bg-amber-50 text-amber-600  ' : 'bg-emerald-50 text-emerald-600  '}`}>
                         {product.stockCount}
                       </span>
                       {!product.isEnabled && (
-                        <span className="ml-1 rounded bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Disabled</span>
+                        <span className="ml-1 rounded bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600  ">Disabled</span>
                       )}
                     </div>
                     <div className="flex gap-2">
@@ -1636,14 +1639,14 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
         )}
         {catalogueView === 'codes' && codeListType === 'product' && (
           codeProducts.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No products found matching your search criteria.</p>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center  ">
+              <p className="text-xs font-bold text-slate-600 ">No products found matching your search criteria.</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+            <div className="overflow-hidden rounded border bg-white  border-slate-200 ">
               <div className="overflow-x-auto">
               <div className="min-w-[1320px]">
-              <div className="grid grid-cols-[44px_150px_minmax(0,1.1fr)_150px_minmax(0,1fr)_120px_320px_120px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              <div className="grid grid-cols-[44px_150px_minmax(0,1.1fr)_150px_minmax(0,1fr)_120px_320px_120px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100  text-slate-600 ">
                 <span>Select</span>
                 <span>Product Code</span>
                 <span>Name</span>
@@ -1659,7 +1662,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                 const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
                 const dateInfo = stickerDateInfo[product.id] || { mfd: '', exp: '', bestBefore: '' };
                 return (
-                  <div key={product.id} className="grid grid-cols-[44px_150px_minmax(0,1.1fr)_150px_minmax(0,1fr)_120px_320px_120px] gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center">
+                  <div key={product.id} className="grid grid-cols-[44px_150px_minmax(0,1.1fr)_150px_minmax(0,1fr)_120px_320px_120px] gap-4 px-4 py-3 border-t border-slate-200  items-center">
                     <div>
                       <input
                         type="checkbox"
@@ -1676,7 +1679,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                       <div className="text-xs font-bold">{product.name}</div>
                       <div className="text-[10px] font-semibold text-slate-500">{formatProductMeasure(product)}</div>
                       {(product.isLooseItem || product.metadata?.isLooseItem) && (
-                        <div className="mt-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        <div className="mt-1 text-[10px] font-semibold text-emerald-700 ">
                           PLU {product.pluCode || product.metadata?.pluCode || '-'} - loose label item
                         </div>
                       )}
@@ -1690,7 +1693,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                           {product.offerPrice > 0 && <div className="text-emerald-600">Offer Rs {Number(activePrice).toFixed(2)}</div>}
                         </div>
                       ) : (
-                        <span className="rounded bg-slate-100 px-2 py-1 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">Hidden</span>
+                        <span className="rounded bg-slate-100 px-2 py-1 text-[10px] text-slate-600  ">Hidden</span>
                       )}
                     </div>
                     <div className="grid gap-2 text-[10px]">
@@ -1703,7 +1706,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                           onChange={(event) => updateStickerDateInfo(product.id, 'mfd', formatStickerDateInput(event.target.value))}
                           disabled={!includeMfdOnSticker}
                           placeholder="dd/mm/yyyy"
-                          className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:disabled:bg-slate-900"
+                          className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400    "
                         />
                       </label>
                       <label className="grid grid-cols-[42px_1fr] items-center gap-2">
@@ -1715,7 +1718,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                           onChange={(event) => updateStickerDateInfo(product.id, 'exp', formatStickerDateInput(event.target.value))}
                           disabled={!includeExpOnSticker}
                           placeholder="dd/mm/yyyy"
-                          className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:disabled:bg-slate-900"
+                          className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400    "
                         />
                       </label>
                       <label className="grid grid-cols-[42px_1fr] items-center gap-2">
@@ -1726,7 +1729,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                           onChange={(event) => updateStickerDateInfo(product.id, 'bestBefore', event.target.value)}
                           disabled={!includeBestBeforeOnSticker}
                           placeholder="e.g. 3 months from PKD"
-                          className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:disabled:bg-slate-900"
+                          className="rounded border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400    "
                         />
                       </label>
                     </div>
@@ -1746,14 +1749,14 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
         )}
         {catalogueView === 'codes' && codeListType === 'plu' && (
           codeProducts.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800">
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">No PLU loose products found.</p>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center  ">
+              <p className="text-xs font-bold text-slate-600 ">No PLU loose products found.</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+            <div className="overflow-hidden rounded border bg-white  border-slate-200 ">
               <div className="overflow-x-auto">
                 <div className="min-w-[760px]">
-                  <div className="grid grid-cols-[90px_minmax(0,1.3fr)_minmax(0,1fr)_120px_120px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                  <div className="grid grid-cols-[90px_minmax(0,1.3fr)_minmax(0,1fr)_120px_120px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100  text-slate-600 ">
                     <span>PLU No.</span>
                     <span>Item Name</span>
                     <span>Category</span>
@@ -1763,8 +1766,8 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                   {visibleCodeProducts.map((product) => {
                     const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
                     return (
-                      <div key={product.id} className="grid grid-cols-[90px_minmax(0,1.3fr)_minmax(0,1fr)_120px_120px] gap-4 px-4 py-3 border-t border-slate-200 dark:border-slate-700 items-center">
-                        <div className="font-mono text-base font-semibold text-emerald-700 dark:text-emerald-300">{productPluCode(product) || '-'}</div>
+                      <div key={product.id} className="grid grid-cols-[90px_minmax(0,1.3fr)_minmax(0,1fr)_120px_120px] gap-4 px-4 py-3 border-t border-slate-200  items-center">
+                        <div className="font-mono text-base font-semibold text-emerald-700 ">{productPluCode(product) || '-'}</div>
                         <div>
                           <div className="text-xs font-bold">{product.name}</div>
                           <div className="text-[10px] text-slate-500">Stock: {product.stockCount} {product.stockUnit || product.metadata?.stockUnit || ''}</div>

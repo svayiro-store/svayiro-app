@@ -58,9 +58,9 @@ const defaultSlots = [
   'Store hours standard pickup (07:00 AM - 09:00 PM)'
 ];
 
-const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
+const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100   ';
 const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
-const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900';
+const sectionClass = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm  ';
 const maxLogoUploadBytes = 2 * 1024 * 1024;
 const defaultBarcodeLabelPrintSettings: BarcodeLabelPrintSettings = {
   labelWidthMm: 50,
@@ -524,7 +524,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
 
   return (
     <div className={`space-y-6 ${isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-      <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 dark:border-slate-800 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-5  md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="font-serif text-2xl font-semibold">Configure SVAYIRO configs and parameters</h2>
           <p className="text-xs text-slate-500">Adjust branding, physical address, support helplines, operational schedules, and delivery limits.</p>
@@ -560,7 +560,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                   onChange={(e) => updateDetail('logoUrl', e.target.value)}
                 />
               </div>
-              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300">
+              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100   ">
                 <Upload className="h-4 w-4" />
                 Upload
                 <input
@@ -573,7 +573,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                   }}
                 />
               </label>
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
+              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50  ">
                 {details.logoUrl ? (
                   <img src={details.logoUrl} alt="Logo preview" className="h-full w-full object-cover" />
                 ) : (
@@ -595,12 +595,12 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           <Field label="Horizontal Gap (mm)"><input className={inputClass} type="number" min="0" step="0.1" value={labelPrintSettings.horizontalGapMm} onChange={(event) => updateLabelPrintSetting('horizontalGapMm', event.target.value)} /></Field>
           <Field label="Vertical Gap (mm)"><input className={inputClass} type="number" min="0" step="0.1" value={labelPrintSettings.verticalGapMm} onChange={(event) => updateLabelPrintSetting('verticalGapMm', event.target.value)} /></Field>
         </div>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3  ">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[10px] font-semibold uppercase text-slate-500">
             <span>Print preview — row width {(labelPrintSettings.labelWidthMm * labelPrintSettings.columnsPerRow + labelPrintSettings.horizontalGapMm * (labelPrintSettings.columnsPerRow - 1)).toFixed(1)} mm</span>
             <span>{labelPrintSettings.labelWidthMm} × {labelPrintSettings.labelHeightMm} mm · {labelPrintSettings.columnsPerRow} columns</span>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-dashed border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+          <div className="overflow-x-auto rounded-lg border border-dashed border-slate-300 bg-white p-3  ">
             <div
               className="grid w-max"
               style={{
@@ -609,7 +609,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               }}
             >
               {Array.from({ length: labelPrintSettings.columnsPerRow * 3 }, (_, index) => (
-                <div key={index} className="flex items-center justify-center border border-indigo-400 bg-indigo-50 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200" style={{ height: Math.max(40, labelPrintSettings.labelHeightMm * 2.4) }}>
+                <div key={index} className="flex items-center justify-center border border-indigo-400 bg-indigo-50 text-[10px] font-semibold text-indigo-700  " style={{ height: Math.max(40, labelPrintSettings.labelHeightMm * 2.4) }}>
                   LABEL {index + 1}
                 </div>
               ))}
@@ -643,7 +643,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
 
       <section className={sectionClass}>
         <div className="mb-4 flex items-center justify-between gap-3 border-b border-indigo-700 pb-2">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-700 ">
             <Globe2 className="h-4 w-4" />
             Social Media Links
           </div>
@@ -654,18 +654,18 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
         </div>
         <div className="space-y-3">
           {socialLinks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 p-4 text-xs font-semibold text-slate-500 dark:border-slate-700">
+            <div className="rounded-xl border border-dashed border-slate-300 p-4 text-xs font-semibold text-slate-500 ">
               No social links added. Add Instagram, Facebook, YouTube, WhatsApp channel, website, or any public page.
             </div>
           ) : socialLinks.map((link, index) => (
-            <div key={index} className="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800 md:grid-cols-[0.45fr_1fr_auto]">
+            <div key={index} className="grid gap-3 rounded-xl border border-slate-200 p-3  md:grid-cols-[0.45fr_1fr_auto]">
               <Field label="Platform / Label">
                 <input className={inputClass} value={link.label} onChange={(e) => updateSocialLink(index, { label: e.target.value })} placeholder="Instagram" />
               </Field>
               <Field label="Public URL">
                 <input className={inputClass} value={link.url} onChange={(e) => updateSocialLink(index, { url: e.target.value })} placeholder="https://instagram.com/yourshop" />
               </Field>
-              <button type="button" title="Delete social link" onClick={() => removeSocialLink(index)} className="self-end rounded-lg border border-rose-100 p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30">
+              <button type="button" title="Delete social link" onClick={() => removeSocialLink(index)} className="self-end rounded-lg border border-rose-100 p-2 text-rose-500 hover:bg-rose-50 ">
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
@@ -675,7 +675,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
 
       <section className={sectionClass}>
         <div className="mb-4 flex items-center justify-between gap-3 border-b border-indigo-700 pb-2">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-700 ">
             <Building2 className="h-4 w-4" />
             Store Branches & Facility Addresses
           </div>
@@ -686,7 +686,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
         </div>
         <div className="space-y-3">
           {branches.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 p-4 text-xs font-semibold text-slate-500 dark:border-slate-700">
+            <div className="rounded-xl border border-dashed border-slate-300 p-4 text-xs font-semibold text-slate-500 ">
               No branches added. Add the main shop branch first so delivery distance can be calculated from a pinned origin.
             </div>
           ) : branches.map((branch, index) => {
@@ -698,7 +698,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               branch.pincode
             ].filter(Boolean).join(', ') || 'Address not completed';
             return (
-              <div key={branch.id} className={`overflow-hidden rounded-xl border ${branch.isDefault ? 'border-indigo-300 bg-indigo-50/40 dark:border-indigo-800 dark:bg-indigo-950/20' : 'border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/30'}`}>
+              <div key={branch.id} className={`overflow-hidden rounded-xl border ${branch.isDefault ? 'border-indigo-300 bg-indigo-50/40  ' : 'border-slate-300 bg-white  '}`}>
                 <button
                   type="button"
                   onClick={() => setOpenBranchId(isOpen ? null : branch.id)}
@@ -708,17 +708,17 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-semibold uppercase text-slate-500">Branch {index + 1}</span>
                       <span className="truncate text-sm font-semibold">{branch.branchName || 'Unnamed Branch'}</span>
-                      {branch.isDefault && <span className="rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">Main Branch</span>}
-                      {branch.lat && branch.lng && <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">Pinned</span>}
+                      {branch.isDefault && <span className="rounded-full bg-indigo-100 px-2 py-1 text-[10px] font-semibold text-indigo-700  ">Main Branch</span>}
+                      {branch.lat && branch.lng && <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700  ">Pinned</span>}
                     </div>
                     <p className="mt-1 truncate text-[11px] font-semibold text-slate-500">{branchSummary}</p>
                   </div>
-                  <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-2  ">
                     {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </div>
                 </button>
                 {isOpen && (
-                  <div className="border-t border-slate-200 p-4 dark:border-slate-800">
+                  <div className="border-t border-slate-200 p-4 ">
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <input className={`${inputClass} font-semibold`} value={branch.branchName} onChange={(e) => updateBranch(branch.id, { branchName: e.target.value })} />
                     </div>
@@ -733,10 +733,10 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                       <input className={inputClass} placeholder="State" value={branch.state} onChange={(e) => updateBranch(branch.id, { state: e.target.value })} />
                       <input className={inputClass} placeholder="Pincode" inputMode="numeric" maxLength={6} value={branch.pincode} onChange={(e) => updateBranch(branch.id, { pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })} />
                     </div>
-                    <div className="mt-3 rounded-xl border border-indigo-100 bg-white p-3 dark:border-indigo-900 dark:bg-slate-950">
+                    <div className="mt-3 rounded-xl border border-indigo-100 bg-white p-3  ">
                       <div className="mb-2">
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Pinned branch location</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 ">Pinned branch location</p>
                           <p className="text-[10px] font-semibold text-slate-500">Used as route origin for delivery billing.</p>
                         </div>
                       </div>
@@ -758,16 +758,16 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                         <input className={inputClass} placeholder="Latitude e.g. 12.9715987" inputMode="decimal" value={branch.lat ?? ''} onChange={(e) => updateBranch(branch.id, { lat: e.target.value === '' ? undefined : Number(e.target.value) })} />
                         <input className={inputClass} placeholder="Longitude e.g. 77.5945627" inputMode="decimal" value={branch.lng ?? ''} onChange={(e) => updateBranch(branch.id, { lng: e.target.value === '' ? undefined : Number(e.target.value) })} />
                       </div>
-                      <p className="mt-2 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                      <p className="mt-2 text-[10px] font-semibold text-amber-700 ">
                         For accurate pointing, enter the exact latitude and longitude from Google Maps: open the location, long-press/right-click the pin, then copy the coordinates.
                       </p>
                     </div>
-                    <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-                      {!branch.isDefault && <button type="button" onClick={() => setMainBranch(branch.id)} className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Set Main Branch</button>}
+                    <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-200 pt-3 ">
+                      {!branch.isDefault && <button type="button" onClick={() => setMainBranch(branch.id)} className="text-xs font-semibold text-indigo-700 ">Set Main Branch</button>}
                       <button type="button" title="Delete branch" onClick={() => {
                         setBranches((prev) => prev.filter((item) => item.id !== branch.id));
                         setOpenBranchId((current) => current === branch.id ? null : current);
-                      }} className="rounded-lg p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30">
+                      }} className="rounded-lg p-2 text-rose-500 hover:bg-rose-50 ">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -784,8 +784,8 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           <SectionTitle icon={Clock} title="Core Operational Timings & Schedules" />
           <div className={`mb-4 rounded-xl border px-4 py-3 text-sm font-bold ${
             storeIsOpen
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300'
-              : 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800   '
+              : 'border-rose-200 bg-rose-50 text-rose-800   '
           }`}>
             {storeIsOpen
               ? 'Store is OPEN. Customers can browse, add to cart, and place checkout orders.'
@@ -800,8 +800,8 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           />
           <div className={`mb-4 rounded-xl border px-4 py-3 text-sm font-bold ${
             holidayAdvisoryEnabled
-              ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300'
-              : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'
+              ? 'border-amber-200 bg-amber-50 text-amber-800   '
+              : 'border-slate-200 bg-slate-50 text-slate-600   '
           }`}>
             {holidayAdvisoryEnabled
               ? 'Holiday advisory is ENABLED. This broadcast message is shown above the customer banner, including when the store is closed.'
@@ -841,7 +841,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               <input className={inputClass} type="number" min={0} value={details.deliveryChargePerKm ?? 12} onChange={(e) => updateDetail('deliveryChargePerKm', Number(e.target.value))} />
             </Field>
           </div>
-          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4  ">
             <Toggle
               label="Allow Out-of-Range Delivery Requests"
               checked={Boolean(details.allowExtendedDelivery)}
@@ -849,7 +849,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               uncheckedLabel="Blocked"
               onChange={(checked) => updateDetail('allowExtendedDelivery', checked)}
             />
-            <p className="mt-2 text-[11px] font-semibold leading-relaxed text-amber-800 dark:text-amber-200">
+            <p className="mt-2 text-[11px] font-semibold leading-relaxed text-amber-800 ">
               If enabled, customers outside normal radius can request owner approval. The order waits as an outside-coverage request and stock/payment effects are not finalized automatically.
             </p>
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
@@ -871,8 +871,8 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               </Field>
             </div>
           </div>
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900 dark:bg-emerald-950/20">
-            <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4  ">
+            <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase text-emerald-700 ">
               <span>Edit Slotted Delivery Timings</span>
               <span>{deliverySlots.length} Slots</span>
             </div>
@@ -885,7 +885,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
                   </button>
                 </div>
               ))}
-              <button type="button" onClick={() => setDeliverySlots((prev) => [...prev, ''])} className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-emerald-400 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+              <button type="button" onClick={() => setDeliverySlots((prev) => [...prev, ''])} className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-emerald-400 px-3 py-2 text-xs font-semibold text-emerald-700 ">
                 <Plus className="h-4 w-4" />
                 Add New Delivery Slot
               </button>
@@ -900,7 +900,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           Owner creates worker console IDs here. Workers sign in only with this ID and password; password changes must be done by the owner.
         </p>
         {editingStaffId && (
-          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800   ">
             Editing staff account. Console ID is locked unless the role changes; leave password blank to keep the current password.
           </div>
         )}
@@ -935,7 +935,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               <button
                 type="button"
                 onClick={() => setShowStaffPassword((prev) => !prev)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-500 hover:bg-slate-100  "
                 aria-label={showStaffPassword ? 'Hide password' : 'Show password'}
                 title={showStaffPassword ? 'Hide password' : 'Show password'}
               >
@@ -955,14 +955,14 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
             {savingStaff ? 'Saving...' : editingStaffId ? 'Save Staff Changes' : 'Register Staff Account'}
           </button>
           {editingStaffId && (
-            <button type="button" onClick={resetStaffForm} disabled={savingStaff} className="rounded-lg border border-slate-200 px-4 py-3 text-xs font-semibold uppercase text-slate-600 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900">
+            <button type="button" onClick={resetStaffForm} disabled={savingStaff} className="rounded-lg border border-slate-200 px-4 py-3 text-xs font-semibold uppercase text-slate-600 hover:bg-slate-50 disabled:opacity-60   ">
               Cancel Edit
             </button>
           )}
         </div>
-        <div className="mt-5 overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        <div className="mt-5 overflow-auto rounded-xl border border-slate-200 ">
           <table className="w-full min-w-[760px] text-left text-xs">
-            <thead className="bg-slate-50 text-[10px] uppercase text-slate-500 dark:bg-slate-950">
+            <thead className="bg-slate-50 text-[10px] uppercase text-slate-500 ">
               <tr>
                 <th className="px-3 py-2 font-semibold">Name</th>
                 <th className="px-3 py-2 font-semibold">Login ID</th>
@@ -975,18 +975,18 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               {staffUsers.length === 0 ? (
                 <tr><td colSpan={5} className="px-3 py-5 text-center text-slate-500">No staff accounts registered yet.</td></tr>
               ) : staffUsers.map((staff) => (
-                <tr key={staff.id} className="border-t border-slate-100 dark:border-slate-800">
+                <tr key={staff.id} className="border-t border-slate-100 ">
                   <td className="px-3 py-2 font-bold">{staff.name}</td>
-                  <td className="px-3 py-2 font-mono font-semibold text-indigo-700 dark:text-indigo-300">{staff.staffLoginId || 'Not generated'}</td>
+                  <td className="px-3 py-2 font-mono font-semibold text-indigo-700 ">{staff.staffLoginId || 'Not generated'}</td>
                   <td className="px-3 py-2">{staffRoleLabels[(staff.roles?.find((role) => role !== 'admin' && role !== 'customer') as Exclude<RoleCode, 'admin' | 'customer'>) || 'inventory_manager']}</td>
                   <td className="px-3 py-2">{staff.isActive === false ? 'Inactive' : 'Active'}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => handleEditStaff(staff)} className="inline-flex items-center gap-1 rounded-md border border-indigo-200 px-2 py-1 text-[10px] font-semibold uppercase text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/30">
+                      <button type="button" onClick={() => handleEditStaff(staff)} className="inline-flex items-center gap-1 rounded-md border border-indigo-200 px-2 py-1 text-[10px] font-semibold uppercase text-indigo-700 hover:bg-indigo-50   ">
                         <Edit3 className="h-3 w-3" />
                         Edit
                       </button>
-                      <button type="button" onClick={() => handleDeleteStaff(staff)} className="inline-flex items-center gap-1 rounded-md border border-rose-200 px-2 py-1 text-[10px] font-semibold uppercase text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30">
+                      <button type="button" onClick={() => handleDeleteStaff(staff)} className="inline-flex items-center gap-1 rounded-md border border-rose-200 px-2 py-1 text-[10px] font-semibold uppercase text-rose-700 hover:bg-rose-50   ">
                         <Trash2 className="h-3 w-3" />
                         Delete
                       </button>
@@ -1005,7 +1005,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           <Field label="Merchant UPI ID">
             <input className={inputClass} value={details.upiId || ''} onChange={(e) => updateDetail('upiId', e.target.value.trim())} />
           </Field>
-          <div className="flex items-center gap-4 rounded-xl border border-slate-900 p-4 dark:border-slate-700">
+          <div className="flex items-center gap-4 rounded-xl border border-slate-900 p-4 ">
             <img src={qrPreviewUrl} alt="UPI QR preview" className="h-28 w-28 rounded-lg border bg-white p-2" />
             <div>
               <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold uppercase text-emerald-700">Auto-generated live preview</span>
@@ -1021,7 +1021,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
         <p className="mb-4 text-xs text-slate-500">Configure dynamic pricing and maximum carrying capacity in grams. Checkout uses these thresholds to allocate packaging by order weight.</p>
         <div className="space-y-3">
           {bags.map((bag, index) => (
-            <div key={bag.id || index} className="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800 md:grid-cols-[1.2fr_1fr_1fr_auto]">
+            <div key={bag.id || index} className="grid gap-3 rounded-xl border border-slate-200 p-3  md:grid-cols-[1.2fr_1fr_1fr_auto]">
               <Field label="Bag Label / Size Name">
                 <input className={inputClass} value={bag.size} onChange={(e) => setBags((prev) => prev.map((item, i) => i === index ? { ...item, size: e.target.value } : item))} />
               </Field>
@@ -1038,7 +1038,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
           ))}
         </div>
         <div className="mt-5 flex flex-col gap-3 md:flex-row">
-          <button type="button" onClick={() => setBags((prev) => [...prev, { id: `bag_${Date.now()}`, size: 'New Carrier Bag', capacityGrams: 1000, price: 0, isEnabled: true, position: prev.length }])} className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-indigo-400 px-4 py-3 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+          <button type="button" onClick={() => setBags((prev) => [...prev, { id: `bag_${Date.now()}`, size: 'New Carrier Bag', capacityGrams: 1000, price: 0, isEnabled: true, position: prev.length }])} className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-dashed border-indigo-400 px-4 py-3 text-xs font-semibold text-indigo-700 ">
             <Plus className="h-4 w-4" />
             Add New Carrier Bag Type
           </button>
@@ -1053,7 +1053,7 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
 }
 
 function SectionTitle({ icon: Icon, title, accent = 'indigo' }: { icon: any; title: string; accent?: 'indigo' | 'emerald' }) {
-  const color = accent === 'emerald' ? 'text-emerald-700 border-emerald-700 dark:text-emerald-300' : 'text-indigo-700 border-indigo-700 dark:text-indigo-300';
+  const color = accent === 'emerald' ? 'text-emerald-700 border-emerald-700 ' : 'text-indigo-700 border-indigo-700 ';
   return (
     <div className={`mb-4 flex items-center gap-2 border-b pb-2 text-xs font-semibold uppercase ${color}`}>
       <Icon className="h-4 w-4" />
@@ -1096,15 +1096,15 @@ function Toggle({
     <div className="mb-4 flex items-center justify-between gap-3">
       <div>
         <span className="text-sm font-semibold">{label}</span>
-        <p className={`text-[11px] font-bold ${checked ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+        <p className={`text-[11px] font-bold ${checked ? 'text-emerald-600 ' : 'text-rose-600 '}`}>
           Current: {checked ? checkedLabel : uncheckedLabel}
         </p>
       </div>
-      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-semibold dark:border-slate-800 dark:bg-slate-950">
+      <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-semibold  ">
         <button
           type="button"
           onClick={() => onChange(true)}
-          className={`rounded-md px-3 py-1.5 transition-colors duration-75 ease-out ${checked ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+          className={`rounded-md px-3 py-1.5 transition-colors duration-75 ease-out ${checked ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 '}`}
           aria-pressed={checked}
         >
           {checkedLabel}
@@ -1112,7 +1112,7 @@ function Toggle({
         <button
           type="button"
           onClick={() => onChange(false)}
-          className={`rounded-md px-3 py-1.5 transition-colors duration-75 ease-out ${!checked ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+          className={`rounded-md px-3 py-1.5 transition-colors duration-75 ease-out ${!checked ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 '}`}
           aria-pressed={!checked}
         >
           {uncheckedLabel}

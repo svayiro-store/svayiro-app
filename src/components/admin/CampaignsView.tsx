@@ -13,9 +13,9 @@ interface Props {
   refresh?: () => void;
 }
 
-const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100';
+const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100   ';
 const labelClass = 'mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500';
-const cardClass = 'rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900';
+const cardClass = 'rounded-xl border border-slate-200 bg-white p-3 shadow-sm  ';
 const pastelColorPresets = [
   { label: 'Pastel Cream', value: '#ffe5c2' },
   { label: 'Pastel Green', value: '#d7f5df' },
@@ -312,7 +312,7 @@ export default function CampaignsView({ isDarkMode, showToast, products, categor
 
       <section className={cardClass}>
         <div className="mb-3 flex items-center justify-between gap-3 border-b border-indigo-700 pb-2">
-          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-700 dark:text-indigo-300">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase text-indigo-700 ">
             <CalendarDays className="h-4 w-4" /> {editingId ? 'Edit Campaign' : 'Create Campaign'}
           </h3>
           {editingId && <button onClick={resetForm} className="rounded-full border px-3 py-1 text-[10px] font-semibold">Cancel edit</button>}
@@ -373,7 +373,7 @@ export default function CampaignsView({ isDarkMode, showToast, products, categor
           <label><span className={labelClass}>Priority</span><input className={inputClass} type="number" min={0} value={form.priority} onChange={(e) => updateForm('priority', e.target.value)} /></label>
           <div>
             <span className={labelClass}>Customer Section Colors</span>
-            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950">
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-2  ">
               {(form.backgroundColors.length ? form.backgroundColors : [form.backgroundColor]).slice(0, 3).map((color, index) => (
                 <div key={`campaign-color-${index}`} className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
                   <input
@@ -392,7 +392,7 @@ export default function CampaignsView({ isDarkMode, showToast, products, categor
                     type="button"
                     onClick={() => removeBackgroundColor(index)}
                     disabled={form.backgroundColors.length <= 1}
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[10px] font-semibold text-slate-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900"
+                    className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[10px] font-semibold text-slate-500 disabled:cursor-not-allowed disabled:opacity-40  "
                   >
                     Remove
                   </button>
@@ -424,7 +424,7 @@ export default function CampaignsView({ isDarkMode, showToast, products, categor
           </label>
         </div>
         {form.bannerImageUrl && (
-          <div className="mt-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950">
+          <div className="mt-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2  ">
             <img src={form.bannerImageUrl} alt="Campaign preview" className="h-16 w-28 rounded-lg object-cover" referrerPolicy="no-referrer" />
             <button onClick={() => updateForm('bannerImageUrl', '')} className="rounded-full border px-3 py-1 text-[10px] font-semibold"><X className="mr-1 inline h-3 w-3" />Remove</button>
           </div>
@@ -449,7 +449,7 @@ export default function CampaignsView({ isDarkMode, showToast, products, categor
         </div>
         {form.backgroundImageUrl && (
           <div
-            className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-2 dark:border-slate-800"
+            className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-2 "
             style={{
               backgroundImage: campaignBackgroundStyle(form.backgroundColors, form.backgroundImageUrl),
               backgroundSize: 'cover',
@@ -475,9 +475,9 @@ export default function CampaignsView({ isDarkMode, showToast, products, categor
               onChange={(e) => setProductSearch(e.target.value)}
               placeholder="Search loaded products by name, SKU, or code"
             />
-            <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 p-2 dark:border-slate-800">
+            <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 p-2 ">
               {visiblePickerProducts.map((product) => (
-                <label key={product.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-950">
+                <label key={product.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold hover:bg-slate-50 ">
                   <input type="checkbox" checked={form.productIds.includes(product.id)} onChange={() => toggleListValue('productIds', product.id)} />
                   <span className="line-clamp-1">{product.name}</span>
                 </label>
@@ -499,9 +499,9 @@ export default function CampaignsView({ isDarkMode, showToast, products, categor
           </div>
           <div>
             <span className={labelClass}>Categories Included</span>
-            <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 p-2 dark:border-slate-800">
+            <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 p-2 ">
               {activeCategories.map((category) => (
-                <label key={category.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-950">
+                <label key={category.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold hover:bg-slate-50 ">
                   <input type="checkbox" checked={form.categoryIds.includes(category.id)} onChange={() => toggleListValue('categoryIds', category.id)} />
                   <span className="line-clamp-1">{category.name}</span>
                 </label>
@@ -546,7 +546,7 @@ export default function CampaignsView({ isDarkMode, showToast, products, categor
             {campaign.bannerImageUrl ? (
               <img src={campaign.bannerImageUrl} alt={campaign.title} className="mt-3 aspect-[16/7] w-full rounded-xl object-cover" referrerPolicy="no-referrer" />
             ) : (
-              <div className="mt-3 flex aspect-[16/7] items-center justify-center rounded-xl bg-slate-50 text-slate-400 dark:bg-slate-950">
+              <div className="mt-3 flex aspect-[16/7] items-center justify-center rounded-xl bg-slate-50 text-slate-400 ">
                 <ImageIcon className="h-6 w-6" />
               </div>
             )}

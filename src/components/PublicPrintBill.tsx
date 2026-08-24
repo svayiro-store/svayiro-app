@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Order } from '../types';
 import { api } from '../api';
 
-export const PublicPrintBill: React.FC<{ websiteUrl?: string }> = ({ 
-  websiteUrl = 'https://svayiro.co.in' 
+export const PublicPrintBill: React.FC<{ websiteUrl?: string }> = ({
+  websiteUrl = 'https://svayiro.co.in'
 }) => {
   const orderId = typeof window !== 'undefined' ? window.location.pathname.split('/').pop() : '';
   const [order, setOrder] = useState<Order | null>(null);
