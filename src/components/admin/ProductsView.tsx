@@ -726,13 +726,13 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
     // Scale every content block from the configured physical label height. This
     // keeps the barcode and optional sticker details inside one label instead
     // of letting a browser reflow them into the neighbouring column.
-    const contentScale = Math.min(1.6, Math.max(0.35, labelPrintSettings.labelHeightMm / 25));
-    const labelPaddingMm = 1.15 * contentScale;
-    const brandFontPx = 6.8 * contentScale;
+    const contentScale = Math.min(1.5, Math.max(0.35, labelPrintSettings.labelHeightMm / 25));
+    const labelPaddingMm = 1 * contentScale;
+    const brandFontPx = 6.2 * contentScale;
     const nameFontPx = 8.8 * contentScale;
     const metaFontPx = 6.4 * contentScale;
-    const dateFontPx = 5.5 * contentScale;
-    const barcodeHeightMm = 8.3 * contentScale;
+    const dateFontPx = 5.3 * contentScale;
+    const barcodeHeightMm = 8.1 * contentScale;
     return `
       <!doctype html>
       <html>
