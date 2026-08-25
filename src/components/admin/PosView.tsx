@@ -20,7 +20,7 @@ import {
   Send
 } from 'lucide-react';
 import QRCode from 'qrcode';
-import { Bag, InventoryLog, Product } from '../../types';
+import { Bag, InventoryLog, Product, ShopProfile } from '../../types';
 import { formatDateTimeDDMMYYYY } from '../../utils/date';
 import { api } from '../../api';
 
@@ -44,9 +44,9 @@ type RegisterSession = {
   customItemName: string;
   qtyInput: string;
   priceOverride: string;
-  keypadTarget: 'qty' | 'price' | 'phone';
-  customerName: string;
+  keypadTarget: 'qty' | 'price' | 'phone' | 'cash';
   customerPhone: string;
+  cashReceived: string;
   paymentMethod: 'cod' | 'upi';
   upiReference: string;
   transactionNote: string;
@@ -56,6 +56,8 @@ type RegisterSession = {
 interface Props {
   isDarkMode: boolean;
   products: Product[];
+  shop: ShopProfile;
+  cashierName?: string;
   offlineCart: PosCartItem[];
   registers?: { id: string; name: string; itemCount: number; total: number }[];
   activeRegisterId?: string;
@@ -88,7 +90,6 @@ const POS_PRODUCT_PAGE_SIZE = 50;
 
 /** Pre-texted WhatsApp message for POS Walk-In Customer */
 function buildPosWhatsAppMessage(
-  customerName: string,
   grandTotal: number,
   invoiceUrl?: string,
   websiteUrl = 'https://svayiro.co.in'
@@ -96,7 +97,7 @@ function buildPosWhatsAppMessage(
   const publicInvoiceLink = invoiceUrl || websiteUrl;
 
   return [
-    `Namaste *${customerName || 'Customer'}*,`,
+    'Namaste,',
     `Your SVAYIRO store bill is ready.`,
     '',
     `*Status:* COMPLETED`,
@@ -127,8 +128,8 @@ const emptyRegisterSession = (): RegisterSession => ({
   qtyInput: '1',
   priceOverride: '',
   keypadTarget: 'qty',
-  customerName: '',
   customerPhone: '',
+  cashReceived: '',
   paymentMethod: 'cod',
   upiReference: '',
   transactionNote: '',
@@ -138,6 +139,8 @@ const emptyRegisterSession = (): RegisterSession => ({
 export default function PosView({
   isDarkMode,
   products,
+  shop,
+  cashierName = 'Cashier',
   offlineCart,
   registers = [],
   activeRegisterId,
@@ -164,6 +167,7 @@ export default function PosView({
   const [catalogAddFlash, setCatalogAddFlash] = useState(false);
   const [lastCompletedOrder, setLastCompletedOrder] = useState<any | null>(null);
   const [lastInvoiceUrl, setLastInvoiceUrl] = useState('');
+  const [lastReceipt, setLastReceipt] = useState<{ subtotal: number; totalItems: number; totalQuantity: number; saved: number; cashReceived: number; changeDue: number; counterName: string } | null>(null);
   const [barcodeScanValue, setBarcodeScanValue] = useState('');
   const [barcodeScanning, setBarcodeScanning] = useState(false);
   const [productSearch, setProductSearch] = useState('');
@@ -328,7 +332,7 @@ export default function PosView({
   const total = subtotal + bagCost;
   const activeRegister = registers.find((register) => register.id === activeRegisterId) || registers[0];
   const activeRegisterName = activeRegister?.name || 'Customer 1';
-  const activeValue = session.keypadTarget === 'qty' ? session.qtyInput : session.keypadTarget === 'phone' ? session.customerPhone : session.priceOverride;
+  const activeValue = session.keypadTarget === 'qty' ? session.qtyInput : session.keypadTarget === 'phone' ? session.customerPhone : session.keypadTarget === 'cash' ? session.cashReceived : session.priceOverride;
   const recentLogs = inventoryLogs.slice(0, 120);
 
   const cleanupOptions = [
@@ -347,6 +351,7 @@ export default function PosView({
     if (!lastCompletedOrder && !lastInvoiceUrl) return;
     setLastCompletedOrder(null);
     setLastInvoiceUrl('');
+    setLastReceipt(null);
   };
 
   const handleCleanupLogs = async (olderThan: '1w' | '1m' | '2m' | '3m' | '5m') => {
@@ -382,6 +387,7 @@ export default function PosView({
   const setTargetValue = (next: string) => {
     if (session.keypadTarget === 'qty') updateSession({ qtyInput: next });
     else if (session.keypadTarget === 'phone') updateSession({ customerPhone: next.replace(/\D/g, '').slice(0, 10) });
+    else if (session.keypadTarget === 'cash') updateSession({ cashReceived: next });
     else updateSession({ priceOverride: next });
   };
 
@@ -535,6 +541,7 @@ export default function PosView({
     const billBagCost = Number(lastCompletedOrder?.bagCharge ?? lastCompletedOrder?.bag_charge ?? bagCost);
     const billPaymentMethod = String(lastCompletedOrder?.paymentMethod ?? lastCompletedOrder?.payment_method ?? session.paymentMethod).toUpperCase();
     const billPaymentRef = lastCompletedOrder?.paymentRef ?? lastCompletedOrder?.payment_ref ?? session.upiReference;
+    const receipt = lastReceipt || { subtotal: billTotal - billBagCost, totalItems: billItems.length, totalQuantity: billItems.reduce((sum: number, item: any) => sum + Number(item.quantity || 1), 0), saved: 0, cashReceived: 0, changeDue: 0, counterName: activeRegisterName };
     const lines = billItems.map((item: any) => {
       const qty = Number(item.quantity || 1);
       const unit = Number(item.unitPrice ?? item.unit_price ?? item.price ?? 0);
@@ -550,25 +557,31 @@ export default function PosView({
           <title>SVAYIRO POS Receipt</title>
           <style>
             body{font-family:monospace;padding:18px;color:#0f172a}
-            h1{font-size:18px;margin:0 0 4px}
+            h1{font-size:18px;margin:0 0 4px;text-align:center}.shop{text-align:center;margin-bottom:12px}
             table{width:100%;border-collapse:collapse;margin-top:12px}
             td,th{border-bottom:1px solid #ddd;padding:6px;text-align:left;font-size:12px}
             .total{font-weight:800;text-align:right;margin-top:14px}
             .meta{font-size:12px;color:#475569}
+            .summary{margin-top:12px;border-top:1px dashed #94a3b8;border-bottom:1px dashed #94a3b8;padding:8px 0;font-size:12px}.summary div{display:flex;justify-content:space-between;padding:2px 0}.saved{color:#047857;font-weight:800}.terms{margin-top:16px;font-size:10px;color:#475569}.terms h2{font-size:11px;margin:0 0 5px}.terms ol{margin:0;padding-left:16px}.terms li{margin:2px 0}
             .actions{margin-bottom:14px;text-align:right}.actions button{border:0;border-radius:6px;background:#12109b;color:#fff;padding:8px 12px;font-weight:700;cursor:pointer}
             @media print{.actions{display:none}}
           </style>
         </head>
         <body>
           <div class="actions"><button onclick="window.print()">Print / Save PDF</button></div>
-          <h1>SVAYIRO POS Receipt</h1>
+          <div class="shop"><h1>${shop.name || 'SVAYIRO'}</h1><div class="meta">${shop.address || ''}</div><div class="meta">${shop.contactNumber || shop.whatsAppNumber || ''}</div></div>
+          <h1>POS Receipt</h1>
           <div class="meta">${formatDateTimeDDMMYYYY(new Date())}</div>
-          <div class="meta">Customer: ${session.customerName || 'Walk-In Customer'} | ${session.customerPhone || '-'}</div>
+          <div class="meta">Mobile: ${lastCompletedOrder?.customerPhone || lastCompletedOrder?.customer_phone || session.customerPhone || '-'}</div>
+          <div class="meta">Counter No: ${receipt.counterName} | Cashier: ${cashierName}</div>
           <table><thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead><tbody>${lines}</tbody></table>
+          <div class="summary"><div><span>Total items</span><strong>${receipt.totalItems}</strong></div><div><span>Total quantity</span><strong>${receipt.totalQuantity}</strong></div><div><span>Product subtotal</span><strong>Rs. ${receipt.subtotal.toFixed(2)}</strong></div>${receipt.saved > 0 ? `<div class="saved"><span>You saved</span><strong>Rs. ${receipt.saved.toFixed(2)}</strong></div>` : ''}</div>
           ${billBagCost > 0 ? `<div class="total">Bag charge: Rs. ${billBagCost.toFixed(2)}</div>` : ''}
           <div class="total">Grand total: Rs. ${billTotal.toFixed(2)}</div>
           <div class="meta">Payment: ${billPaymentMethod} ${billPaymentRef ? `(${billPaymentRef})` : ''}</div>
+          ${receipt.cashReceived > 0 ? `<div class="summary"><div><span>Cash received</span><strong>Rs. ${receipt.cashReceived.toFixed(2)}</strong></div><div><span>Return change</span><strong>Rs. ${receipt.changeDue.toFixed(2)}</strong></div></div>` : ''}
           ${session.transactionNote ? `<div class="meta">Note: ${session.transactionNote}</div>` : ''}
+          <div class="terms"><h2>Terms & Conditions</h2><ol><li>Please check items and change before leaving the counter.</li><li>Returns or exchanges are subject to the shop's policy and a valid bill.</li><li>Keep this receipt for any billing or product-query support.</li></ol></div>
         </body>
       </html>
     `);
@@ -589,9 +602,8 @@ export default function PosView({
       alert('Complete the sale first so the public invoice link can be created.');
       return;
     }
-    const customerName = lastCompletedOrder?.customerName || lastCompletedOrder?.customer_name || session.customerName;
     const grandTotal = Number(lastCompletedOrder?.finalTotal ?? lastCompletedOrder?.final_amount ?? total);
-    const message = buildPosWhatsAppMessage(customerName, grandTotal, lastInvoiceUrl, 'https://svayiro.co.in');
+    const message = buildPosWhatsAppMessage(grandTotal, lastInvoiceUrl, 'https://svayiro.co.in');
     openPosWhatsAppBill(targetPhone, message);
   };
 
@@ -619,10 +631,22 @@ export default function PosView({
       alert('Mobile number is compulsory. Enter a valid 10-digit Indian mobile number.');
       return;
     }
+    const cashReceived = Number(session.cashReceived || 0);
+    if (session.paymentMethod === 'cod' && (!Number.isFinite(cashReceived) || cashReceived < total)) {
+      alert('Enter the cash received amount, equal to or greater than the bill total.');
+      return;
+    }
+    const totalItems = offlineCart.length;
+    const totalQuantity = offlineCart.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
+    const saved = offlineCart.reduce((sum, item) => {
+      const product = products.find((row) => row.id === item.productId);
+      return sum + Math.max(0, Number(product?.basePrice || item.price) - Number(item.price || 0)) * Number(item.quantity || 1);
+    }, 0);
+    const receiptSnapshot = { subtotal, totalItems, totalQuantity, saved, cashReceived: session.paymentMethod === 'cod' ? cashReceived : 0, changeDue: session.paymentMethod === 'cod' ? cashReceived - total : 0, counterName: activeRegisterName };
     setSubmitting(true);
     try {
       const saleOrder = await onSubmitSale?.({
-        customerName: session.customerName.trim() || activeRegisterName,
+        customerName: 'Walk-In Customer',
         customerPhone: digits,
         paymentMethod: session.paymentMethod,
         upiReference: session.upiReference.trim(),
@@ -632,6 +656,7 @@ export default function PosView({
       });
 
       setLastCompletedOrder(saleOrder);
+      setLastReceipt(receiptSnapshot);
       if (saleOrder?.id) {
         try {
           const invoice = await api.adminInvoiceLink(saleOrder.id);
@@ -985,11 +1010,7 @@ export default function PosView({
             </div>
 
             <div className="border-t border-slate-900 pt-3 ">
-              <div className="grid grid-cols-2 gap-2">
-                <label>
-                  <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Customer Name</span>
-                  <input className={inputClass} value={session.customerName} onChange={(event) => updateSession({ customerName: event.target.value })} placeholder="Optional" />
-                </label>
+              <div>
                 <label>
                   <span className="mb-1 block text-[10px] font-semibold uppercase text-violet-700">Mobile Number * Compulsory</span>
                   <input className={inputClass} value={session.customerPhone} onChange={(event) => updateSession({ customerPhone: event.target.value.replace(/\D/g, '').slice(0, 10), keypadTarget: 'phone' })} onFocus={() => updateSession({ keypadTarget: 'phone' })} placeholder="Compulsory 10-digit phone" />
@@ -1000,13 +1021,21 @@ export default function PosView({
                 <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Payment Channel</span>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => updateSession({ paymentMethod: 'cod' })} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${session.paymentMethod === 'cod' ? 'border-indigo-700 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-500 '}`}>
-                    <CreditCard className="mr-1 inline h-4 w-4" /> Cash/Card
+                    <CreditCard className="mr-1 inline h-4 w-4" /> Cash
                   </button>
                   <button type="button" onClick={() => updateSession({ paymentMethod: 'upi' })} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${session.paymentMethod === 'upi' ? 'border-indigo-700 bg-indigo-50 text-indigo-800' : 'border-slate-200 text-slate-500 '}`}>
                     <QrCode className="mr-1 inline h-4 w-4" /> UPI Scan
                   </button>
                 </div>
               </div>
+
+              {session.paymentMethod === 'cod' && (
+                <label className="mt-3 block">
+                  <span className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Cash Received *</span>
+                  <input className={inputClass} inputMode="decimal" value={session.cashReceived} onFocus={() => updateSession({ keypadTarget: 'cash' })} onChange={(event) => updateSession({ cashReceived: event.target.value.replace(/[^\d.]/g, ''), keypadTarget: 'cash' })} placeholder={`At least Rs. ${total.toFixed(2)}`} />
+                  {Number(session.cashReceived || 0) >= total && <span className="mt-1 block text-[10px] font-semibold text-emerald-700">Return change: Rs. {(Number(session.cashReceived || 0) - total).toFixed(2)}</span>}
+                </label>
+              )}
 
               {session.paymentMethod === 'upi' && (
                 <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3  ">
@@ -1166,15 +1195,16 @@ export default function PosView({
           </div>
 
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <button type="button" onClick={() => updateSession({ keypadTarget: 'qty' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase ${session.keypadTarget === 'qty' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600  '}`}>Qty</button>
               <button type="button" disabled={!canOverridePrice} onClick={() => updateSession({ keypadTarget: 'price' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase disabled:opacity-40 ${session.keypadTarget === 'price' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600  '}`}>Price</button>
               <button type="button" onClick={() => updateSession({ keypadTarget: 'phone' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase ${session.keypadTarget === 'phone' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600  '}`}>Phone</button>
+              <button type="button" onClick={() => updateSession({ keypadTarget: 'cash' })} className={`rounded-lg px-2 py-2 text-[10px] font-semibold uppercase ${session.keypadTarget === 'cash' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600  '}`}>Cash</button>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3  ">
               <p className="mb-2 truncate rounded-lg bg-white px-3 py-2 text-center font-mono text-sm font-semibold text-slate-900  ">
-                {session.keypadTarget === 'qty' ? session.qtyInput : session.keypadTarget === 'phone' ? session.customerPhone || 'phone' : session.priceOverride || 'price'}
+                {session.keypadTarget === 'qty' ? session.qtyInput : session.keypadTarget === 'phone' ? session.customerPhone || 'phone' : session.keypadTarget === 'cash' ? session.cashReceived || 'cash' : session.priceOverride || 'price'}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {keypad.map((key) => (
