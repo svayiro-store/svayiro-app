@@ -687,11 +687,11 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
       const activePrice = product.offerPrice > 0 ? product.offerPrice : product.basePrice;
       const dateInfo = stickerDateInfo[product.id] || { mfd: '', exp: '', bestBefore: '' };
       const priceLine = includePriceOnSticker
-        ? `<div class="price"><span class="mrp">MRP Rs ${Number(product.basePrice).toFixed(0)}</span>${product.offerPrice > 0 ? `<span class="selling-price">S.Price Rs ${Number(activePrice).toFixed(0)}</span>` : ''}</div><div class="tax-note">(Inclusive of all taxes)</div>`
+        ? `<div class="price"><span class="mrp">MRP Rs: ${Number(product.basePrice).toFixed(0)}</span>${product.offerPrice > 0 ? `<span class="selling-price">S.Price Rs: ${Number(activePrice).toFixed(0)}</span>` : ''}</div><div class="tax-note">(Inclusive of all taxes)</div>`
         : '';
       const mfdLine = includeMfdOnSticker && dateInfo.mfd ? `<span>PKD: ${escapeHtml(formatStickerDate(dateInfo.mfd))}</span>` : '';
       const expLine = includeExpOnSticker && dateInfo.exp ? `<span>EXP: ${escapeHtml(formatStickerDate(dateInfo.exp))}</span>` : '';
-      const bestBeforeLine = includeBestBeforeOnSticker && dateInfo.bestBefore ? `<span>Best before ${escapeHtml(dateInfo.bestBefore)}</span>` : '';
+      const bestBeforeLine = includeBestBeforeOnSticker && dateInfo.bestBefore ? `<span>Best before:${escapeHtml(dateInfo.bestBefore)}</span>` : '';
       const dateLine = [mfdLine, expLine, bestBeforeLine].filter(Boolean).length > 0
         ? `<div class="dates">${[mfdLine, expLine, bestBeforeLine].filter(Boolean).join('')}</div>`
         : '';
