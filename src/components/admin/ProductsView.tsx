@@ -620,7 +620,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
     setLoadingAllProducts(true);
     try {
       let offset = productOffset;
-      let hasMore = hasMoreProducts;
+      let hasMore: boolean = hasMoreProducts;
       const loadedProducts: Product[] = [];
 
       while (hasMore) {
@@ -660,10 +660,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
     setStickerDateInfo((prev) => ({
       ...prev,
       [productId]: {
-        mfd: '',
-        exp: '',
-        bestBefore: '',
-        ...(prev[productId] || {}),
+        ...(prev[productId] || { mfd: '', exp: '', bestBefore: '' }),
         [key]: value
       }
     }));
