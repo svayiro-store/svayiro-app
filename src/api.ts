@@ -768,6 +768,9 @@ export const api = {
     customerPhone?: string;
     paymentMethod?: 'cod' | 'upi';
     upiReference?: string;
+    cashReceived?: number;
+    counterName?: string;
+    cashierName?: string;
     bagOption?: 'own' | 'need';
     bagCharge?: number;
   }) =>

@@ -77,6 +77,9 @@ interface Props {
     customerPhone?: string;
     paymentMethod?: 'cod' | 'upi';
     upiReference?: string;
+    cashReceived?: number;
+    counterName?: string;
+    cashierName?: string;
     bagOption?: 'own' | 'need';
     bagCost?: number;
     note?: string;
@@ -331,7 +334,7 @@ export default function PosView({
   );
   const total = subtotal + bagCost;
   const activeRegister = registers.find((register) => register.id === activeRegisterId) || registers[0];
-  const activeRegisterName = activeRegister?.name || 'Customer 1';
+  const activeRegisterName = activeRegister?.name || 'Counter 1';
   const activeValue = session.keypadTarget === 'qty' ? session.qtyInput : session.keypadTarget === 'phone' ? session.customerPhone : session.keypadTarget === 'cash' ? session.cashReceived : session.priceOverride;
   const recentLogs = inventoryLogs.slice(0, 120);
 
@@ -650,6 +653,9 @@ export default function PosView({
         customerPhone: digits,
         paymentMethod: session.paymentMethod,
         upiReference: session.upiReference.trim(),
+        cashReceived: receiptSnapshot.cashReceived,
+        counterName: receiptSnapshot.counterName,
+        cashierName,
         bagOption: session.bagOption,
         bagCost,
         note: session.transactionNote.trim()
@@ -723,7 +729,7 @@ export default function PosView({
             <ClipboardList className="h-4 w-4" />
             Active Billing Registers ({Math.max(1, registers.length)}):
           </div>
-          {(registers.length ? registers : [{ id: activeRegisterId || 'register_1', name: 'Customer 1', itemCount: offlineCart.length, total }]).map((register) => {
+          {(registers.length ? registers : [{ id: activeRegisterId || 'register_1', name: 'Counter 1', itemCount: offlineCart.length, total }]).map((register) => {
             const isActive = register.id === activeRegisterId || (!activeRegisterId && register.name === activeRegisterName);
             return (
               <div key={register.id} className="flex items-center overflow-hidden rounded-lg border border-violet-200 bg-white shadow-sm  ">

@@ -98,7 +98,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
   const isOwner = userRoles.includes('admin');
   const [activeMenu, setActiveMenu] = useState<AdminMenu>(allowedMenus[0] || 'dashboard');
   const admin = useAdminData(userRoles);
-  const [posRegisters, setPosRegisters] = useState<PosRegister[]>([{ id: 'register_1', name: 'Customer 1', cart: [] }]);
+  const [posRegisters, setPosRegisters] = useState<PosRegister[]>([{ id: 'register_1', name: 'Counter 1', cart: [] }]);
   const [activeRegisterId, setActiveRegisterId] = useState('register_1');
   const [adminCategories, setAdminCategories] = useState<Category[]>([]);
   const [focusedProductId, setFocusedProductId] = useState<string | null>(null);
@@ -261,7 +261,7 @@ export default function AdminApp({ shop, categories, products, banners, notifica
     updateActiveRegisterCart(prev => prev.filter(i => (i.cartKey || i.productId) !== cartKey));
   };
 
-  const handleOfflineSaleSubmit = async (overrides?: { customerName?: string; customerPhone?: string; paymentMethod?: 'cod' | 'upi'; upiReference?: string; bagOption?: 'own' | 'need'; bagCost?: number; note?: string }) => {
+  const handleOfflineSaleSubmit = async (overrides?: { customerName?: string; customerPhone?: string; paymentMethod?: 'cod' | 'upi'; upiReference?: string; cashReceived?: number; counterName?: string; cashierName?: string; bagOption?: 'own' | 'need'; bagCost?: number; note?: string }) => {
     if (offlineCart.length === 0) {
       showToast('Cart is empty!', 'warning');
       return;
@@ -283,6 +283,9 @@ export default function AdminApp({ shop, categories, products, banners, notifica
       customerPhone: overrides?.customerPhone || '',
       paymentMethod: overrides?.paymentMethod || 'cod',
       upiReference: overrides?.upiReference,
+      cashReceived: overrides?.cashReceived,
+      counterName: overrides?.counterName,
+      cashierName: overrides?.cashierName,
       bagOption: overrides?.bagOption || 'own',
       bagCharge: overrides?.bagCost || 0,
       note: overrides?.note || ''

@@ -194,6 +194,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
+  const [loadingAllProducts, setLoadingAllProducts] = useState(false);
   const [productOffset, setProductOffset] = useState(0);
   const [hasMoreProducts, setHasMoreProducts] = useState(true);
   const [visibleProductRows, setVisibleProductRows] = useState(ADMIN_VISIBLE_ROW_SIZE);
@@ -605,6 +606,45 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
       return;
     }
     setVisibleProductRows((count) => count + ADMIN_VISIBLE_ROW_SIZE);
+  };
+
+  const loadAllProductsForCurrentView = async () => {
+    if (loadingAllProducts || loadingMoreProducts) return;
+
+    if (!hasMoreProducts) {
+      if (catalogueView === 'codes') setVisibleCodeRows(codeProducts.length);
+      else setVisibleProductRows(filteredProducts.length);
+      return;
+    }
+
+    setLoadingAllProducts(true);
+    try {
+      let offset = productOffset;
+      let hasMore = hasMoreProducts;
+      const loadedProducts: Product[] = [];
+
+      while (hasMore) {
+        const nextPage = await api.getProducts({ limit: ADMIN_PRODUCT_PAGE_SIZE, offset, includeDisabled: true });
+        loadedProducts.push(...nextPage);
+        offset += nextPage.length;
+        hasMore = nextPage.length === ADMIN_PRODUCT_PAGE_SIZE;
+      }
+
+      if (loadedProducts.length > 0) {
+        setProducts((current) => {
+          const known = new Set(current.map((product) => product.id));
+          return [...current, ...loadedProducts.filter((product) => !known.has(product.id))];
+        });
+      }
+      setProductOffset(offset);
+      setHasMoreProducts(false);
+      if (catalogueView === 'codes') setVisibleCodeRows(Number.MAX_SAFE_INTEGER);
+      else setVisibleProductRows(Number.MAX_SAFE_INTEGER);
+    } catch (err: any) {
+      console.error('Failed to load all products:', err);
+    } finally {
+      setLoadingAllProducts(false);
+    }
   };
 
   const toggleCodeSelection = (productId: string) => {
@@ -1543,24 +1583,36 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             {' '}of {catalogueView === 'codes' ? codeProducts.length : filteredProducts.length} matching products
             {' '}({products.length} loaded)
           </span>
-          {hasMoreRowsInCurrentView ? (
-            <button
-              type="button"
-              onClick={showMoreRowsInCurrentView}
-              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50   "
-            >
-              Show More Rows
-            </button>
-          ) : hasMoreProducts && (
-            <button
-              type="button"
-              onClick={loadMoreProductsForCurrentView}
-              disabled={loadingMoreProducts}
-              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60   "
-            >
-              {loadingMoreProducts ? 'Loading...' : 'Load More Products'}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {hasMoreRowsInCurrentView ? (
+              <button
+                type="button"
+                onClick={showMoreRowsInCurrentView}
+                className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50   "
+              >
+                Show More Rows
+              </button>
+            ) : hasMoreProducts && (
+              <button
+                type="button"
+                onClick={loadMoreProductsForCurrentView}
+                disabled={loadingMoreProducts || loadingAllProducts}
+                className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60   "
+              >
+                {loadingMoreProducts ? 'Loading...' : 'Load More Products'}
+              </button>
+            )}
+            {(hasMoreRowsInCurrentView || hasMoreProducts) && (
+              <button
+                type="button"
+                onClick={loadAllProductsForCurrentView}
+                disabled={loadingAllProducts || loadingMoreProducts}
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-800 shadow-sm hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60   "
+              >
+                {loadingAllProducts ? 'Loading all...' : 'Load all'}
+              </button>
+            )}
+          </div>
           <span className="text-[10px] font-mono opacity-60">{loading ? 'Loading...' : 'Ready'}</span>
         </div>
 

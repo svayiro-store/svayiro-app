@@ -1353,10 +1353,17 @@ function safeJsonArray(value: any) {
   return [];
 }
 
-function renderPublicInvoiceHtml(invoice: any, order: any) {
+function renderPublicInvoiceHtml(invoice: any, order: any, shop?: any) {
   const items = safeJsonArray(invoice.line_items || order.items);
   const status = String(order.status || 'pending').replace(/_/g, ' ');
   const paymentStatus = invoice.payment_status || order.payment_status || 'pending';
+  const posReceipt = order.meta?.posReceipt && typeof order.meta.posReceipt === 'object' ? order.meta.posReceipt : null;
+  const posReceiptHtml = invoice.invoice_type === 'offline_pos' && posReceipt ? `
+    <div class="grid">
+      <div class="box"><div class="label">Counter Details</div><strong>Counter: ${escapeHtml(posReceipt.counterName || '-')}</strong><br><span class="muted">Cashier: ${escapeHtml(posReceipt.cashierName || '-')}</span></div>
+      <div class="box"><div class="label">Sale Summary</div><strong>Total items: ${escapeHtml(posReceipt.totalItems || 0)}</strong><br><span class="muted">Total quantity: ${escapeHtml(posReceipt.totalQuantity || 0)}</span>${Number(posReceipt.saved || 0) > 0 ? `<br><strong style="color:#047857">You saved: ${money(posReceipt.saved)}</strong>` : ''}</div>
+    </div>
+    ${Number(posReceipt.cashReceived || 0) > 0 ? `<div class="totals"><div class="total-row"><span>Cash received</span><strong>${money(posReceipt.cashReceived)}</strong></div><div class="total-row"><span>Return change</span><strong>${money(posReceipt.changeDue)}</strong></div></div>` : ''}` : '';
   const itemRows = items.map((item: any, index: number) => {
     const qty = Number(item.quantity || 1);
     const fallbackUnit = Number(item.totalPrice || item.price || 0) / qty;
@@ -1403,8 +1410,8 @@ function renderPublicInvoiceHtml(invoice: any, order: any) {
         <div class="bill">
           <div class="top">
             <div>
-              <h1>SVAYIRO</h1>
-              <div class="muted">Trust In Every Choice<br>Premium groceries, natural staples, and daily essentials</div>
+              <h1>${escapeHtml(shop?.name || 'SVAYIRO')}</h1>
+              <div class="muted">${escapeHtml(shop?.tagline || 'Trust In Every Choice')}<br>${escapeHtml(shop?.address || '')}${shop?.phone || shop?.whatsapp ? `<br>${escapeHtml(shop.phone || shop.whatsapp)}` : ''}</div>
             </div>
             <div class="right">
               <div class="badge">${escapeHtml(invoice.invoice_type === 'offline_pos' ? 'POS Bill' : 'Tax Invoice')}</div>
@@ -1429,10 +1436,12 @@ function renderPublicInvoiceHtml(invoice: any, order: any) {
             <div class="total-row"><span>Discount</span><strong>- ${money(invoice.discount_amount)}</strong></div>
             <div class="total-row grand"><span>Grand Total</span><span>${money(invoice.total_amount)}</span></div>
           </div>
+          ${posReceiptHtml}
           <div class="grid">
             <div class="box"><div class="label">Payment</div><strong>${escapeHtml(order.payment_method || 'cod')}</strong> <span class="muted">(${escapeHtml(paymentStatus)})</span><br><span class="muted">Reference: ${escapeHtml(order.payment_ref || '-')}</span></div>
             <div class="box"><div class="label">Invoice Status</div><strong>${escapeHtml(status)}</strong><br><span class="muted">This link is protected by a private invoice token.</span></div>
           </div>
+          ${invoice.invoice_type === 'offline_pos' ? '<div class="box muted"><strong>Terms & Conditions</strong><ol><li>Please check items and change before leaving the counter.</li><li>Returns or exchanges are subject to the shop\'s policy and a valid bill.</li><li>Keep this receipt for any billing or product-query support.</li></ol></div>' : ''}
         </div>
       </div>
     </body>
@@ -6831,7 +6840,7 @@ app.get('/invoice/:invoiceNo', async (req, res) => {
   }
   try {
     const { rows } = await pgQuery(
-      `SELECT i.*, o.status, o.order_ref, o.payment_method, o.payment_ref, o.delivery_method, o.selected_slot, o.delivery_address, o.created_at AS order_created_at, o.id AS order_real_id
+      `SELECT i.*, o.status, o.order_ref, o.payment_method, o.payment_ref, o.delivery_method, o.selected_slot, o.delivery_address, o.meta, o.created_at AS order_created_at, o.id AS order_real_id
        FROM invoices i
        JOIN orders o ON o.id = i.order_id
        WHERE i.invoice_no = $1 AND i.public_token = $2
@@ -6846,12 +6855,14 @@ app.get('/invoice/:invoiceNo', async (req, res) => {
       order_ref: row.order_ref,
       payment_method: row.payment_method,
       payment_ref: row.payment_ref,
-      delivery_method: row.delivery_method,
-      selected_slot: row.selected_slot,
-      delivery_address: row.delivery_address,
-      created_at: row.order_created_at
+       delivery_method: row.delivery_method,
+       selected_slot: row.selected_slot,
+       delivery_address: row.delivery_address,
+       meta: row.meta,
+       created_at: row.order_created_at
     };
-    return res.type('html').send(renderPublicInvoiceHtml(row, order));
+    const shopRes = await pgQuery('SELECT name, tagline, address, phone, whatsapp FROM shop_profile ORDER BY created_at DESC LIMIT 1');
+    return res.type('html').send(renderPublicInvoiceHtml(row, order, shopRes.rows[0] || null));
   } catch (err) {
     console.error('GET /invoice/:invoiceNo error', err);
     return res.status(500).send('Unable to open invoice.');
@@ -7280,7 +7291,7 @@ app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
 // --------------------------------------------------------
 
 app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use'), async (req, res) => {
-  const { productId, quantity, note, items, customerName, customerPhone, paymentMethod, upiReference } = req.body;
+  const { productId, quantity, note, items, customerName, customerPhone, paymentMethod, upiReference, cashReceived, counterName, cashierName } = req.body;
   const isOwner = hasAnyRole(req, ['admin']);
   const normalizedCustomerPhone = normalizePhone(customerPhone);
   if (!isValidIndianMobile(normalizedCustomerPhone)) {
@@ -7387,7 +7398,19 @@ app.post('/api/admin/offline-sale', authMiddleware, requirePermission('pos:use')
       }
       const itemDiscountValue = orderItems.reduce((sum, item) => sum + Number(item.item_discount || 0), 0);
       const finalAmount = calculatedTotal + bagCharge;
-      const ordRes = await client.query('INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, meta, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now(),now()) RETURNING *', [null, generateId('ord'), customerName || 'Guest', normalizedCustomerPhone, 'delivered', paymentMethod === 'upi' ? 'upi' : 'cod', 'paid', upiReference || null, 'pickup', null, 'In-store Direct Purchase', bagOption, JSON.stringify(orderItems), baseProductSubtotal, 0, bagCharge, itemDiscountValue, finalAmount, { itemDiscount: itemDiscountValue, productSellingSubtotal: calculatedTotal }]);
+      const paymentMethodValue = paymentMethod === 'upi' ? 'upi' : 'cod';
+      const cashTendered = paymentMethodValue === 'cod' ? nonNegativeNumber(cashReceived, 0) : 0;
+      if (cashReceived !== undefined && paymentMethodValue === 'cod' && cashTendered < finalAmount) throw new HttpError(400, 'Cash received cannot be lower than the final bill amount.');
+      const posReceipt = {
+        counterName: String(counterName || '').trim().slice(0, 80) || 'POS Counter',
+        cashierName: String(cashierName || '').trim().slice(0, 120) || 'Cashier',
+        totalItems: orderItems.length,
+        totalQuantity: orderItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+        saved: itemDiscountValue,
+        cashReceived: cashTendered,
+        changeDue: Math.max(0, cashTendered - finalAmount)
+      };
+      const ordRes = await client.query('INSERT INTO orders(user_id, order_ref, customer_name, customer_phone, status, payment_method, payment_status, payment_ref, delivery_method, delivery_address, selected_slot, bag_option, items, amount_total, delivery_charge, bag_charge, discount_amount, final_amount, meta, created_at, updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,now(),now()) RETURNING *', [null, generateId('ord'), customerName || 'Guest', normalizedCustomerPhone, 'delivered', paymentMethodValue, 'paid', upiReference || null, 'pickup', null, 'In-store Direct Purchase', bagOption, JSON.stringify(orderItems), baseProductSubtotal, 0, bagCharge, itemDiscountValue, finalAmount, { itemDiscount: itemDiscountValue, productSellingSubtotal: calculatedTotal, posReceipt }]);
       const order = ordRes.rows[0];
       for (const it of orderItems) {
         await client.query('INSERT INTO order_items(order_id, product_id, name, sku, quantity, unit_price, purchase_unit_cost, total_price) VALUES($1,$2,$3,$4,$5,$6,$7,$8)', [order.id, it.product_id, it.name, it.sku || null, it.quantity, it.unit_price, it.purchase_unit_cost, it.total_price]);
