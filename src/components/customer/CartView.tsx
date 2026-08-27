@@ -99,6 +99,8 @@ export default function CartView({
     : null;
 
   const isOutOfRange = deliveryMethod === 'delivery' && !!selectedAddress && (totals.deliveryDistanceKm ?? 0) > (shop.deliveryRadius || 10);
+  const minimumDeliveryOrderAmount = Math.max(0, Number(shop.minimumDeliveryOrderAmount || 0));
+  const deliveryMinimumNotMet = deliveryMethod === 'delivery' && minimumDeliveryOrderAmount > 0 && totals.productTotal < minimumDeliveryOrderAmount;
   const redeemBlockPoints = loyaltySummary?.redeemBlockPoints || 10;
   const redeemBlockValue = loyaltySummary?.redeemBlockValue || 20;
   const maxRedeemBlocks = Math.floor((loyaltySummary?.points || 0) / redeemBlockPoints);
@@ -290,6 +292,13 @@ export default function CartView({
               {/* DETAILS FOR DELIVERY */}
               {deliveryMethod === 'delivery' && (
                 <div className="space-y-2.5 pt-2 border-t border-slate-100 ">
+                  {minimumDeliveryOrderAmount > 0 && (
+                    <p className={`rounded-lg border px-3 py-2 text-[10px] font-semibold ${deliveryMinimumNotMet ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                      {deliveryMinimumNotMet
+                        ? `Home delivery minimum: ₹${minimumDeliveryOrderAmount}. Add ₹${(minimumDeliveryOrderAmount - totals.productTotal).toFixed(2)} more.`
+                        : `Home delivery minimum of ₹${minimumDeliveryOrderAmount} reached.`}
+                    </p>
+                  )}
                   {activeUser ? (
                     activeUser.savedAddresses && activeUser.savedAddresses.length > 0 ? (
                       <div className="space-y-2">
@@ -549,7 +558,7 @@ export default function CartView({
               </button>
             ) : (
               <button
-                disabled={isOutOfRange}
+                disabled={isOutOfRange || deliveryMinimumNotMet}
                 onClick={() => {
                   if (!activeUser) {
                     setIsAuthOpen(true);
@@ -558,12 +567,12 @@ export default function CartView({
                   }
                 }}
                 className={`w-full py-3 rounded-full text-xs font-bold shadow text-center flex items-center justify-center gap-1.5 ${
-                  isOutOfRange
+                  isOutOfRange || deliveryMinimumNotMet
                     ? 'bg-slate-300  text-slate-500 cursor-not-allowed'
                     : 'bg-indigo-600 hover:bg-indigo-500 text-white'
                 }`}
               >
-                <span>Review Order & Continue</span>
+                <span>{deliveryMinimumNotMet ? `Add ₹${(minimumDeliveryOrderAmount - totals.productTotal).toFixed(0)} for delivery` : 'Review Order & Continue'}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             )}

@@ -167,6 +167,8 @@ export default function HomeView({
   const bestOfferProducts = discountedProducts;
   const featuredProducts = products
     .filter((product) => product.isEnabled && !isLooseProduct(product) && product.isFeatured);
+  const farmDirectProducts = products
+    .filter((product) => product.isEnabled && Boolean(product.isSvayiroProduct || product.metadata?.isSvayiroProduct));
   const excludedShowcaseIds = new Set([...featuredProducts, ...bestOfferProducts].map((product) => product.id));
   const personalizedRecommendedProducts = products
     .filter((product) => {
@@ -1064,6 +1066,7 @@ export default function HomeView({
         </div>
       )}
 
+      {renderShowcaseSection('From Farm to Your Home', 'Directly sourced from trusted farmers and makers.', farmDirectProducts, { id: 'farm-direct', hideWhenCategorySelected: true, backgroundColor: '#e4f7df' })}
       {renderShowcaseSection('Featured Today', 'Owner-picked products to highlight right now.', featuredProducts, { id: 'featured-today', hideWhenCategorySelected: true, backgroundColor: '#dbe4ff' })}
       {renderShowcaseSection('Best Offers', 'Discounted products customers should not miss.', bestOfferProducts, { id: 'best-offers', hideWhenCategorySelected: true, backgroundColor: '#d7f5df' })}
       {recommendedProducts.length > 0 && renderShowcaseSection('Recommended for You', 'Useful picks based on your activity and stronger product signals.', recommendedProducts, { id: 'recommended-for-you', hideWhenCategorySelected: true, backgroundColor: '#f7dceb' })}
@@ -1170,13 +1173,13 @@ export default function HomeView({
                             <span className="text-[9px] font-semibold text-slate-700  sm:text-[10px]">{prod.ratingAverage || 'New'}</span>
                           </div>
                         </div>
-                        <h4
-                          onClick={() => setSelectedProduct(prod)}
-                          className="cursor-pointer text-left text-[11px] font-medium leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500   sm:text-xs"
-                        >
-                          {prod.name}
-                        </h4>
-                        {prod.description && (
+                    <h4
+                      onClick={() => setSelectedProduct(prod)}
+                      className="cursor-pointer text-left text-[11px] font-medium leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500   sm:text-xs"
+                    >
+                      {prod.name}
+                    </h4>
+                    {prod.description && (
                           <button
                             type="button"
                             onClick={() => setSelectedProduct(prod)}

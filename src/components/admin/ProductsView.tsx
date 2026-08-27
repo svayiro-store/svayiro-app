@@ -121,6 +121,7 @@ interface ProductForm {
   basePrice: string;
   offerPrice: string;
   stockCount: string;
+  minimumOrderQuantity: string;
   packageQuantity: string;
   unit: string;
   customUnit: string;
@@ -130,6 +131,7 @@ interface ProductForm {
   isEnabled: boolean;
   isDailyEssential: boolean;
   isFeatured: boolean;
+  isSvayiroProduct: boolean;
   isLooseItem: boolean;
   looseSection: string;
   stockUnit: 'g' | 'ml' | 'piece';
@@ -154,6 +156,7 @@ const emptyForm = (): ProductForm => ({
   basePrice: '',
   offerPrice: '0',
   stockCount: '0',
+  minimumOrderQuantity: '1',
   packageQuantity: '100',
   unit: 'g',
   customUnit: '',
@@ -163,6 +166,7 @@ const emptyForm = (): ProductForm => ({
   isEnabled: true,
   isDailyEssential: false,
   isFeatured: false,
+  isSvayiroProduct: false,
   isLooseItem: false,
   looseSection: 'vegetables',
   stockUnit: 'g',
@@ -379,6 +383,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
     if (form.unit === 'custom' && !form.customUnit.trim()) return 'Custom unit label is required.';
     if (!form.weight || Number(form.weight) <= 0) return 'Packing weight must be greater than 0 grams for bag calculation.';
     if (Number(form.stockCount || 0) < 0) return 'Stock count cannot be negative.';
+    if (!Number.isInteger(Number(form.minimumOrderQuantity)) || Number(form.minimumOrderQuantity) < 1) return 'Minimum order quantity must be a whole number of at least 1.';
     if (form.isLooseItem && !form.looseSection) return 'Select a PLU section for loose/weighed item.';
     if (form.pluCode.trim() && !/^\d{2,4}$/.test(form.pluCode.trim())) return 'Manual PLU code must be 2 to 4 digits.';
     return '';
@@ -404,6 +409,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
         basePrice: Number(form.basePrice),
         offerPrice: Number(form.offerPrice) || 0,
         stockCount: Number(form.stockCount) || 0,
+        minimumOrderQuantity: Number(form.minimumOrderQuantity) || 1,
         packageQuantity: Number(form.packageQuantity) || 0,
         unit: form.unit,
         customUnit: form.customUnit.trim(),
@@ -413,6 +419,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
         isEnabled: form.isEnabled,
         isDailyEssential: form.isDailyEssential,
         isFeatured: form.isFeatured,
+        isSvayiroProduct: form.isSvayiroProduct,
         isLooseItem: form.isLooseItem,
         looseSection: form.looseSection,
         stockUnit: form.stockUnit,
@@ -469,6 +476,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
       basePrice: String(prod.basePrice),
       offerPrice: String(prod.offerPrice || 0),
       stockCount: String(prod.stockCount),
+      minimumOrderQuantity: String(prod.minimumOrderQuantity || prod.metadata?.minimumOrderQuantity || 1),
       packageQuantity: String(prod.packageQuantity || prod.metadata?.packageQuantity || (prod.weight >= 1000 ? prod.weight / 1000 : prod.weight) || 100),
       unit: String(prod.unit || prod.metadata?.unit || (prod.weight >= 1000 ? 'kg' : 'g')),
       customUnit: String(prod.metadata?.customUnit || ''),
@@ -478,6 +486,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
       isEnabled: prod.isEnabled,
       isDailyEssential: prod.isDailyEssential || false,
       isFeatured: prod.isFeatured || false,
+      isSvayiroProduct: Boolean(prod.isSvayiroProduct || prod.metadata?.isSvayiroProduct),
       isLooseItem: Boolean(prod.isLooseItem || prod.metadata?.isLooseItem),
       looseSection: String(prod.looseSection || prod.metadata?.looseSection || 'vegetables'),
       stockUnit: (String(prod.stockUnit || prod.metadata?.stockUnit || 'g') as ProductForm['stockUnit']),
@@ -1105,6 +1114,11 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                 <input className={inputClass} type="number" min="0" value={form.stockCount} onChange={(e) => updateForm('stockCount', e.target.value)} placeholder="0" />
               </label>
               <label className="block">
+                <span className={labelClass}>Minimum Order Quantity</span>
+                <input className={inputClass} type="number" min="1" step="1" value={form.minimumOrderQuantity} onChange={(e) => updateForm('minimumOrderQuantity', e.target.value)} placeholder="1" />
+                <span className="text-[9px] text-slate-500">Customers must add at least this quantity to their cart.</span>
+              </label>
+              <label className="block">
                 <span className={labelClass}>Product Quantity / Size</span>
                 <input className={inputClass} type="number" min="0" step="0.01" value={form.packageQuantity} onChange={(e) => updatePackageField('packageQuantity', e.target.value)} placeholder="e.g. 1, 500, 6" />
               </label>
@@ -1195,7 +1209,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             </div>
 
             {/* Flags */}
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-4">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={form.isEnabled} onChange={(e) => updateForm('isEnabled', e.target.checked)} />
                 <span className="text-xs font-bold">Enabled</span>
@@ -1207,6 +1221,10 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={form.isFeatured} onChange={(e) => updateForm('isFeatured', e.target.checked)} />
                 <span className="text-xs font-bold">Featured</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={form.isSvayiroProduct} onChange={(e) => updateForm('isSvayiroProduct', e.target.checked)} />
+                <span className="text-xs font-bold">SVAYIRO own product</span>
               </label>
             </div>
           </div>
@@ -1620,11 +1638,12 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             </div>
           ) : (
             <div className="max-h-[70vh] overflow-auto rounded border bg-white  border-slate-200 ">
-              <div className="grid min-w-[760px] grid-cols-6 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100  text-slate-600 ">
+              <div className="grid min-w-[860px] grid-cols-7 gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider bg-slate-100  text-slate-600 ">
                 <span className="col-span-2">Product</span>
                 <span>Category</span>
                 <span>Price</span>
                 <span>Stock</span>
+                <span>Min. Cart Qty</span>
                 <span>Action</span>
               </div>
               {visibleFilteredProducts.map((product) => {
@@ -1635,7 +1654,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                   <div
                     key={product.id}
                     id={`admin-product-${product.id}`}
-                    className="grid min-w-[760px] grid-cols-6 gap-4 px-4 py-3 border-t border-slate-200  items-center"
+                    className="grid min-w-[860px] grid-cols-7 gap-4 px-4 py-3 border-t border-slate-200  items-center"
                   >
                     <div className="col-span-2 flex items-center gap-3">
                       {thumbnail ? (
@@ -1676,6 +1695,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
                         <span className="ml-1 rounded bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600  ">Disabled</span>
                       )}
                     </div>
+                    <div className="text-xs font-semibold text-slate-700">{product.minimumOrderQuantity || product.metadata?.minimumOrderQuantity || 1}</div>
                     <div className="flex gap-2">
                       <button onClick={() => startEdit(product)} className="rounded bg-indigo-600 px-3 py-1 text-xs text-white">Edit</button>
                       <button onClick={() => handleDelete(product.id)} className="rounded bg-rose-600 px-3 py-1 text-xs text-white">Delete</button>

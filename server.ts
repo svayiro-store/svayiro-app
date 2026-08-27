@@ -1504,6 +1504,7 @@ const DEFAULT_SHOP_PROFILE = {
   delivery_radius_km: 10,
   base_delivery_charge: 30,
   delivery_charge_per_km: 12,
+  minimum_delivery_order_amount: 0,
   operational_timings: '07:00 AM - 09:00 PM',
   holiday_timings: '',
   is_open: true,
@@ -1553,6 +1554,7 @@ function normalizeShopProfile(profile: any) {
     freeDeliveryRadiusKm: Number(profile.free_delivery_radius_km ?? profile.freeDeliveryRadiusKm ?? 0),
     baseDeliveryCharge: Number(profile.base_delivery_charge ?? profile.baseDeliveryCharge ?? 30),
     deliveryChargePerKm: Number(profile.delivery_charge_per_km ?? profile.deliveryChargePerKm ?? 12),
+    minimumDeliveryOrderAmount: Math.max(0, Number(profile.minimum_delivery_order_amount ?? profile.minimumDeliveryOrderAmount ?? 0) || 0),
     workingHours: profile.operational_timings || profile.workingHours || '07:00 AM - 09:00 PM',
     holidayTimings: profile.holiday_timings || profile.holidayTimings || '',
     isOpen: normalizeBoolean(profile.is_open ?? profile.isOpen, true),
@@ -1596,6 +1598,7 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
     basePrice: Number(product.base_price ?? product.basePrice ?? 0),
     offerPrice: Number(product.offer_price ?? product.offerPrice ?? 0),
     stockCount: Number(product.stock_count ?? product.stockCount ?? 0),
+    minimumOrderQuantity: Math.max(1, Number(metadata.minimumOrderQuantity ?? product.minimumOrderQuantity ?? 1) || 1),
     weight: Number(product.weight_grams ?? product.weight ?? 0),
     unit: metadata.unit || product.unit || 'g',
     packageQuantity: Number(metadata.packageQuantity ?? product.packageQuantity ?? 0),
@@ -1605,6 +1608,7 @@ function normalizeProduct(product: any, imageRows: any[] = []) {
     purchasePrice: Number(metadata.purchasePrice ?? product.purchasePrice ?? 0),
     isDailyEssential: Boolean(metadata.isDailyEssential ?? product.isDailyEssential ?? false),
     isFeatured: Boolean(metadata.isFeatured ?? product.isFeatured ?? false),
+    isSvayiroProduct: Boolean(metadata.isSvayiroProduct ?? product.isSvayiroProduct ?? false),
     isLooseItem: Boolean(metadata.isLooseItem ?? product.isLooseItem ?? false),
     looseSection: metadata.looseSection || product.looseSection || '',
     pluCode: metadata.pluCode || product.pluCode || '',
@@ -1655,6 +1659,7 @@ function normalizeProductSummary(product: any) {
     purchasePrice: normalized.purchasePrice,
     isDailyEssential: normalized.isDailyEssential,
     isFeatured: normalized.isFeatured,
+    isSvayiroProduct: normalized.isSvayiroProduct,
     isLooseItem: normalized.isLooseItem,
     looseSection: normalized.looseSection,
     pluCode: normalized.pluCode,
@@ -1970,6 +1975,13 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
         const stockQuantity = isLooseItem ? nonNegativeInteger(it.stockQuantity ?? it.quantity, 0) : nonNegativeInteger(it.quantity, 0);
         const lineQuantity = isLooseItem ? looseQuantityFactor(productMetadata, stockQuantity) : stockQuantity;
         if (stockQuantity <= 0 || lineQuantity <= 0) throw new Error(`Invalid quantity for ${p.name}`);
+        const minimumOrderQuantity = Math.max(1, nonNegativeInteger(productMetadata.minimumOrderQuantity, 1));
+        if (stockQuantity < minimumOrderQuantity) {
+          const minimumLabel = isLooseItem
+            ? looseQuantityLabel(minimumOrderQuantity, normalizeLooseStockUnit(productMetadata.stockUnit))
+            : `${minimumOrderQuantity} unit${minimumOrderQuantity === 1 ? '' : 's'}`;
+          throw new Error(`Minimum order for ${p.name} is ${minimumLabel}.`);
+        }
         if (p.stock_count < stockQuantity) throw new Error(`Insufficient stock for ${p.name}`);
         const baseUnitPrice = Number(p.base_price || 0);
         const unitPrice = (p.offer_price && Number(p.offer_price) > 0) ? Number(p.offer_price) : baseUnitPrice;
@@ -1998,6 +2010,11 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
           displayQuantityLabel,
           isLooseItem
         });
+      }
+
+      const minimumDeliveryOrderAmount = Math.max(0, Number(normalizedShopProfile?.minimumDeliveryOrderAmount || 0));
+      if (deliveryMethodValue === 'delivery' && minimumDeliveryOrderAmount > 0 && productTotal < minimumDeliveryOrderAmount) {
+        throw new Error(`Home delivery requires a minimum product order of Rs ${minimumDeliveryOrderAmount.toFixed(2)}. Add Rs ${(minimumDeliveryOrderAmount - productTotal).toFixed(2)} more or choose Store Pickup.`);
       }
 
       const paymentMethod = ['cod', 'upi', 'cashfree'].includes(String(payload.paymentMethod || '').toLowerCase())
@@ -3828,6 +3845,7 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
     free_delivery_radius_km: firstDefined(req.body?.freeDeliveryRadiusKm, req.body?.free_delivery_radius_km),
     base_delivery_charge: firstDefined(req.body?.baseDeliveryCharge, req.body?.base_delivery_charge),
     delivery_charge_per_km: firstDefined(req.body?.deliveryChargePerKm, req.body?.delivery_charge_per_km),
+    minimum_delivery_order_amount: firstDefined(req.body?.minimumDeliveryOrderAmount, req.body?.minimum_delivery_order_amount),
     is_open: requestedIsOpen === undefined ? undefined : normalizeBoolean(requestedIsOpen, true),
     holiday_mode: requestedHolidayMode === undefined ? undefined : normalizeBoolean(requestedHolidayMode, false),
     operational_timings: firstDefined(req.body?.workingHours, req.body?.operational_timings),
@@ -3900,8 +3918,13 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
           barcodeLabelPrintSettingsJson || JSON.stringify(DEFAULT_SHOP_PROFILE.barcode_label_print_settings)
         ]
       );
+      let savedProfile = ins.rows[0];
+      if (profileDetails.minimum_delivery_order_amount !== undefined) {
+        const minimumRes = await pgQuery('UPDATE shop_profile SET minimum_delivery_order_amount = $1, updated_at = now() WHERE id = $2 RETURNING *', [Math.max(0, nonNegativeNumber(profileDetails.minimum_delivery_order_amount, 0)), savedProfile.id]);
+        savedProfile = minimumRes.rows[0] || savedProfile;
+      }
       invalidatePublicCache('shop-profile');
-      return res.json({ success: true, data: normalizeShopProfile(ins.rows[0]) });
+      return res.json({ success: true, data: normalizeShopProfile(savedProfile) });
     }
     const id = existing.rows[0].id;
     const upd = await pgQuery(
@@ -3972,8 +3995,13 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
         id
       ]
     );
+    let savedProfile = upd.rows[0];
+    if (profileDetails.minimum_delivery_order_amount !== undefined) {
+      const minimumRes = await pgQuery('UPDATE shop_profile SET minimum_delivery_order_amount = $1, updated_at = now() WHERE id = $2 RETURNING *', [Math.max(0, nonNegativeNumber(profileDetails.minimum_delivery_order_amount, 0)), id]);
+      savedProfile = minimumRes.rows[0] || savedProfile;
+    }
     invalidatePublicCache('shop-profile');
-    return res.json({ success: true, data: normalizeShopProfile(upd.rows[0]) });
+    return res.json({ success: true, data: normalizeShopProfile(savedProfile) });
   } catch (err) {
     console.error('PUT /api/shop-profile error', err);
     return res.status(500).json({ error: 'Failed to update shop profile' });
@@ -5332,11 +5360,14 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
       const packageQuantity = nonNegativeNumber(productData.packageQuantity, 0);
       const weightGrams = nonNegativeNumber(productData.weight, 0);
       const lowStockThreshold = nonNegativeInteger(productData.lowStockAlertThreshold, 5);
+      const minimumOrderQuantity = Math.max(1, nonNegativeInteger(productData.minimumOrderQuantity, 1));
       const metadata = {
         ...(productData.metadata || {}),
         isDailyEssential: Boolean(productData.isDailyEssential),
         isFeatured: Boolean(productData.isFeatured),
+        isSvayiroProduct: Boolean(productData.isSvayiroProduct),
         purchasePrice,
+        minimumOrderQuantity,
         packageQuantity,
         unit: productData.unit || 'g',
         customUnit: productData.customUnit || '',
@@ -5405,7 +5436,9 @@ app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'
       };
       if (productData.isDailyEssential !== undefined) metadata.isDailyEssential = Boolean(productData.isDailyEssential);
       if (productData.isFeatured !== undefined) metadata.isFeatured = Boolean(productData.isFeatured);
+      if (productData.isSvayiroProduct !== undefined) metadata.isSvayiroProduct = Boolean(productData.isSvayiroProduct);
       if (productData.purchasePrice !== undefined) metadata.purchasePrice = nonNegativeNumber(productData.purchasePrice, 0);
+      if (productData.minimumOrderQuantity !== undefined) metadata.minimumOrderQuantity = Math.max(1, nonNegativeInteger(productData.minimumOrderQuantity, 1));
       if (productData.packageQuantity !== undefined) metadata.packageQuantity = nonNegativeNumber(productData.packageQuantity, 0);
       if (productData.unit !== undefined) metadata.unit = productData.unit || 'g';
       if (productData.customUnit !== undefined) metadata.customUnit = productData.customUnit || '';
@@ -7786,6 +7819,7 @@ async function ensureRuntimeSchemaCompatibility() {
   `);
   await pgQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_archived_at timestamptz');
   await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS free_delivery_radius_km numeric DEFAULT 0');
+  await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS minimum_delivery_order_amount numeric DEFAULT 0');
   await pgQuery("ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS social_links jsonb DEFAULT '[]'");
   await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS allow_extended_delivery boolean DEFAULT false');
   await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS extended_delivery_message text');

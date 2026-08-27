@@ -418,6 +418,8 @@ export default function CheckoutModal({
     ? activeUser.savedAddresses[selectedAddressIndex]
     : null;
   const isOutOfRange = deliveryMethod === 'delivery' && !!selectedAddress && (totals.deliveryDistanceKm ?? 0) > (shop.deliveryRadius || 10);
+  const minimumDeliveryOrderAmount = Math.max(0, Number(shop.minimumDeliveryOrderAmount || 0));
+  const deliveryMinimumNotMet = deliveryMethod === 'delivery' && minimumDeliveryOrderAmount > 0 && totals.productTotal < minimumDeliveryOrderAmount;
   const canRequestExtendedDelivery = isOutOfRange && Boolean(shop.allowExtendedDelivery);
   const outOfRangeBlocked = isOutOfRange && !extendedDeliveryRequested;
 
@@ -1335,6 +1337,11 @@ export default function CheckoutModal({
                 <span className="font-bold">₹{totals.deliveryCost}</span>
               </div>
             )}
+            {deliveryMethod === 'delivery' && minimumDeliveryOrderAmount > 0 && (
+              <div className={`rounded-lg border px-3 py-2 text-[10px] font-semibold ${deliveryMinimumNotMet ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                {deliveryMinimumNotMet ? `Home delivery needs ₹${(minimumDeliveryOrderAmount - totals.productTotal).toFixed(2)} more (minimum ₹${minimumDeliveryOrderAmount}).` : `Home delivery minimum of ₹${minimumDeliveryOrderAmount} reached.`}
+              </div>
+            )}
             {appliedCoupon && (
               <div className="flex justify-between text-emerald-600  font-bold">
                 <span>Coupon Promo</span>
@@ -1360,7 +1367,7 @@ export default function CheckoutModal({
         {/* Action Button Footer */}
         <div className="border-t border-slate-150  p-5 shrink-0 bg-slate-50  flex flex-col gap-2">
           <button
-            disabled={isPlacingOrder || (deliveryMethod === 'delivery' && !!isAddingAddress) || outOfRangeBlocked || (deliveryMethod === 'delivery' && (!activeUser?.savedAddresses || activeUser.savedAddresses.length === 0))}
+            disabled={isPlacingOrder || deliveryMinimumNotMet || (deliveryMethod === 'delivery' && !!isAddingAddress) || outOfRangeBlocked || (deliveryMethod === 'delivery' && (!activeUser?.savedAddresses || activeUser.savedAddresses.length === 0))}
             onClick={handlePlaceOrder}
             className={`${commonStyles.buttonPrimary} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
@@ -1368,6 +1375,8 @@ export default function CheckoutModal({
               ? 'Validating stock transaction...'
               : deliveryMethod === 'delivery' && isAddingAddress
               ? 'Please Save or Cancel Address Form First'
+              : deliveryMinimumNotMet
+              ? `Add ₹${(minimumDeliveryOrderAmount - totals.productTotal).toFixed(0)} for delivery`
               : outOfRangeBlocked
               ? 'Choose Extended Delivery Request or Store Pickup'
               : isOutOfRange && extendedDeliveryRequested

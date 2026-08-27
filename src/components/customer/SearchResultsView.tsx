@@ -202,13 +202,13 @@ export default function SearchResultsView({
                         <span className="text-[9px] font-semibold text-slate-700  sm:text-[10px]">{prod.ratingAverage || 'New'}</span>
                       </div>
                     </div>
-                    <h4
-                      onClick={() => setSelectedProduct(prod)}
-                      className="cursor-pointer text-left text-[11px] font-medium leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500   sm:text-xs"
-                    >
-                      {prod.name}
-                    </h4>
-                    {prod.description && (
+                  <h4
+                    onClick={() => setSelectedProduct(prod)}
+                    className="cursor-pointer text-left text-[11px] font-medium leading-snug tracking-normal text-slate-950 line-clamp-1 hover:text-indigo-500   sm:text-xs"
+                  >
+                    {prod.name}
+                  </h4>
+                  {prod.description && (
                       <button
                         type="button"
                         onClick={() => setSelectedProduct(prod)}

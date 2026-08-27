@@ -114,6 +114,7 @@ function normalizeShopDetails(shop: ShopProfile): Partial<ShopProfile> {
         ? (shop as any).social_links
         : [],
     freeDeliveryRadiusKm: Number(shop.freeDeliveryRadiusKm ?? (shop as any).free_delivery_radius_km ?? 0),
+    minimumDeliveryOrderAmount: Number(shop.minimumDeliveryOrderAmount ?? (shop as any).minimum_delivery_order_amount ?? 0),
     allowExtendedDelivery: normalizeBoolean((shop as any).allowExtendedDelivery ?? (shop as any).allow_extended_delivery, false),
     extendedDeliveryMessage: (shop as any).extendedDeliveryMessage || (shop as any).extended_delivery_message || 'Your address is outside our regular delivery area. You can choose Store Pickup or request extended delivery for owner approval.',
     extendedDeliveryNote: (shop as any).extendedDeliveryNote || (shop as any).extended_delivery_note || '',
@@ -465,6 +466,8 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
         free_delivery_radius_km: Number(details.freeDeliveryRadiusKm || 0),
         baseDeliveryCharge: Number(details.baseDeliveryCharge || 0),
         deliveryChargePerKm: Number(details.deliveryChargePerKm || 0),
+        minimumDeliveryOrderAmount: Number(details.minimumDeliveryOrderAmount || 0),
+        minimum_delivery_order_amount: Number(details.minimumDeliveryOrderAmount || 0),
         isOpen,
         is_open: isOpen,
         isHolidayMode,
@@ -841,6 +844,10 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
               <input className={inputClass} type="number" min={0} value={details.deliveryChargePerKm ?? 12} onChange={(e) => updateDetail('deliveryChargePerKm', Number(e.target.value))} />
             </Field>
           </div>
+          <Field label="Minimum Product Order for Home Delivery (₹)">
+            <input className={inputClass} type="number" min={0} step="1" value={details.minimumDeliveryOrderAmount ?? 0} onChange={(e) => updateDetail('minimumDeliveryOrderAmount', Number(e.target.value))} />
+            <p className="mt-1 text-[10px] font-semibold text-slate-500">Set 0 to allow delivery for any product total. Store pickup is never restricted by this amount.</p>
+          </Field>
           <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4  ">
             <Toggle
               label="Allow Out-of-Range Delivery Requests"

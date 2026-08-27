@@ -80,14 +80,15 @@ export default function ProductDetailView({
   const hasDiscount = selectedProduct.offerPrice > 0 && selectedProduct.basePrice > selectedProduct.offerPrice;
   const discountPercent = hasDiscount ? Math.round(((selectedProduct.basePrice - selectedProduct.offerPrice) / selectedProduct.basePrice) * 100) : 0;
   const looseOptions = isLooseProduct(selectedProduct) ? looseQuantityOptions(selectedProduct) : [];
+  const minimumOrderQuantity = Math.max(1, Math.round(Number(selectedProduct.minimumOrderQuantity ?? selectedProduct.metadata?.minimumOrderQuantity ?? 1) || 1));
   const detailPriceFactor = isLooseProduct(selectedProduct) ? loosePriceFactor(selectedProduct, detailQty) : detailQty;
   const detailTotal = activePrice * detailPriceFactor;
 
   useEffect(() => {
     if (isLooseProduct(selectedProduct)) {
-      setDetailQty(looseOptions[0]?.value || 500);
+      setDetailQty(Math.max(minimumOrderQuantity, looseOptions[0]?.value || 500));
     } else {
-      setDetailQty(1);
+      setDetailQty(minimumOrderQuantity);
     }
   }, [selectedProduct.id]);
   const selectedWords = new Set(
@@ -356,7 +357,7 @@ export default function ProductDetailView({
                 ) : (
                   <div className="flex items-center gap-2 bg-slate-100  p-1 rounded-xl border border-slate-200/30 ">
                     <button
-                      onClick={() => setDetailQty(prev => Math.max(1, prev - 1))}
+                      onClick={() => setDetailQty(prev => Math.max(minimumOrderQuantity, prev - 1))}
                       className="p-1.5 rounded-lg hover:bg-white  text-slate-600  hover:shadow-sm transition"
                       title="Reduce quantity"
                     >
@@ -379,6 +380,9 @@ export default function ProductDetailView({
 
           {/* ATC Buttons panel */}
           <div className="space-y-4 text-left">
+            {minimumOrderQuantity > 1 && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">Minimum order: {minimumOrderQuantity} {isLooseProduct(selectedProduct) ? selectedProduct.stockUnit || 'units' : 'unit(s)'}</p>
+            )}
             {selectedProduct.stockCount === 0 ? (
               <button disabled className="w-full bg-slate-200  text-slate-400  font-semibold py-4 text-xs rounded-2xl cursor-not-allowed uppercase tracking-wider">Product out of stock</button>
             ) : (

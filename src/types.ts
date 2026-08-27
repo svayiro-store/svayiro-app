@@ -32,6 +32,7 @@ export interface ShopProfile {
   deliverySlots?: string[];
   deliveryChargePerKm?: number;
   baseDeliveryCharge?: number;
+  minimumDeliveryOrderAmount?: number;
   freeDeliveryRadiusKm?: number;
   allowExtendedDelivery?: boolean;
   extendedDeliveryMessage?: string;
@@ -93,6 +94,7 @@ export interface Product {
   basePrice: number;
   offerPrice: number;
   stockCount: number;
+  minimumOrderQuantity?: number;
   weight: number; // in grams
   unit?: string;
   packageQuantity?: number;
@@ -109,6 +111,7 @@ export interface Product {
   purchasePrice?: number;
   isDailyEssential?: boolean;
   isFeatured?: boolean;
+  isSvayiroProduct?: boolean;
   isLooseItem?: boolean;
   looseSection?: string;
   pluCode?: string;

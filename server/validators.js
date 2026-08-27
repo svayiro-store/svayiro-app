@@ -171,7 +171,7 @@ export function validateShopProfileUpdate(body) {
   if (body.upiId !== undefined && body.upiId !== '' && !isValidUpiId(body.upiId)) errors.push('UPI ID format is invalid');
   if (body.is_open !== undefined && typeof body.is_open !== 'boolean') errors.push('Store open status must be true or false');
   if (body.holiday_mode !== undefined && typeof body.holiday_mode !== 'boolean') errors.push('Holiday advisory status must be true or false');
-  for (const field of ['delivery_radius_km', 'free_delivery_radius_km', 'base_delivery_charge', 'delivery_charge_per_km']) {
+  for (const field of ['delivery_radius_km', 'free_delivery_radius_km', 'base_delivery_charge', 'delivery_charge_per_km', 'minimum_delivery_order_amount']) {
     if (body[field] !== undefined && Number(body[field]) < 0) errors.push(`${field} cannot be negative`);
   }
   if (body.delivery_radius_km !== undefined && body.free_delivery_radius_km !== undefined && Number(body.free_delivery_radius_km) > Number(body.delivery_radius_km)) {
@@ -263,6 +263,7 @@ export function validateProductPayload(body, isUpdate = false) {
   if (body.basePrice !== undefined && body.purchasePrice !== undefined && Number(body.basePrice) < Number(body.purchasePrice)) errors.push('Selling price cannot be below real item cost');
   if (body.offerPrice !== undefined && Number(body.offerPrice) > 0 && body.purchasePrice !== undefined && Number(body.offerPrice) < Number(body.purchasePrice)) errors.push('Offer price cannot be below real item cost');
   if (body.stockCount !== undefined && (!Number.isInteger(Number(body.stockCount)) || Number(body.stockCount) < 0)) errors.push('Stock count must be a whole number');
+  if (body.minimumOrderQuantity !== undefined && (!Number.isInteger(Number(body.minimumOrderQuantity)) || Number(body.minimumOrderQuantity) < 1)) errors.push('Minimum order quantity must be a whole number of at least 1');
   if (body.weight !== undefined && Number(body.weight) <= 0) errors.push('Weight must be greater than zero');
   if (body.packageQuantity !== undefined && Number(body.packageQuantity) <= 0) errors.push('Package quantity/size must be greater than zero');
   if (body.unit !== undefined && !['kg', 'g', 'liter', 'ml', 'piece', 'packet', 'box', 'dozen', 'custom'].includes(String(body.unit))) errors.push('Product unit is invalid');

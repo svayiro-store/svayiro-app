@@ -857,8 +857,9 @@ export default function CustomerApp({
 
     // Check stock limit
     const existing = cart.find(item => item.productId === productId);
+    const minimumOrderQuantity = Math.max(1, Math.round(Number(prod.minimumOrderQuantity ?? prod.metadata?.minimumOrderQuantity ?? 1) || 1));
     const quantityStep = isLooseProduct(prod) ? Math.max(1, Math.round(qty)) : Math.max(1, Math.floor(qty));
-    const totalNewQty = (existing?.quantity || 0) + quantityStep;
+    const totalNewQty = Math.max(minimumOrderQuantity, (existing?.quantity || 0) + quantityStep);
     if (totalNewQty > prod.stockCount) {
       if (!silent) {
         showToast(`Buy Now! Only ${prod.stockCount} ${isLooseProduct(prod) ? looseStockUnit(prod) : 'left'} in stock.`, 'warning');
@@ -872,11 +873,11 @@ export default function CustomerApp({
         item.productId === productId ? { ...item, quantity: totalNewQty } : item
       );
     } else {
-      nextCart.push({ productId, quantity: quantityStep });
+      nextCart.push({ productId, quantity: totalNewQty });
     }
     updateCartState(nextCart);
     if (!silent) {
-      showToast(`Added ${prod.name} to cart!`, 'success');
+      showToast(`Added ${prod.name} to cart${minimumOrderQuantity > 1 && !existing ? ` (minimum ${minimumOrderQuantity})` : ''}!`, 'success');
     }
   };
 
@@ -891,7 +892,13 @@ export default function CustomerApp({
       return;
     }
 
-    const nextQuantity = isLooseProduct(prod) ? Math.max(0, Math.round(quantity)) : Math.max(0, Math.floor(quantity));
+    const minimumOrderQuantity = Math.max(1, Math.round(Number(prod.minimumOrderQuantity ?? prod.metadata?.minimumOrderQuantity ?? 1) || 1));
+    const requestedQuantity = isLooseProduct(prod) ? Math.max(0, Math.round(quantity)) : Math.max(0, Math.floor(quantity));
+    const nextQuantity = Math.max(minimumOrderQuantity, requestedQuantity);
+
+    if (requestedQuantity < minimumOrderQuantity) {
+      showToast(`${prod.name} has a minimum order quantity of ${minimumOrderQuantity}. Remove it to take it out of the cart.`, 'info');
+    }
 
     if (nextQuantity > prod.stockCount) {
       showToast(`No More stock limit (${prod.stockCount} ${isLooseProduct(prod) ? looseStockUnit(prod) : 'units'}).`, 'warning');
@@ -1760,6 +1767,11 @@ export default function CustomerApp({
 
     let isExtendedDeliveryOrder = false;
     if (deliveryMethod === 'delivery') {
+      const minimumDeliveryOrderAmount = Math.max(0, Number(shop.minimumDeliveryOrderAmount || 0));
+      if (minimumDeliveryOrderAmount > 0 && totals.productTotal < minimumDeliveryOrderAmount) {
+        setCheckoutError(`Home delivery requires a minimum product order of Rs ${minimumDeliveryOrderAmount}. Add Rs ${(minimumDeliveryOrderAmount - totals.productTotal).toFixed(2)} more or choose Store Pickup.`);
+        return;
+      }
       if (activeUser.savedAddresses.length === 0) {
         setCheckoutError('Please provide a delivery address.');
         return;
