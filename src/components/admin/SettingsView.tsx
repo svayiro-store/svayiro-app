@@ -69,6 +69,7 @@ const defaultBarcodeLabelPrintSettings: BarcodeLabelPrintSettings = {
   horizontalGapMm: 0,
   verticalGapMm: 0
 };
+const defaultDeliverySurchargeSettings = { distanceAfterKm: 0, distanceCharge: 0, peakStartHour: 0, peakEndHour: 0, peakCharge: 0 };
 
 function normalizeBarcodeLabelPrintSettings(value: any): BarcodeLabelPrintSettings {
   const source = value && typeof value === 'object' ? value : {};
@@ -115,6 +116,7 @@ function normalizeShopDetails(shop: ShopProfile): Partial<ShopProfile> {
         : [],
     freeDeliveryRadiusKm: Number(shop.freeDeliveryRadiusKm ?? (shop as any).free_delivery_radius_km ?? 0),
     minimumDeliveryOrderAmount: Number(shop.minimumDeliveryOrderAmount ?? (shop as any).minimum_delivery_order_amount ?? 0),
+    deliverySurchargeSettings: { ...defaultDeliverySurchargeSettings, ...(shop.deliverySurchargeSettings || (shop as any).delivery_surcharge_settings || {}) },
     allowExtendedDelivery: normalizeBoolean((shop as any).allowExtendedDelivery ?? (shop as any).allow_extended_delivery, false),
     extendedDeliveryMessage: (shop as any).extendedDeliveryMessage || (shop as any).extended_delivery_message || 'Your address is outside our regular delivery area. You can choose Store Pickup or request extended delivery for owner approval.',
     extendedDeliveryNote: (shop as any).extendedDeliveryNote || (shop as any).extended_delivery_note || '',
@@ -468,6 +470,8 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
         deliveryChargePerKm: Number(details.deliveryChargePerKm || 0),
         minimumDeliveryOrderAmount: Number(details.minimumDeliveryOrderAmount || 0),
         minimum_delivery_order_amount: Number(details.minimumDeliveryOrderAmount || 0),
+        deliverySurchargeSettings: details.deliverySurchargeSettings || defaultDeliverySurchargeSettings,
+        delivery_surcharge_settings: details.deliverySurchargeSettings || defaultDeliverySurchargeSettings,
         isOpen,
         is_open: isOpen,
         isHolidayMode,
@@ -848,6 +852,15 @@ export default function SettingsView({ shop, isDarkMode, showToast, refresh }: P
             <input className={inputClass} type="number" min={0} step="1" value={details.minimumDeliveryOrderAmount ?? 0} onChange={(e) => updateDetail('minimumDeliveryOrderAmount', Number(e.target.value))} />
             <p className="mt-1 text-[10px] font-semibold text-slate-500">Set 0 to allow delivery for any product total. Store pickup is never restricted by this amount.</p>
           </Field>
+          <div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
+            <p className="mb-3 text-xs font-bold text-violet-900">Distance & urgent delivery surcharge</p>
+            <p className="mb-3 text-[10px] font-semibold text-violet-700">Distance charges apply automatically. The urgent charge applies only when the customer selects urgent delivery at checkout. Set charges to 0 to disable a rule.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Add charge after distance (KM)"><input className={inputClass} type="number" min={0} step="0.1" value={details.deliverySurchargeSettings?.distanceAfterKm ?? 0} onChange={(e) => updateDetail('deliverySurchargeSettings', { ...defaultDeliverySurchargeSettings, ...details.deliverySurchargeSettings, distanceAfterKm: Number(e.target.value) })} /></Field>
+              <Field label="Distance surcharge (₹)"><input className={inputClass} type="number" min={0} value={details.deliverySurchargeSettings?.distanceCharge ?? 0} onChange={(e) => updateDetail('deliverySurchargeSettings', { ...defaultDeliverySurchargeSettings, ...details.deliverySurchargeSettings, distanceCharge: Number(e.target.value) })} /></Field>
+              <Field label="Urgent delivery surcharge (₹)"><input className={inputClass} type="number" min={0} value={details.deliverySurchargeSettings?.peakCharge ?? 0} onChange={(e) => updateDetail('deliverySurchargeSettings', { ...defaultDeliverySurchargeSettings, ...details.deliverySurchargeSettings, peakCharge: Number(e.target.value) })} /></Field>
+            </div>
+          </div>
           <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4  ">
             <Toggle
               label="Allow Out-of-Range Delivery Requests"

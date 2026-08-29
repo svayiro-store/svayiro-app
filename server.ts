@@ -1534,6 +1534,19 @@ function normalizeBarcodeLabelPrintSettings(value: any) {
   };
 }
 
+function normalizeDeliverySurchargeSettings(value: any) {
+  const source = value && typeof value === 'object' ? value : {};
+  const amount = (input: any) => Math.max(0, Number(input) || 0);
+  const hour = (input: any) => Math.min(23, Math.max(0, Math.round(Number(input) || 0)));
+  return {
+    distanceAfterKm: amount(source.distanceAfterKm ?? source.distance_after_km),
+    distanceCharge: amount(source.distanceCharge ?? source.distance_charge),
+    peakStartHour: hour(source.peakStartHour ?? source.peak_start_hour),
+    peakEndHour: hour(source.peakEndHour ?? source.peak_end_hour),
+    peakCharge: amount(source.peakCharge ?? source.peak_charge)
+  };
+}
+
 function normalizeShopProfile(profile: any) {
   if (!profile) profile = DEFAULT_SHOP_PROFILE;
   const addressValue = profile.address;
@@ -1555,6 +1568,7 @@ function normalizeShopProfile(profile: any) {
     baseDeliveryCharge: Number(profile.base_delivery_charge ?? profile.baseDeliveryCharge ?? 30),
     deliveryChargePerKm: Number(profile.delivery_charge_per_km ?? profile.deliveryChargePerKm ?? 12),
     minimumDeliveryOrderAmount: Math.max(0, Number(profile.minimum_delivery_order_amount ?? profile.minimumDeliveryOrderAmount ?? 0) || 0),
+    deliverySurchargeSettings: normalizeDeliverySurchargeSettings(profile.delivery_surcharge_settings || profile.deliverySurchargeSettings),
     workingHours: profile.operational_timings || profile.workingHours || '07:00 AM - 09:00 PM',
     holidayTimings: profile.holiday_timings || profile.holidayTimings || '',
     isOpen: normalizeBoolean(profile.is_open ?? profile.isOpen, true),
@@ -1926,6 +1940,13 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
       deliveryChargeValue = billableDistanceKm > 0
         ? Math.round(Number(shopProfile.baseDeliveryCharge || 30) + (billableDistanceKm * Number(shopProfile.deliveryChargePerKm || 12)))
         : 0;
+      const surchargeSettings = normalizeDeliverySurchargeSettings(shopProfile.deliverySurchargeSettings);
+      const distanceSurcharge = !isOutOfRangeDelivery && surchargeSettings.distanceAfterKm > 0 && route.distanceKm > surchargeSettings.distanceAfterKm
+        ? surchargeSettings.distanceCharge
+        : 0;
+      const urgentDeliveryRequested = Boolean(payload.urgentDeliveryRequested);
+      const urgentDeliverySurcharge = !isOutOfRangeDelivery && urgentDeliveryRequested ? surchargeSettings.peakCharge : 0;
+      deliveryChargeValue += distanceSurcharge + urgentDeliverySurcharge;
       deliveryRouteMeta = {
         shopBranchId: selectedShopBranch.id || null,
         shopBranchName: selectedShopBranch.branchName || null,
@@ -1937,6 +1958,10 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
         warning: route.warning || null,
         freeRadiusKm: freeRadius,
         billableDistanceKm,
+        distanceSurcharge,
+        urgentDeliveryRequested: urgentDeliverySurcharge > 0,
+        urgentDeliverySurcharge,
+        surchargeSettings,
         maxRadiusKm: maxDeliveryRadius,
         outsideCoverage: isOutOfRangeDelivery,
         extendedDeliveryRequested: Boolean(payload.extendedDeliveryRequested),
@@ -2165,6 +2190,16 @@ app.post('/api/orders', authMiddleware, async (req, res) => {
         severity: normalizedOrder.status === 'pending_delivery_approval' || (['upi', 'cashfree'].includes(normalizedOrder.paymentMethod) && normalizedOrder.paymentStatus !== 'paid') ? 'warning' : 'info',
         payload: { orderId: normalizedOrder.id, orderRef: normalizedOrder.orderRef || null, customerPhone: normalizedOrder.customerPhone || null, paymentMethod: normalizedOrder.paymentMethod, paymentStatus: normalizedOrder.paymentStatus }
       });
+      if (normalizedOrder.raw?.meta?.deliveryRoute?.urgentDeliveryRequested) {
+        await createAdminAlertRecord(null, {
+          title: 'Urgent Delivery Order',
+          body: `Priority delivery requested for order #${normalizedOrder.orderRef || normalizedOrder.id} by ${normalizedOrder.customerName || 'Customer'}. Urgent delivery charge: Rs ${Number(normalizedOrder.raw.meta.deliveryRoute.urgentDeliverySurcharge || 0)}.`,
+          type: 'order',
+          source: 'urgent_delivery_order',
+          severity: 'critical',
+          payload: { orderId: normalizedOrder.id, orderRef: normalizedOrder.orderRef || null, customerPhone: normalizedOrder.customerPhone || null, urgentDeliveryCharge: Number(normalizedOrder.raw.meta.deliveryRoute.urgentDeliverySurcharge || 0) }
+        });
+      }
       notifyPushUser(result.order.user_id, {
         title: 'Order received', body: `Your order #${normalizedOrder.orderRef || normalizedOrder.id} is ${normalizedOrder.status}.`, type: 'order', tag: `order-${normalizedOrder.id}`, url: '/',
         data: { orderId: normalizedOrder.id, orderRef: normalizedOrder.orderRef || null, status: normalizedOrder.status }
@@ -2491,12 +2526,15 @@ async function announceVerifiedCashfreeOrder(order: any) {
   if (!shouldAnnounce) return;
 
   const normalized = normalizeOrder(order);
+  const urgentDelivery = Boolean(normalized.raw?.meta?.deliveryRoute?.urgentDeliveryRequested);
   await createAdminAlertRecord(null, {
-    title: 'Paid Cashfree Order Received',
-    body: `Order #${normalized.orderRef || normalized.id} was verified as paid by Cashfree for Rs ${normalized.finalAmount}.`,
+    title: urgentDelivery ? 'Urgent Delivery Order Paid' : 'Paid Cashfree Order Received',
+    body: urgentDelivery
+      ? `Priority delivery requested for paid order #${normalized.orderRef || normalized.id} by ${normalized.customerName || 'Customer'}. Urgent delivery charge: Rs ${Number(normalized.raw?.meta?.deliveryRoute?.urgentDeliverySurcharge || 0)}.`
+      : `Order #${normalized.orderRef || normalized.id} was verified as paid by Cashfree for Rs ${normalized.finalAmount}.`,
     type: 'order',
     source: 'cashfree_payment_verified',
-    severity: 'info',
+    severity: urgentDelivery ? 'critical' : 'info',
     payload: { orderId: normalized.id, orderRef: normalized.orderRef || null, paymentMethod: 'cashfree', paymentStatus: 'paid' }
   });
   notifyPushUser(order.user_id, {
@@ -3830,6 +3868,7 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
   const requestedDeliverySlots = firstArray(req.body?.deliverySlots, req.body?.delivery_slots);
   const requestedSocialLinks = firstArray(req.body?.socialLinks, req.body?.social_links);
   const barcodeLabelPrintSettings = req.body?.barcodeLabelPrintSettings ?? req.body?.barcode_label_print_settings;
+  const deliverySurchargeSettings = req.body?.deliverySurchargeSettings ?? req.body?.delivery_surcharge_settings;
   const profileDetails = {
     ...(req.body || {}),
     phone: firstDefined(req.body?.contactNumber, req.body?.phone, req.body?.personalPhoneNumber),
@@ -3846,6 +3885,7 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
     base_delivery_charge: firstDefined(req.body?.baseDeliveryCharge, req.body?.base_delivery_charge),
     delivery_charge_per_km: firstDefined(req.body?.deliveryChargePerKm, req.body?.delivery_charge_per_km),
     minimum_delivery_order_amount: firstDefined(req.body?.minimumDeliveryOrderAmount, req.body?.minimum_delivery_order_amount),
+    delivery_surcharge_settings: deliverySurchargeSettings,
     is_open: requestedIsOpen === undefined ? undefined : normalizeBoolean(requestedIsOpen, true),
     holiday_mode: requestedHolidayMode === undefined ? undefined : normalizeBoolean(requestedHolidayMode, false),
     operational_timings: firstDefined(req.body?.workingHours, req.body?.operational_timings),
@@ -3867,6 +3907,9 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
   if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join('; ') });
   if (profileDetails.barcode_label_print_settings !== undefined) {
     profileDetails.barcode_label_print_settings = normalizeBarcodeLabelPrintSettings(profileDetails.barcode_label_print_settings);
+  }
+  if (profileDetails.delivery_surcharge_settings !== undefined) {
+    profileDetails.delivery_surcharge_settings = normalizeDeliverySurchargeSettings(profileDetails.delivery_surcharge_settings);
   }
   const addressJson = JSON.stringify(profileDetails.address || {});
   const addressesJson = JSON.stringify(profileDetails.addresses || []);
@@ -3922,6 +3965,10 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
       if (profileDetails.minimum_delivery_order_amount !== undefined) {
         const minimumRes = await pgQuery('UPDATE shop_profile SET minimum_delivery_order_amount = $1, updated_at = now() WHERE id = $2 RETURNING *', [Math.max(0, nonNegativeNumber(profileDetails.minimum_delivery_order_amount, 0)), savedProfile.id]);
         savedProfile = minimumRes.rows[0] || savedProfile;
+      }
+      if (profileDetails.delivery_surcharge_settings !== undefined) {
+        const surchargeRes = await pgQuery('UPDATE shop_profile SET delivery_surcharge_settings = $1::jsonb, updated_at = now() WHERE id = $2 RETURNING *', [JSON.stringify(profileDetails.delivery_surcharge_settings), savedProfile.id]);
+        savedProfile = surchargeRes.rows[0] || savedProfile;
       }
       invalidatePublicCache('shop-profile');
       return res.json({ success: true, data: normalizeShopProfile(savedProfile) });
@@ -3999,6 +4046,10 @@ app.put('/api/shop-profile', authMiddleware, isAdminMiddleware, async (req, res)
     if (profileDetails.minimum_delivery_order_amount !== undefined) {
       const minimumRes = await pgQuery('UPDATE shop_profile SET minimum_delivery_order_amount = $1, updated_at = now() WHERE id = $2 RETURNING *', [Math.max(0, nonNegativeNumber(profileDetails.minimum_delivery_order_amount, 0)), id]);
       savedProfile = minimumRes.rows[0] || savedProfile;
+    }
+    if (profileDetails.delivery_surcharge_settings !== undefined) {
+      const surchargeRes = await pgQuery('UPDATE shop_profile SET delivery_surcharge_settings = $1::jsonb, updated_at = now() WHERE id = $2 RETURNING *', [JSON.stringify(profileDetails.delivery_surcharge_settings), id]);
+      savedProfile = surchargeRes.rows[0] || savedProfile;
     }
     invalidatePublicCache('shop-profile');
     return res.json({ success: true, data: normalizeShopProfile(savedProfile) });
@@ -7820,6 +7871,7 @@ async function ensureRuntimeSchemaCompatibility() {
   await pgQuery('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_archived_at timestamptz');
   await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS free_delivery_radius_km numeric DEFAULT 0');
   await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS minimum_delivery_order_amount numeric DEFAULT 0');
+  await pgQuery("ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS delivery_surcharge_settings jsonb DEFAULT '{}'::jsonb");
   await pgQuery("ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS social_links jsonb DEFAULT '[]'");
   await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS allow_extended_delivery boolean DEFAULT false');
   await pgQuery('ALTER TABLE shop_profile ADD COLUMN IF NOT EXISTS extended_delivery_message text');

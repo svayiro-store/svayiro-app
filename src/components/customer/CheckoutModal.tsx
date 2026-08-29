@@ -82,6 +82,8 @@ interface CheckoutModalProps {
   showToast: (msg: string, type: 'success' | 'info' | 'warning' | 'error') => void;
   extendedDeliveryRequested?: boolean;
   setExtendedDeliveryRequested?: (requested: boolean) => void;
+  urgentDeliveryRequested?: boolean;
+  setUrgentDeliveryRequested?: (requested: boolean) => void;
   handleSaveAddress?: () => Promise<void>;
   handleDeleteAddress?: (addressId: string, index?: number) => Promise<void>;
   isAddingAddress?: boolean;
@@ -135,6 +137,8 @@ export default function CheckoutModal({
   showToast,
   extendedDeliveryRequested = false,
   setExtendedDeliveryRequested,
+  urgentDeliveryRequested = false,
+  setUrgentDeliveryRequested,
   handleSaveAddress,
   handleDeleteAddress,
   isAddingAddress,
@@ -419,6 +423,7 @@ export default function CheckoutModal({
     : null;
   const isOutOfRange = deliveryMethod === 'delivery' && !!selectedAddress && (totals.deliveryDistanceKm ?? 0) > (shop.deliveryRadius || 10);
   const minimumDeliveryOrderAmount = Math.max(0, Number(shop.minimumDeliveryOrderAmount || 0));
+  const urgentDeliveryCharge = Math.max(0, Number(shop.deliverySurchargeSettings?.peakCharge || 0));
   const deliveryMinimumNotMet = deliveryMethod === 'delivery' && minimumDeliveryOrderAmount > 0 && totals.productTotal < minimumDeliveryOrderAmount;
   const canRequestExtendedDelivery = isOutOfRange && Boolean(shop.allowExtendedDelivery);
   const outOfRangeBlocked = isOutOfRange && !extendedDeliveryRequested;
@@ -1040,6 +1045,26 @@ export default function CheckoutModal({
                         <span className="text-slate-500">⚙ Configured Delivery Rates:</span>
                         <span className="font-semibold text-slate-700 ">₹{shop.baseDeliveryCharge ?? 30} base + ₹{shop.deliveryChargePerKm ?? 12}/km</span>
                       </div>
+
+                      {urgentDeliveryCharge > 0 && !isOutOfRange && (
+                        <button
+                          type="button"
+                          onClick={() => setUrgentDeliveryRequested?.(!urgentDeliveryRequested)}
+                          className={`w-full rounded-xl border p-3 text-left transition ${
+                            urgentDeliveryRequested
+                              ? 'border-violet-400 bg-violet-50 text-violet-900'
+                              : 'border-slate-200 bg-white text-slate-700 hover:border-violet-300'
+                          }`}
+                        >
+                          <span className="flex items-center justify-between gap-3">
+                            <span>
+                              <span className="block text-[11px] font-bold">Need urgent delivery?</span>
+                              <span className="mt-0.5 block text-[10px] font-medium opacity-75">Choose this only if you need priority delivery.</span>
+                            </span>
+                            <span className="shrink-0 text-[11px] font-bold">+ {formatMoney(urgentDeliveryCharge)}</span>
+                          </span>
+                        </button>
+                      )}
 
                       <div className="flex justify-between font-bold pt-1 border-t border-dashed border-slate-150/50 ">
                         <span className="text-slate-700 ">💰 Delivery Fee:</span>

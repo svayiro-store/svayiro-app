@@ -611,6 +611,7 @@ export default function CustomerApp({
   const [couponSuccessMessage, setCouponSuccessMessage] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi' | 'cashfree'>('cod');
   const [extendedDeliveryRequested, setExtendedDeliveryRequested] = useState(false);
+  const [urgentDeliveryRequested, setUrgentDeliveryRequested] = useState(false);
   const [upiReference, setUpiReference] = useState('');
   const [upiPaymentId, setUpiPaymentId] = useState<string | null>(null);
   const [upiPaymentUrl, setUpiPaymentUrl] = useState('');
@@ -626,6 +627,7 @@ export default function CustomerApp({
     setCheckoutError('');
     const firstOwnerSlot = shop.deliverySlots?.[0] || '07:00 AM - 10:00 AM';
     if (method === 'pickup') {
+      setUrgentDeliveryRequested(false);
       setIsAddingAddress(false);
       setGoogleMapsDistanceKm(null);
       setGoogleMapsDistanceText('');
@@ -1556,6 +1558,14 @@ export default function CustomerApp({
       const freeRadius = Math.max(0, Number(shop.freeDeliveryRadiusKm ?? 0));
       const billableDistanceKm = Math.max(0, deliveryDistanceKm - freeRadius);
       deliveryCost = billableDistanceKm > 0 ? Math.round(base + (billableDistanceKm * perKm)) : 0;
+      const surcharge = shop.deliverySurchargeSettings || { distanceAfterKm: 0, distanceCharge: 0, peakStartHour: 0, peakEndHour: 0, peakCharge: 0 };
+      const distanceSurcharge = Number(surcharge.distanceAfterKm || 0) > 0 && deliveryDistanceKm > Number(surcharge.distanceAfterKm || 0)
+        ? Math.max(0, Number(surcharge.distanceCharge || 0))
+        : 0;
+      const urgentDeliverySurcharge = urgentDeliveryRequested
+        ? Math.max(0, Number(surcharge.peakCharge || 0))
+        : 0;
+      deliveryCost += distanceSurcharge + urgentDeliverySurcharge;
     }
 
     // Discounts
@@ -1609,7 +1619,7 @@ export default function CustomerApp({
       itemsList,
       deliveryDistanceKm
     };
-  }, [cart, products, bags, bagOption, deliveryMethod, appliedCoupon, campaigns, shop, activeUser, loyaltyAccount, loyaltyRedeemPoints, selectedAddressIndex, googleMapsDistanceKm]);
+  }, [cart, products, bags, bagOption, deliveryMethod, urgentDeliveryRequested, appliedCoupon, campaigns, shop, activeUser, loyaltyAccount, loyaltyRedeemPoints, selectedAddressIndex, googleMapsDistanceKm]);
 
   const buildOrderItemsPayload = () => cart.map((item) => {
     const product = products.find((prod) => prod.id === item.productId);
@@ -1816,7 +1826,8 @@ export default function CustomerApp({
       finalAmount: totals.finalTotal,
       loyaltyRedeemPoints: totals.loyaltyRedeemPoints,
       items: buildOrderItemsPayload(),
-      extendedDeliveryRequested: isExtendedDeliveryOrder
+      extendedDeliveryRequested: isExtendedDeliveryOrder,
+      urgentDeliveryRequested: deliveryMethod === 'delivery' && urgentDeliveryRequested
     };
 
     if (isExtendedDeliveryOrder) {
@@ -2675,6 +2686,8 @@ export default function CustomerApp({
         setPaymentMethod={setPaymentMethod}
         extendedDeliveryRequested={extendedDeliveryRequested}
         setExtendedDeliveryRequested={setExtendedDeliveryRequested}
+        urgentDeliveryRequested={urgentDeliveryRequested}
+        setUrgentDeliveryRequested={setUrgentDeliveryRequested}
         generatedUpiUrl={generatedUpiUrl}
         upiReference={upiReference}
         setUpiReference={setUpiReference}

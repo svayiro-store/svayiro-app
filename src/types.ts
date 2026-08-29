@@ -33,6 +33,13 @@ export interface ShopProfile {
   deliveryChargePerKm?: number;
   baseDeliveryCharge?: number;
   minimumDeliveryOrderAmount?: number;
+  deliverySurchargeSettings?: {
+    distanceAfterKm: number;
+    distanceCharge: number;
+    peakStartHour: number;
+    peakEndHour: number;
+    peakCharge: number;
+  };
   freeDeliveryRadiusKm?: number;
   allowExtendedDelivery?: boolean;
   extendedDeliveryMessage?: string;
