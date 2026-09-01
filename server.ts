@@ -2376,12 +2376,12 @@ function isCashfreeConfigured() {
 }
 
 function cashfreeMode() {
-  return 'production';
+  return ['sandbox', 'test'].includes(CASHFREE_ENV) ? 'sandbox' : 'production';
 }
 
-function assertLiveCashfreeMode() {
-  if (!['production', 'prod'].includes(CASHFREE_ENV)) {
-    throw new HttpError(503, 'Live Cashfree checkout is required. Set CASHFREE_ENV=production; sandbox payments are disabled.');
+function assertCashfreeMode() {
+  if (!['production', 'prod', 'sandbox', 'test'].includes(CASHFREE_ENV)) {
+    throw new HttpError(503, 'Invalid CASHFREE_ENV. Use sandbox for testing or production for live payments.');
   }
 }
 
@@ -2422,7 +2422,7 @@ function buildCashfreeOrderId(order: any) {
 }
 
 async function cashfreeApiRequest(pathname: string, init: RequestInit = {}) {
-  assertLiveCashfreeMode();
+  assertCashfreeMode();
   if (!isCashfreeConfigured()) {
     throw new HttpError(503, 'Cashfree payment gateway is not configured. Add CASHFREE_APP_ID and CASHFREE_SECRET_KEY in environment variables.');
   }

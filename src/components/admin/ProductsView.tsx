@@ -91,6 +91,15 @@ function escapeHtml(value: string) {
   }[char] || char));
 }
 
+function productSlugFromTitle(title: string) {
+  return title
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 const defaultBarcodeLabelPrintSettings: BarcodeLabelPrintSettings = {
   labelWidthMm: 50,
   labelHeightMm: 25,
@@ -400,7 +409,8 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
       const primaryCategory = derivePrimaryCategoryFields(form.categoryIds);
       const payload = {
         name: form.name.trim(),
-        slug: form.name.toLowerCase().replace(/\s+/g, '-'),
+        // Keep the title exactly as entered (including symbols); only the internal URL slug is simplified.
+        slug: productSlugFromTitle(form.name),
         description: form.description.trim(),
         categoryId: primaryCategory.categoryId,
         subcategoryId: primaryCategory.subcategoryId,
@@ -940,7 +950,7 @@ export default function ProductsView({ isDarkMode, barcodeLabelPrintSettings, fo
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className={labelClass}>Product Name *</span>
-                <input className={inputClass} value={form.name} onChange={(e) => updateForm('name', e.target.value)} placeholder="e.g. Organic Toor Dal" />
+                <input className={inputClass} value={form.name} onChange={(e) => updateForm('name', e.target.value)} maxLength={160} placeholder="e.g. Organic Toor Dal (1 kg)" />
               </label>
               <div>
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Product Code</span>
