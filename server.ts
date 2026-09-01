@@ -2226,6 +2226,15 @@ function productCodePrefix(name: any) {
   return (compact || 'ITEM').slice(0, 4).padEnd(4, 'X');
 }
 
+function normalizeProductSlug(value: any) {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 async function generateUniqueProductSku(client: any, productName: string) {
   const prefix = productCodePrefix(productName);
   for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -5392,6 +5401,7 @@ app.get('/api/public/orders/:id', async (req, res) => {
 
 app.post('/api/products', authMiddleware, requirePermission('products:manage'), async (req, res) => {
   const productData = { ...req.body, sku: undefined };
+  if (productData.slug !== undefined) productData.slug = normalizeProductSlug(productData.slug);
   const validationErrors = validateProductPayload(productData);
   if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join('; ') });
   try {
@@ -5472,6 +5482,7 @@ app.post('/api/products', authMiddleware, requirePermission('products:manage'), 
 app.put('/api/products/:id', authMiddleware, requirePermission('products:manage'), async (req, res) => {
   const { id } = req.params;
   const productData = { ...req.body, sku: undefined };
+  if (productData.slug !== undefined) productData.slug = normalizeProductSlug(productData.slug);
   const validationErrors = validateProductPayload(productData, true);
   if (validationErrors.length > 0) return res.status(400).json({ error: validationErrors.join('; ') });
   try {
