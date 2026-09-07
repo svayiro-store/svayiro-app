@@ -684,7 +684,7 @@ export default function HomeView({
                         />
                       )}
                     </span>
-                    <span className="line-clamp-2 max-w-[72px] leading-tight">{sub.name}</span>
+                    <span className="line-clamp-2 max-w-[72px] text-[7px] leading-tight sm:text-[9px]">{sub.name}</span>
                     {isSubSelected && <span className="absolute -bottom-1 h-0.5 w-8 rounded-full bg-indigo-600" />}
                   </button>
                 );
@@ -1066,7 +1066,7 @@ export default function HomeView({
         </div>
       )}
 
-      {renderShowcaseSection('From Farm to Your Home', 'Directly sourced from trusted farmers and makers.', farmDirectProducts, { id: 'farm-direct', hideWhenCategorySelected: true, backgroundColor: '#e4f7df' })}
+      {renderShowcaseSection('SVAYIRO Products — Farm to Your Hand', 'Directly sourced from trusted farmers and makers.', farmDirectProducts, { id: 'farm-direct', hideWhenCategorySelected: true, backgroundColor: '#e4f7df' })}
       {renderShowcaseSection('Featured Today', 'Owner-picked products to highlight right now.', featuredProducts, { id: 'featured-today', hideWhenCategorySelected: true, backgroundColor: '#dbe4ff' })}
       {renderShowcaseSection('Best Offers', 'Discounted products customers should not miss.', bestOfferProducts, { id: 'best-offers', hideWhenCategorySelected: true, backgroundColor: '#d7f5df' })}
       {recommendedProducts.length > 0 && renderShowcaseSection('Recommended for You', 'Useful picks based on your activity and stronger product signals.', recommendedProducts, { id: 'recommended-for-you', hideWhenCategorySelected: true, backgroundColor: '#f7dceb' })}

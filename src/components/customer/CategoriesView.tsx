@@ -244,7 +244,7 @@ export default function CategoriesView({
                     >
                       <CategoryThumb
                         category={sub}
-                        className={`h-10 w-10 rounded-xl border-0 shadow-sm transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${selectedCategory === sub.id ? 'ring-2 ring-indigo-500/40' : ''}`}
+                        className={`h-10 w-10 rounded-xl border-0 shadow-none transition group-hover:-translate-y-0.5 sm:h-12 sm:w-12 ${selectedCategory === sub.id ? 'ring-2 ring-indigo-500/40' : ''}`}
                       />
                       <span className="line-clamp-2 max-w-[76px] text-[10px] font-normal leading-tight sm:text-xs">{sub.name}</span>
                       {selectedCategory === sub.id && <span className="absolute -bottom-1 h-0.5 w-8 rounded-full bg-indigo-600" />}
