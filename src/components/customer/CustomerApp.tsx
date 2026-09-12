@@ -1929,7 +1929,7 @@ export default function CustomerApp({
 
         // Keep the cart intact. It is cleared only by the verified return flow
         // above, never merely because checkout was opened.
-        showToast('Complete payment in the secure Cashfree window. Cards, UPI and other enabled methods are available there.', 'info');
+        showToast('Complete payment in the secure payment window. Cards, UPI and other enabled methods are available there.', 'info');
       } catch (err: any) {
         const errMsg = err.message || 'Unable to start secure online payment.';
         setCheckoutError(errMsg);

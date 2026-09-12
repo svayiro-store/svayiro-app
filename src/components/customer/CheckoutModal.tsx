@@ -1066,12 +1066,19 @@ export default function CheckoutModal({
                         </button>
                       )}
 
-                      <div className="flex justify-between font-bold pt-1 border-t border-dashed border-slate-150/50 ">
-                        <span className="text-slate-700 ">💰 Delivery Fee:</span>
-                        <span className={`text-[12px] ${isOutOfRange ? 'text-rose-600' : 'text-indigo-600 '}`}>
-                          {isOutOfRange ? '🚫 OUT OF DELIVERY RANGE' : `₹${totals.deliveryCost}`}
-                        </span>
-                      </div>
+                      {isOutOfRange && (
+                        <div className="flex justify-between font-bold pt-1 border-t border-dashed border-slate-150/50 ">
+                          <span className="text-slate-700 ">💰 Delivery Fee:</span>
+                          <span className="text-[12px] text-rose-600">🚫 OUT OF DELIVERY RANGE</span>
+                        </div>
+                      )}
+
+                      {!isOutOfRange && totals.deliveryCost > 0 && (
+                        <div className="flex justify-between font-bold pt-1 border-t border-dashed border-slate-150/50 ">
+                          <span className="text-slate-700 ">💰 Delivery Fee:</span>
+                          <span className="text-[12px] text-indigo-600">₹{totals.deliveryCost}</span>
+                        </div>
+                      )}
 
                       {isOutOfRange && (
                         <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left  ">
@@ -1277,7 +1284,7 @@ export default function CheckoutModal({
               <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 text-xs font-semibold text-emerald-900 animate-fadeIn   ">
                 <p className="font-semibold uppercase tracking-wide">Secure payment selected</p>
                 <p className="mt-1 leading-relaxed">
-                  Pay on Cashfree's secure hosted checkout using UPI, credit/debit cards, net banking, or other methods enabled for this merchant. SVAYIRO confirms the order only after Cashfree verifies payment.
+                  You will be redirected to a secure payment page where you can use UPI, credit/debit cards, net banking, or other available methods. SVAYIRO confirms the order only after your payment is securely verified.
                 </p>
               </div>
             )}
@@ -1327,62 +1334,20 @@ export default function CheckoutModal({
                   <span>{formatMoney(totals.bagCost)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-slate-700 ">
-                <span>Delivery</span>
-                <span>{deliveryMethod === 'pickup' ? '₹0' : totals.deliveryCost === 0 ? 'FREE' : formatMoney(totals.deliveryCost)}</span>
-              </div>
+              {deliveryMethod === 'delivery' && totals.deliveryCost > 0 && (
+                <div className="flex justify-between text-slate-700 ">
+                  <span>Delivery</span>
+                  <span>{formatMoney(totals.deliveryCost)}</span>
+                </div>
+              )}
               <div className="mt-2 flex justify-between border-t border-emerald-200 pt-2 text-sm font-semibold text-indigo-700  ">
                 <span>Final payable</span>
                 <span>{formatMoney(totals.finalTotal)}</span>
               </div>
             </div>
             <p className="mt-2 text-[10px] font-medium leading-relaxed text-emerald-800 ">
-              Card and UPI details are entered only on Cashfree's secure payment page; SVAYIRO does not request or store them. Online payment confirms only after secure gateway verification.
+              Card and UPI details are entered only on the secure payment page; SVAYIRO does not request or store them. Online payment confirms only after secure gateway verification.
             </p>
-          </div>
-
-          {/* Checkout Bill calculation summary */}
-          <div className="bg-slate-50  border border-slate-150  p-4 rounded-xl font-mono text-xs space-y-1.5">
-            <span className="font-bold uppercase text-[9px] opacity-75 text-indigo-600  block pb-1 border-b border-dashed border-slate-200 ">
-              Payout metrics
-            </span>
-            <div className="flex justify-between text-slate-700 ">
-              <span>Product Total</span>
-              <span className="font-bold">₹{totals.productTotal}</span>
-            </div>
-            {bagOption === 'need' && (
-              <div className="flex justify-between text-slate-700 ">
-                <span>Smart Bags Fee</span>
-                <span className="font-bold">₹{totals.bagCost}</span>
-              </div>
-            )}
-            {deliveryMethod === 'delivery' && (
-              <div className="flex justify-between text-slate-700 ">
-                <span>Doorstep radius fee</span>
-                <span className="font-bold">₹{totals.deliveryCost}</span>
-              </div>
-            )}
-            {deliveryMethod === 'delivery' && minimumDeliveryOrderAmount > 0 && (
-              <div className={`rounded-lg border px-3 py-2 text-[10px] font-semibold ${deliveryMinimumNotMet ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
-                {deliveryMinimumNotMet ? `Home delivery needs ₹${(minimumDeliveryOrderAmount - totals.productTotal).toFixed(2)} more (minimum ₹${minimumDeliveryOrderAmount}).` : `Home delivery minimum of ₹${minimumDeliveryOrderAmount} reached.`}
-              </div>
-            )}
-            {appliedCoupon && (
-              <div className="flex justify-between text-emerald-600  font-bold">
-                <span>Coupon Promo</span>
-                <span>-₹{totals.discount}</span>
-              </div>
-            )}
-            {(totals.loyaltyDiscount || 0) > 0 && (
-              <div className="flex justify-between text-indigo-600  font-bold">
-                <span>Savings Points redemption</span>
-                <span>-Rs {totals.loyaltyDiscount}</span>
-              </div>
-            )}
-            <div className="border-t border-slate-200  pt-2 mt-2 flex justify-between font-semibold text-sm text-indigo-600 ">
-              <span>Grand Payout due</span>
-              <span>₹{totals.finalTotal}</span>
-            </div>
           </div>
 
           {checkoutError && <p className="text-[11px] text-red-500 font-bold">{checkoutError}</p>}
