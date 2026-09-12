@@ -88,12 +88,27 @@ async function apiRequest<T>(url: string, options?: RequestInit, cacheMs = 0): P
 
   const requestPromise = sendRequest(headers).then(async (res) => {
     if (res.status === 401 && token) {
-      const refreshedToken = await refreshAccessToken();
-      if (refreshedToken) {
-        const retryHeaders = { ...headers, Authorization: `Bearer ${refreshedToken}` };
-        return sendRequest(retryHeaders);
+      const clone = res.clone();
+      let shouldRefreshOrClear = false;
+      try {
+        const body = await clone.json();
+        const err = String(body?.error || '').toLowerCase();
+        // Only refresh or clear session if the error is genuinely about customer token/auth
+        if (err.includes('token') || err.includes('unauthorized') || err.includes('not authenticated') || !err) {
+          shouldRefreshOrClear = true;
+        }
+      } catch {
+        shouldRefreshOrClear = true;
       }
-      clearExpiredAuthSession();
+
+      if (shouldRefreshOrClear) {
+        const refreshedToken = await refreshAccessToken();
+        if (refreshedToken) {
+          const retryHeaders = { ...headers, Authorization: `Bearer ${refreshedToken}` };
+          return sendRequest(retryHeaders);
+        }
+        clearExpiredAuthSession();
+      }
     }
     return res;
   }).then(async (res) => {

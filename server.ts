@@ -2377,19 +2377,21 @@ function getApiBaseUrl(req?: any) {
 
 const CASHFREE_APP_ID = String(process.env.CASHFREE_APP_ID || '').trim();
 const CASHFREE_SECRET_KEY = String(process.env.CASHFREE_SECRET_KEY || '').trim();
-const CASHFREE_ENV = String(process.env.CASHFREE_ENV || 'production').trim().toLowerCase();
-const CASHFREE_API_VERSION = String(process.env.CASHFREE_API_VERSION || '2025-01-01').trim();
+const CASHFREE_ENV = String(process.env.CASHFREE_ENV || '').trim().toLowerCase();
+const CASHFREE_API_VERSION = String(process.env.CASHFREE_API_VERSION || '2023-08-01').trim();
 
 function isCashfreeConfigured() {
   return Boolean(CASHFREE_APP_ID && CASHFREE_SECRET_KEY);
 }
 
 function cashfreeMode() {
-  return ['sandbox', 'test'].includes(CASHFREE_ENV) ? 'sandbox' : 'production';
+  if (['sandbox', 'test'].includes(CASHFREE_ENV)) return 'sandbox';
+  if (CASHFREE_APP_ID.toUpperCase().startsWith('TEST')) return 'sandbox';
+  return 'production';
 }
 
 function assertCashfreeMode() {
-  if (!['production', 'prod', 'sandbox', 'test'].includes(CASHFREE_ENV)) {
+  if (CASHFREE_ENV && !['production', 'prod', 'sandbox', 'test'].includes(CASHFREE_ENV) && !CASHFREE_APP_ID.toUpperCase().startsWith('TEST')) {
     throw new HttpError(503, 'Invalid CASHFREE_ENV. Use sandbox for testing or production for live payments.');
   }
 }
@@ -2435,7 +2437,8 @@ async function cashfreeApiRequest(pathname: string, init: RequestInit = {}) {
   if (!isCashfreeConfigured()) {
     throw new HttpError(503, 'Cashfree payment gateway is not configured. Add CASHFREE_APP_ID and CASHFREE_SECRET_KEY in environment variables.');
   }
-  const response = await fetch(`${cashfreeBaseUrl()}${pathname}`, {
+  const url = `${cashfreeBaseUrl()}${pathname}`;
+  const response = await fetch(url, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -2446,9 +2449,28 @@ async function cashfreeApiRequest(pathname: string, init: RequestInit = {}) {
     }
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { raw: text };
+  }
   if (!response.ok) {
-    throw new HttpError(response.status, data?.message || data?.error || 'Cashfree request failed');
+    console.error(`[Cashfree API Error] ${init.method || 'GET'} ${url} returned HTTP ${response.status}:`, JSON.stringify(data));
+    const msg = data?.message || data?.error || data?.description || 'Cashfree request failed';
+    if (response.status === 401) {
+      throw new HttpError(
+        502,
+        `Cashfree authentication failed: ${msg}. Check CASHFREE_APP_ID, CASHFREE_SECRET_KEY, and ensure CASHFREE_ENV matches your key type (sandbox vs production).`
+      );
+    }
+    if (response.status === 403) {
+      throw new HttpError(
+        502,
+        `Cashfree access forbidden: ${msg}. Check IP whitelisting or permissions in Cashfree dashboard.`
+      );
+    }
+    throw new HttpError(response.status >= 500 ? 502 : response.status, `Cashfree request failed: ${msg}`);
   }
   return data;
 }
@@ -2491,21 +2513,27 @@ async function handleCashfreePaymentStatus(cashfreeOrderId: string, status: stri
        WHERE order_id = $4 AND provider = 'cashfree'`,
       [status, cashfreeOrderId, JSON.stringify({ latest: payload, providerRef }), order.id]
     );
+    const isFailedOrDropped = ['user_dropped', 'failed'].includes(status);
+    const orderStatusUpdate = status === 'paid'
+      ? (order.status === 'pending_delivery_approval' ? order.status : 'accepted')
+      : (isFailedOrDropped ? 'cancelled' : order.status);
+
     await client.query(
       `UPDATE orders
        SET payment_status = $1,
-           payment_ref = COALESCE($2, payment_ref),
+           status = $2,
+           payment_ref = COALESCE($3, payment_ref),
            meta = COALESCE(meta, '{}'::jsonb) || jsonb_build_object(
              'cashfree', COALESCE(meta->'cashfree', '{}'::jsonb) || jsonb_build_object(
-               'orderId', $3::text,
-               'paymentId', $2::text,
+               'orderId', $4::text,
+               'paymentId', $3::text,
                'status', $1::text,
-               'lastPayload', $4::jsonb
+               'lastPayload', $5::jsonb
              )
            ),
            updated_at = now()
-       WHERE id = $5`,
-      [status, providerRef, cashfreeOrderId, JSON.stringify(payload || {}), order.id]
+       WHERE id = $6`,
+      [status, orderStatusUpdate, providerRef, cashfreeOrderId, JSON.stringify(payload || {}), order.id]
     );
     const fresh = await client.query('SELECT * FROM orders WHERE id = $1', [order.id]);
     const current = fresh.rows[0];
@@ -5761,16 +5789,26 @@ app.post('/api/payments/cashfree/create-order', authMiddleware, async (req, res)
     const amount = Number(order.final_amount || 0);
     if (amount <= 0) return res.status(400).json({ error: 'Invalid order amount for Cashfree payment' });
     const cashfreeOrderId = order.meta?.cashfree?.orderId || buildCashfreeOrderId(order);
-    const customerPhone = normalizePhone(order.customer_phone);
-    const customerRes = await pgQuery('SELECT email, name FROM users WHERE id = $1', [uid]);
+    const customerRes = await pgQuery('SELECT email, name, phone FROM users WHERE id = $1', [uid]);
     const customer = customerRes.rows?.[0] || {};
+    let customerPhone = String(order.customer_phone || customer.phone || '').replace(/\D/g, '');
+    if (customerPhone.length === 12 && customerPhone.startsWith('91')) {
+      customerPhone = customerPhone.slice(2);
+    }
+    if (!customerPhone || customerPhone.length !== 10) {
+      customerPhone = '9999999999';
+    }
+    const customerEmail = customer.email || (customerPhone !== '9999999999' ? `customer-${customerPhone}@svayiro.co.in` : `customer-${uid}@svayiro.co.in`);
     const returnUrl = validateCashfreePublicUrl(
       process.env.CASHFREE_RETURN_URL || `${getPublicBaseUrl(req)}/?payment=return&order_id={order_id}`,
       'CASHFREE_RETURN_URL',
       true
     );
+    const configuredNotify = process.env.CASHFREE_NOTIFY_URL;
     const notifyUrl = validateCashfreePublicUrl(
-      process.env.CASHFREE_NOTIFY_URL || `${getApiBaseUrl(req)}/api/payments/cashfree/webhook`,
+      (configuredNotify && !configuredNotify.includes('your-api.onrender.com') && !configuredNotify.includes('example.com'))
+        ? configuredNotify
+        : `${getApiBaseUrl(req)}/api/payments/cashfree/webhook`,
       'CASHFREE_NOTIFY_URL'
     );
     const cashfreeOrder = await cashfreeApiRequest('/orders', {
@@ -5782,7 +5820,7 @@ app.post('/api/payments/cashfree/create-order', authMiddleware, async (req, res)
         customer_details: {
           customer_id: String(uid),
           customer_name: order.customer_name || customer.name || 'SVAYIRO Customer',
-          customer_email: customer.email || `customer-${uid}@svayiro.local`,
+          customer_email: customerEmail,
           customer_phone: customerPhone
         },
         order_meta: {
@@ -6843,6 +6881,7 @@ app.get('/api/admin/invoice-queue', authMiddleware, requirePermission('orders:re
       LEFT JOIN invoices i ON i.order_id = o.id
       WHERE o.status NOT IN ('delivered', 'cancelled')
         AND o.admin_archived_at IS NULL
+        AND NOT (o.payment_method = 'cashfree' AND o.payment_status != 'paid')
         AND ($1::boolean = false OR (o.delivery_method = 'delivery' AND o.status IN ('packed','out_for_delivery')))
       ORDER BY o.created_at ASC
     `, [deliveryPartnerOnly]);

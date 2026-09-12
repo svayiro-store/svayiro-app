@@ -1907,6 +1907,7 @@ export default function CustomerApp({
 
     if (paymentMethod === 'cashfree') {
       setIsPlacingOrder(true);
+      let createdOrderId: string | null = null;
       try {
         const orderRes = await api.placeOrder({
           ...baseOrderPayload,
@@ -1917,8 +1918,9 @@ export default function CustomerApp({
         if (!orderRes.success || !orderRes.order) {
           throw new Error('Unable to create secure payment order.');
         }
+        createdOrderId = orderRes.order.id;
 
-        const paymentRes = await api.createCashfreePayment(orderRes.order.id);
+        const paymentRes = await api.createCashfreePayment(createdOrderId);
         if (paymentRes.paymentSessionId) {
           const Cashfree = await loadCashfreeCheckoutSdk();
           const cashfree = Cashfree({ mode: paymentRes.mode === 'production' ? 'production' : 'sandbox' });
@@ -1936,6 +1938,10 @@ export default function CustomerApp({
         // above, never merely because checkout was opened.
         showToast('Complete payment in the secure payment window. Cards, UPI and other enabled methods are available there.', 'info');
       } catch (err: any) {
+        if (createdOrderId) {
+          // If payment session failed to initialize, cancel the incomplete order so it doesn't stay as an active pending order
+          api.updateOrderStatus(createdOrderId, 'cancelled', 'failed').catch(() => {});
+        }
         const errMsg = err.message || 'Unable to start secure online payment.';
         setCheckoutError(errMsg);
         showToast(errMsg, 'error');
