@@ -11,6 +11,7 @@ const API_BASE = normalizedApiUrl
   ? normalizedApiUrl.endsWith('/api') ? normalizedApiUrl : `${normalizedApiUrl}/api`
   : '/api';
 const getCache = new Map<string, { expiresAt: number; data?: unknown; promise?: Promise<unknown> }>();
+let refreshPromise: Promise<string | null> | null = null;
 
 function cacheKeyFor(url: string) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('svayiro_auth_token') : '';
@@ -48,9 +49,44 @@ async function apiRequest<T>(url: string, options?: RequestInit, cacheMs = 0): P
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const requestPromise = fetch(`${API_BASE}${url}`, {
+  const sendRequest = (requestHeaders: Record<string, string>) => fetch(`${API_BASE}${url}`, {
     ...options,
-    headers
+    headers: requestHeaders
+  });
+
+  const refreshAccessToken = async () => {
+    if (refreshPromise) return refreshPromise;
+
+    const refreshToken = localStorage.getItem('svayiro_refresh_token');
+    const phone = localStorage.getItem('svayiro_active_phone');
+    if (!refreshToken || !phone || url === '/auth/refresh') return null;
+
+    refreshPromise = fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, refreshToken })
+    }).then(async (refreshResponse) => {
+      const refreshData = await refreshResponse.json();
+      if (!refreshResponse.ok || !refreshData.token || !refreshData.refreshToken) return null;
+      localStorage.setItem('svayiro_auth_token', refreshData.token);
+      localStorage.setItem('svayiro_refresh_token', refreshData.refreshToken);
+      return refreshData.token as string;
+    }).finally(() => {
+      refreshPromise = null;
+    });
+
+    return refreshPromise;
+  };
+
+  const requestPromise = sendRequest(headers).then(async (res) => {
+    if (res.status === 401 && token) {
+      const refreshedToken = await refreshAccessToken();
+      if (refreshedToken) {
+        const retryHeaders = { ...headers, Authorization: `Bearer ${refreshedToken}` };
+        return sendRequest(retryHeaders);
+      }
+    }
+    return res;
   }).then(async (res) => {
     const data = await res.json();
     if (!res.ok) {
