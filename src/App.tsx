@@ -620,9 +620,7 @@ export default function App() {
         }
       }
       if (cachedPhone) {
-        api.getUserProfile(cachedPhone)
-          .then(u => setActiveUser(normalizeUser(u)))
-          .catch(_ => localStorage.removeItem('svayiro_active_phone'));
+        localStorage.removeItem('svayiro_active_phone');
       }
     };
     restoreSession();

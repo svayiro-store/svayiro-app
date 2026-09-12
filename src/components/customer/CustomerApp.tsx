@@ -1768,6 +1768,11 @@ export default function CustomerApp({
       setIsAuthOpen(true);
       return;
     }
+    if (!localStorage.getItem('svayiro_auth_token')) {
+      setCheckoutError('Please sign in again before starting secure payment.');
+      setIsAuthOpen(true);
+      return;
+    }
     const customerPhoneDigits = String(activeUser.phone || '').replace(/\D/g, '');
     if (!/^[6-9]\d{9}$/.test(customerPhoneDigits)) {
       setCheckoutError('Valid 10-digit customer phone number is required before invoice generation.');
