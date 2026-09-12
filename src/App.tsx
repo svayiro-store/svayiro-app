@@ -730,6 +730,15 @@ export default function App() {
     showToast('Logged out from SVAYIRO secure session.', 'success');
   };
 
+  useEffect(() => {
+    const handleExpiredAuth = () => {
+      setActiveUser(null);
+      showToast('Your session expired. Please sign in again to continue.', 'warning');
+    };
+    window.addEventListener('svayiro:auth-expired', handleExpiredAuth);
+    return () => window.removeEventListener('svayiro:auth-expired', handleExpiredAuth);
+  }, []);
+
   const handleAdminRequestOtp = async () => {
     setAdminMessage('');
     const digits = adminPhone.replace(/\D/g, '');

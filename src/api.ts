@@ -24,6 +24,14 @@ function invalidateApiCache(prefix: string) {
   }
 }
 
+function clearExpiredAuthSession() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('svayiro_auth_token');
+  localStorage.removeItem('svayiro_refresh_token');
+  localStorage.removeItem('svayiro_active_phone');
+  window.dispatchEvent(new CustomEvent('svayiro:auth-expired'));
+}
+
 /**
  * Helper to fetch and throw on error
  */
@@ -71,7 +79,7 @@ async function apiRequest<T>(url: string, options?: RequestInit, cacheMs = 0): P
       localStorage.setItem('svayiro_auth_token', refreshData.token);
       localStorage.setItem('svayiro_refresh_token', refreshData.refreshToken);
       return refreshData.token as string;
-    }).finally(() => {
+    }).catch(() => null).finally(() => {
       refreshPromise = null;
     });
 
@@ -85,6 +93,7 @@ async function apiRequest<T>(url: string, options?: RequestInit, cacheMs = 0): P
         const retryHeaders = { ...headers, Authorization: `Bearer ${refreshedToken}` };
         return sendRequest(retryHeaders);
       }
+      clearExpiredAuthSession();
     }
     return res;
   }).then(async (res) => {
